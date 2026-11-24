@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Talavera theme reference</title>
+<!-- Reference only: a static picture of the approved Talavera theme, light and dark side by side.
+     It is not part of the site and is never served (it lives in docs/, outside public/).
+     Fonts load from Google here for convenience; the real site must self-host them (see THEME.md). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@700&display=swap">
+<style>
+body { margin: 0; padding: 32px; background: #EFEDE8; font-family: 'Atkinson Hyperlegible', sans-serif; }
+a { color: inherit; }
+</style>
+</head>
+<body>
+<div style="display: flex; gap: 40px; align-items: flex-start">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 16px; font-weight: 700; color: #3A3A3A">Light</div>
+<div style="width: 440px; box-sizing: border-box; background: #FFFDF6; color: #14213D; border: 1px solid #C9D2EA; border-radius: 20px; overflow: hidden; font-size: 17px; line-height: 1.45">
+<svg aria-hidden="true" width="440" height="36" viewBox="0 0 440 36" style="display: block"><rect x="0" y="0" width="40" height="36" fill="#1E40AF"></rect><polygon points="20,4 34,18 20,32 6,18" fill="#FFFDF6"></polygon><circle cx="20" cy="18" r="5" fill="#F2B01E"></circle><rect x="40" y="0" width="40" height="36" fill="#F2B01E"></rect><polygon points="60,4 74,18 60,32 46,18" fill="#FFFDF6"></polygon><circle cx="60" cy="18" r="5" fill="#1E40AF"></circle><rect x="80" y="0" width="40" height="36" fill="#1E40AF"></rect><polygon points="100,4 114,18 100,32 86,18" fill="#FFFDF6"></polygon><circle cx="100" cy="18" r="5" fill="#F2B01E"></circle><rect x="120" y="0" width="40" height="36" fill="#F2B01E"></rect><polygon points="140,4 154,18 140,32 126,18" fill="#FFFDF6"></polygon><circle cx="140" cy="18" r="5" fill="#1E40AF"></circle><rect x="160" y="0" width="40" height="36" fill="#1E40AF"></rect><polygon points="180,4 194,18 180,32 166,18" fill="#FFFDF6"></polygon><circle cx="180" cy="18" r="5" fill="#F2B01E"></circle><rect x="200" y="0" width="40" height="36" fill="#F2B01E"></rect><polygon points="220,4 234,18 220,32 206,18" fill="#FFFDF6"></polygon><circle cx="220" cy="18" r="5" fill="#1E40AF"></circle><rect x="240" y="0" width="40" height="36" fill="#1E40AF"></rect><polygon points="260,4 274,18 260,32 246,18" fill="#FFFDF6"></polygon><circle cx="260" cy="18" r="5" fill="#F2B01E"></circle><rect x="280" y="0" width="40" height="36" fill="#F2B01E"></rect><polygon points="300,4 314,18 300,32 286,18" fill="#FFFDF6"></polygon><circle cx="300" cy="18" r="5" fill="#1E40AF"></circle><rect x="320" y="0" width="40" height="36" fill="#1E40AF"></rect><polygon points="340,4 354,18 340,32 326,18" fill="#FFFDF6"></polygon><circle cx="340" cy="18" r="5" fill="#F2B01E"></circle><rect x="360" y="0" width="40" height="36" fill="#F2B01E"></rect><polygon points="380,4 394,18 380,32 366,18" fill="#FFFDF6"></polygon><circle cx="380" cy="18" r="5" fill="#1E40AF"></circle><rect x="400" y="0" width="40" height="36" fill="#1E40AF"></rect><polygon points="420,4 434,18 420,32 406,18" fill="#FFFDF6"></polygon><circle cx="420" cy="18" r="5" fill="#F2B01E"></circle></svg>
+<div style="padding: 20px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; gap: 14px; align-items: center">
+<div style="width: 60px; height: 60px; flex: none; border-radius: 30px; border: 2px dashed #4A5673; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; line-height: 1.15; color: #4A5673">[LOGO]</div>
+<div>
+<div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1">Holy Frijoles</div>
+<div style="font-size: 15px; color: #4A5673">Beans, grains and good company</div>
+</div>
+</div>
+<div style="display: flex; gap: 10px">
+<a href="#order" style="flex: 1 1 0; min-height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 24px; background: #1E40AF; color: #FFFFFF; font-weight: 700; text-decoration: none">My order</a>
+<a href="#shares" style="flex: 1 1 0; min-height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 24px; border: 2px solid #1E40AF; color: #14213D; font-weight: 700; text-decoration: none">Share items</a>
+</div>
+<div>
+<h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 25px; line-height: 1.2">Place your December order</h2>
+<p style="margin: 6px 0 0; color: #4A5673">Orders are due Monday, December 14 at 7 pm.</p>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #C9D2EA; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<label for="q-main-light" style="font-weight: 700">Spill the beans: what are you after?</label>
+<div style="display: flex; gap: 8px">
+<input id="q-main-light" value="honey" readonly style="flex: 1 1 0; min-width: 0; min-height: 48px; box-sizing: border-box; padding: 0 12px; font: inherit; color: #14213D; background: #FFFDF6; border: 2px solid #4A5673; border-radius: 10px">
+<button style="min-height: 48px; padding: 0 18px; border: 0; border-radius: 10px; background: #1E40AF; color: #FFFFFF; font: inherit; font-weight: 700">Search</button>
+</div>
+<div style="display: flex; gap: 8px; align-items: center; border-top: 1px solid #C9D2EA; padding-top: 12px">
+<div style="flex: 1 1 0; min-width: 0">
+<div style="font-weight: 700">Honey, Orange Blossom</div>
+<div style="font-size: 15px; color: #4A5673">B112 · 1 lb jar · $11.69</div>
+</div>
+<button aria-label="Remove from favorites: Honey, Orange Blossom, 1 lb jar" style="width: 48px; height: 48px; border: 0; background: none; padding: 0"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#B26A00" stroke="#B26A00" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"></path></svg></button>
+<button style="min-height: 48px; padding: 0 18px; border: 0; border-radius: 10px; background: #1E40AF; color: #FFFFFF; font: inherit; font-weight: 700">Add</button>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #C9D2EA; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; font-weight: 700; color: #4A5673">Up for sharing</div>
+<div>
+<div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 21px; line-height: 1.2">Quick Oats, Grain Millers</div>
+<div style="font-size: 15px; color: #4A5673">G129 · 25 lb bag · $25.00 ($1.00 per lb)</div>
+</div>
+<div style="height: 14px; border-radius: 7px; background: #42507A; overflow: hidden"><div style="width: 60%; height: 14px; background: #F2B01E"></div></div>
+<div style="font-weight: 700">15 of 25 lb claimed · 10 lb left</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span>Maria · 10 lb</span><span>$10.00</span></div>
+<div style="display: flex; justify-content: space-between"><span>Dan · 5 lb</span><span>$5.00</span></div>
+</div>
+<button style="min-height: 48px; border: 0; border-radius: 10px; background: #F2B01E; color: #14213D; font: inherit; font-weight: 700">I&#39;ll take some</button>
+</div>
+<div style="display: flex; gap: 12px; align-items: center; background: #1E40AF; color: #FFFFFF; border-radius: 12px; padding: 12px 14px; font-weight: 700"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Order submitted. Cool beans! A summary is on its way to your inbox.</span></div>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 16px; font-weight: 700; color: #3A3A3A">Dark</div>
+<div style="width: 440px; box-sizing: border-box; background: #0E1630; color: #F5F1E4; border: 1px solid #33407A; border-radius: 20px; overflow: hidden; font-size: 17px; line-height: 1.45">
+<svg aria-hidden="true" width="440" height="36" viewBox="0 0 440 36" style="display: block"><rect x="0" y="0" width="40" height="36" fill="#FFC53D"></rect><polygon points="20,4 34,18 20,32 6,18" fill="#0E1630"></polygon><circle cx="20" cy="18" r="5" fill="#7FA4FF"></circle><rect x="40" y="0" width="40" height="36" fill="#7FA4FF"></rect><polygon points="60,4 74,18 60,32 46,18" fill="#0E1630"></polygon><circle cx="60" cy="18" r="5" fill="#FFC53D"></circle><rect x="80" y="0" width="40" height="36" fill="#FFC53D"></rect><polygon points="100,4 114,18 100,32 86,18" fill="#0E1630"></polygon><circle cx="100" cy="18" r="5" fill="#7FA4FF"></circle><rect x="120" y="0" width="40" height="36" fill="#7FA4FF"></rect><polygon points="140,4 154,18 140,32 126,18" fill="#0E1630"></polygon><circle cx="140" cy="18" r="5" fill="#FFC53D"></circle><rect x="160" y="0" width="40" height="36" fill="#FFC53D"></rect><polygon points="180,4 194,18 180,32 166,18" fill="#0E1630"></polygon><circle cx="180" cy="18" r="5" fill="#7FA4FF"></circle><rect x="200" y="0" width="40" height="36" fill="#7FA4FF"></rect><polygon points="220,4 234,18 220,32 206,18" fill="#0E1630"></polygon><circle cx="220" cy="18" r="5" fill="#FFC53D"></circle><rect x="240" y="0" width="40" height="36" fill="#FFC53D"></rect><polygon points="260,4 274,18 260,32 246,18" fill="#0E1630"></polygon><circle cx="260" cy="18" r="5" fill="#7FA4FF"></circle><rect x="280" y="0" width="40" height="36" fill="#7FA4FF"></rect><polygon points="300,4 314,18 300,32 286,18" fill="#0E1630"></polygon><circle cx="300" cy="18" r="5" fill="#FFC53D"></circle><rect x="320" y="0" width="40" height="36" fill="#FFC53D"></rect><polygon points="340,4 354,18 340,32 326,18" fill="#0E1630"></polygon><circle cx="340" cy="18" r="5" fill="#7FA4FF"></circle><rect x="360" y="0" width="40" height="36" fill="#7FA4FF"></rect><polygon points="380,4 394,18 380,32 366,18" fill="#0E1630"></polygon><circle cx="380" cy="18" r="5" fill="#FFC53D"></circle><rect x="400" y="0" width="40" height="36" fill="#FFC53D"></rect><polygon points="420,4 434,18 420,32 406,18" fill="#0E1630"></polygon><circle cx="420" cy="18" r="5" fill="#7FA4FF"></circle></svg>
+<div style="padding: 20px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; gap: 14px; align-items: center">
+<div style="width: 60px; height: 60px; flex: none; border-radius: 30px; border: 2px dashed #B9C2DE; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; line-height: 1.15; color: #B9C2DE">[LOGO]</div>
+<div>
+<div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1">Holy Frijoles</div>
+<div style="font-size: 15px; color: #B9C2DE">Beans, grains and good company</div>
+</div>
+</div>
+<div style="display: flex; gap: 10px">
+<a href="#order" style="flex: 1 1 0; min-height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 24px; background: #FFC53D; color: #14213D; font-weight: 700; text-decoration: none">My order</a>
+<a href="#shares" style="flex: 1 1 0; min-height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 24px; border: 2px solid #FFC53D; color: #F5F1E4; font-weight: 700; text-decoration: none">Share items</a>
+</div>
+<div>
+<h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 25px; line-height: 1.2">Place your December order</h2>
+<p style="margin: 6px 0 0; color: #B9C2DE">Orders are due Monday, December 14 at 7 pm.</p>
+</div>
+<div style="background: #18234A; border: 1px solid #33407A; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<label for="q-main-dark" style="font-weight: 700">Spill the beans: what are you after?</label>
+<div style="display: flex; gap: 8px">
+<input id="q-main-dark" value="honey" readonly style="flex: 1 1 0; min-width: 0; min-height: 48px; box-sizing: border-box; padding: 0 12px; font: inherit; color: #F5F1E4; background: #0E1630; border: 2px solid #B9C2DE; border-radius: 10px">
+<button style="min-height: 48px; padding: 0 18px; border: 0; border-radius: 10px; background: #FFC53D; color: #14213D; font: inherit; font-weight: 700">Search</button>
+</div>
+<div style="display: flex; gap: 8px; align-items: center; border-top: 1px solid #33407A; padding-top: 12px">
+<div style="flex: 1 1 0; min-width: 0">
+<div style="font-weight: 700">Honey, Orange Blossom</div>
+<div style="font-size: 15px; color: #B9C2DE">B112 · 1 lb jar · $11.69</div>
+</div>
+<button aria-label="Remove from favorites: Honey, Orange Blossom, 1 lb jar" style="width: 48px; height: 48px; border: 0; background: none; padding: 0"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#FFC53D" stroke="#FFC53D" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"></path></svg></button>
+<button style="min-height: 48px; padding: 0 18px; border: 0; border-radius: 10px; background: #FFC53D; color: #14213D; font: inherit; font-weight: 700">Add</button>
+</div>
+</div>
+<div style="background: #18234A; border: 1px solid #33407A; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; font-weight: 700; color: #B9C2DE">Up for sharing</div>
+<div>
+<div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 21px; line-height: 1.2">Quick Oats, Grain Millers</div>
+<div style="font-size: 15px; color: #B9C2DE">G129 · 25 lb bag · $25.00 ($1.00 per lb)</div>
+</div>
+<div style="height: 14px; border-radius: 7px; background: #2A376B; overflow: hidden"><div style="width: 60%; height: 14px; background: #7FA4FF"></div></div>
+<div style="font-weight: 700">15 of 25 lb claimed · 10 lb left</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span>Maria · 10 lb</span><span>$10.00</span></div>
+<div style="display: flex; justify-content: space-between"><span>Dan · 5 lb</span><span>$5.00</span></div>
+</div>
+<button style="min-height: 48px; border: 0; border-radius: 10px; background: #7FA4FF; color: #0E1630; font: inherit; font-weight: 700">I&#39;ll take some</button>
+</div>
+<div style="display: flex; gap: 12px; align-items: center; background: #7FA4FF; color: #0E1630; border-radius: 12px; padding: 12px 14px; font-weight: 700"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0E1630" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Order submitted. Cool beans! A summary is on its way to your inbox.</span></div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
