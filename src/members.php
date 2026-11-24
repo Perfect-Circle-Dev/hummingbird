@@ -86,9 +86,7 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
         q('UPDATE members SET household_id = ?, name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
            WHERE id = ?', [$householdId, $name, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
         if (!$active) {
-            // Sign them out everywhere, and cancel any sign-in link still on its way.
-            q('DELETE FROM sessions WHERE member_id = ?', [$memberId]);
-            q('DELETE FROM login_tokens WHERE member_id = ?', [$memberId]);
+            member_sign_out_everywhere($memberId);
         }
     }
     households_tidy();
@@ -233,4 +231,117 @@ function settings_save(array $form): ?string
     recompute_deposits();
     refresh_open_order_prices();
     return null;
+}
+
+/** Signs a member out on every device and cancels any sign-in link still on its way. */
+function member_sign_out_everywhere(int $memberId): void
+{
+    q('DELETE FROM sessions WHERE member_id = ?', [$memberId]);
+    q('DELETE FROM login_tokens WHERE member_id = ?', [$memberId]);
+}
+
+/**
+ * Archives a member, or restores an archived one. An archived member can't sign in and
+ * gets no emails; their past orders stay on record. $actingId is the organizer doing it,
+ * who can't archive themselves. Returns a problem code, or null if it was done.
+ */
+function member_set_active(int $memberId, bool $active, int $actingId): ?string
+{
+    if (!find_member($memberId)) {
+        return 'member_gone';
+    }
+    if (!$active && $memberId === $actingId) {
+        return 'member_self';
+    }
+    q('UPDATE members SET active = ? WHERE id = ?', [$active ? 1 : 0, $memberId]);
+    if (!$active) {
+        member_sign_out_everywhere($memberId);
+    }
+    return null;
+}
+
+// ---- The end-of-year tidy-up ----
+
+// Members added in the last few months of the year are left alone, because they have
+// not had a fair chance to order yet. With 6, that is anyone added from July onward.
+const ARCHIVE_GRACE_MONTHS = 6;
+
+/**
+ * The members the end-of-year tidy-up would archive for $year: active, not an organizer,
+ * on the list since before July, and in a household that had nothing on any order that
+ * year. "Nothing" means no items of its own in any month, and no part in a share that
+ * was ordered. People in a household share one order, so they are kept or archived together.
+ */
+function yearly_archive_candidates(int $year): array
+{
+    // The months whose deadline fell in that year, by the site's own clock.
+    $months = [];
+    foreach (q("SELECT id, due_at FROM cycles WHERE status <> 'next'")->fetchAll() as $c) {
+        if ((int) fmt_local($c['due_at'], 'Y') === $year) {
+            $months[] = (int) $c['id'];
+        }
+    }
+    $ordered = []; // ids of households that ordered something
+    if ($months) {
+        $in = implode(',', $months); // whole numbers from the database, safe to put in the query
+        $own = q("SELECT DISTINCT o.household_id FROM orders o JOIN order_lines l ON l.order_id = o.id
+                  WHERE o.cycle_id IN ($in)")->fetchAll(PDO::FETCH_COLUMN);
+        $shared = q("SELECT DISTINCT m.household_id FROM share_claims c JOIN shares s ON s.id = c.share_id
+                     JOIN members m ON m.id = c.member_id WHERE s.cycle_id IN ($in)")->fetchAll(PDO::FETCH_COLUMN);
+        $ordered = array_flip(array_map('intval', array_merge($own, $shared)));
+    }
+    $addedBefore = sprintf('%d-%02d-01 00:00:00', $year, 13 - ARCHIVE_GRACE_MONTHS);
+    $members = q('SELECT m.*, h.name AS household_name FROM members m JOIN households h ON h.id = m.household_id
+                  WHERE m.active = 1 AND m.is_admin = 0 AND m.created_at < ?
+                  ORDER BY h.name COLLATE NOCASE, m.name COLLATE NOCASE', [$addedBefore])->fetchAll();
+    return array_values(array_filter($members, fn(array $m): bool => !isset($ordered[(int) $m['household_id']])));
+}
+
+/** The note an archived member gets. Replies go to the organizer, because it is sent from his address. */
+function archive_email_text(array $member, int $year): string
+{
+    return "Hi {$member['name']},\n\n"
+        . "At the end of each year we tidy up the " . config('site_name') . " member list. Your household didn't\n"
+        . "place an order in $year, so your account has been archived.\n\n"
+        . "That only means two things: you won't get our emails, and your sign-in link won't work for now.\n"
+        . "Nothing has been deleted.\n\n"
+        . "You are welcome back any time. If you'd like to order with us again, next month or next year,\n"
+        . "just reply to this email, or write to " . config('mail_from') . ", and I'll switch your account back on.\n\n"
+        . "Thank you for being part of the group.\n\n"
+        . "Brent\n";
+}
+
+/**
+ * Runs the end-of-year tidy-up for $year: archives each member found above, queues the
+ * note to them, and emails the organizers the list. Returns the members archived.
+ */
+function yearly_archive_run(int $year): array
+{
+    $members = yearly_archive_candidates($year);
+    foreach ($members as $m) {
+        q('UPDATE members SET active = 0 WHERE id = ?', [$m['id']]);
+        member_sign_out_everywhere((int) $m['id']);
+        queue_email($m['email'], 'Your ' . config('site_name') . ' account has been archived', archive_email_text($m, $year));
+    }
+    set_setting('archive_done_year', (string) $year);
+
+    $count = count($members);
+    $body = "The end-of-year tidy-up of the " . config('site_name') . " member list has run for $year.\n\n";
+    if ($count === 0) {
+        $body .= "Nobody needed archiving: every household either ordered this year or joined since July.\n";
+    } else {
+        $body .= "$count " . ($count === 1 ? 'member was' : 'members were') . " archived, because their household had nothing on any order this year:\n\n";
+        foreach ($members as $m) {
+            $body .= "  {$m['name']} <{$m['email']}>, {$m['household_name']}\n";
+        }
+        $body .= "\nEach has been sent a note saying their account is archived and that they can come back\n"
+            . "any time by emailing you.\n\n"
+            . "To bring someone back: Organizer, Members, then Restore beside their name.\n"
+            . config('base_url') . "/?a=organizer&view=members\n";
+    }
+    $body .= "\nOrganizers, and anyone added since July, are never archived by this.\n";
+    foreach (q('SELECT email FROM members WHERE is_admin = 1 AND active = 1')->fetchAll(PDO::FETCH_COLUMN) as $email) {
+        send_email($email, config('site_name') . " member list tidy-up for $year", $body);
+    }
+    return $members;
 }

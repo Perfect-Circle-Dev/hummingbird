@@ -142,7 +142,7 @@ function time_to_order_text(array $cycle, array $member, string $note, string $l
     $text = "Hi {$member['name']},\n\n"
         . (trim($note) !== '' ? trim($note) . "\n\n" : '')
         . "The {$cycle['label']} order is open. Orders are due " . fmt_local($cycle['due_at']) . ".\n"
-        . ($cycle['pickup_note'] ? $cycle['pickup_note'] . "\n" : '')
+        . (pickup_text($cycle) !== '' ? pickup_text($cycle) . "\n" : '')
         . "\nYour own sign-in link:\n$link\n"
         . "It works until the order is locked, so you can come back to this email whenever you like.\n";
     if ($state['items'] > 0 && !$state['submitted']) {

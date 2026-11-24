@@ -20,6 +20,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 | Deadline | Members see Monday 7 pm. Nothing closes until the organizer locks the order (about 11 am Tuesday). A lock can be undone with Reopen |
 | Next month | Members can save items for next month at any time. When that month opens, the saved items are already on their order, and they still submit it |
 | Payment | At pickup by check, Venmo or cash; organizer marks each order paid |
+| Pickup | Always after 4 pm; the site adds that to each month's pickup note |
+| Inactive members | On December 31, members whose household placed no order that year are archived and told how to come back. Organizers and anyone added since July are left alone |
 
 ## Monthly flow
 

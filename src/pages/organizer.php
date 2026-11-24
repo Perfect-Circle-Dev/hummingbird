@@ -15,6 +15,9 @@ const ORGANIZER_DONE = [
     'member_added'   => 'Member added. Nothing has been emailed to them.',
     'member_saved'   => 'Member saved.',
     'member_deleted' => 'Member deleted.',
+    'member_archived' => 'Archived. They can\'t sign in and will get no emails. Restore brings them back.',
+    'member_restored' => 'Restored. They can sign in again and will get emails.',
+    'login_sent'      => 'A sign-in link has been emailed to them. It works once, any time in the next 7 days.',
     'household_saved' => 'Household renamed.',
     'settings_saved' => 'Settings saved. Open orders and saved lists now use the new amounts.',
 ];
@@ -34,9 +37,10 @@ const ORGANIZER_PROBLEMS = [
     'member_email'     => 'That email address doesn\'t look right.',
     'member_duplicate' => 'Someone with that email address is already a member.',
     'member_household' => 'Choose a household, or type a name for a new one.',
-    'member_self'      => 'You can\'t switch off or delete your own organizer account. Another organizer can do it.',
-    'member_used'      => 'That member has used the site, so they can\'t be deleted. Untick "Active" instead.',
+    'member_self'      => 'You can\'t archive or delete your own organizer account. Another organizer can do it.',
+    'member_used'      => 'That member has used the site, so they can\'t be deleted. Archive them instead.',
     'member_gone'      => 'That member could not be found.',
+    'login_not_sent'   => 'The sign-in link could not be sent. An archived member has to be restored first.',
     'household_name'      => 'Give the household a name.',
     'household_duplicate' => 'Another household already has that name.',
     'settings_discount' => 'Nothing was saved. The discount should be a number from 0 to 100.',
@@ -204,6 +208,7 @@ function organizer_month_fields(?array $cycle): void
     <div>
       <label for="pickup_note">Pickup note (optional)</label>
       <input id="pickup_note" name="pickup_note" type="text" value="<?= e($cycle['pickup_note'] ?? '') ?>" placeholder="Pickup from Wednesday, Dec 16">
+      <p class="note">Members see this with "<?= e(PICKUP_TIME) ?>" added on the end, so there is no need to type the time.</p>
     </div>
     <?php
 }
@@ -248,7 +253,7 @@ function organizer_months(): void
       <div class="card stack">
         <h2><?= e($cycle['label']) ?> <span class="flag"><?= $isOpen ? 'Open for orders' : 'Locked' ?></span></h2>
         <p class="note">
-          Due <?= e(fmt_local($cycle['due_at'])) ?><?= $cycle['pickup_note'] ? ' · ' . e($cycle['pickup_note']) : '' ?>
+          Due <?= e(fmt_local($cycle['due_at'])) ?><?= pickup_text($cycle) !== '' ? ' · ' . e(pickup_text($cycle)) : '' ?>
           <?= $isOpen ? '' : '<br>Locked ' . e(fmt_local($cycle['locked_at'])) ?>
         </p>
         <p>
@@ -512,7 +517,7 @@ function organizer_combined_order(array $cycle): void
     <?php
     // Lets the "for everyone" box tick each household's box as you click it.
     // Saving works the same without it.
-    echo '<script src="/site.js" defer></script>';
+    echo '<script src="' . e(asset('site.js')) . '" defer></script>';
     page_end();
 }
 

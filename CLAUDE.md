@@ -25,7 +25,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - `public/site.js` is three small add-ons, and every page works without it: search as you type;
   on My order, buttons update the page in place (the server still answers with the whole page,
   and the script swaps in the parts with ids `results`, `favorites` and `order-lists`); and the
-  organizer's "out of stock for everyone" box ticking the others.
+  organizer's "out of stock for everyone" box ticking the others. It also remembers whether
+  "My favorites" was left folded away (the folding itself is a plain `<details>`).
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.
@@ -43,7 +44,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   paid (`order_set_paid()`), the pickup email (`pickup_emails_send()`, `venmo_link()`).
 - `src/members.php`: members and households (`member_save()`, `member_delete()`,
   `members_import()`, `household_rename()`) and `settings_save()`.
-- `src/layout.php`: the page frame. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
+- `src/layout.php`: the page frame. Link the stylesheet and script through `asset()`, which adds
+  a version number so browsers fetch a changed file at once. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
   the header and as the tab icon when such a file exists.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
   Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=settings`;
@@ -133,12 +135,14 @@ a little, and wants to be able to follow and lightly edit the code. So:
   people on an unfilled share). Each ends with `group_footer()` and the member's own
   unsubscribe link. Unsubscribing (`members.email_opt_out`) stops only these; emails about a
   member's own order still arrive. Organizers can flip it on the Members page.
-- Two kinds of sign-in link (`check_login_token`): the one requested on the sign-in page works
-  once for 30 minutes; the one in a group email (`login_tokens.cycle_id` set) works as often as
-  needed while that month is open, and again if the month is reopened.
+- Three kinds of sign-in link (`check_login_token`): the one requested on the sign-in page works
+  once for 30 minutes; the one an organizer sends from the Members page works once within 7 days;
+  the one in a group email (`login_tokens.cycle_id` set) works as often as needed while that
+  month is open, and again if the month is reopened.
 - Scheduled jobs all live in `/etc/cron.d/hummingbird-auto`, written by `deploy/setup-auto.sh`.
   The server's clock is UTC, so times there are UTC: catalog refresh 11:15 (3:15 am Pacific in
-  winter), backup 11:45, restart check 15:00, GitHub check every 2 minutes, mail jobs every minute.
+  winter), backup 11:45, end-of-year tidy-up 12:30 (acts only on December 31), restart check 15:00,
+  GitHub check every 2 minutes, mail jobs every minute.
   A change to that schedule needs `sudo bash deploy/setup-auto.sh` run on the server again.
 - Backups (`bin/backup.php`): nightly, gzipped, 30 kept in `data/backups/`, with the newest
   emailed to `admin_email` once a week. Sessions, sign-in links, queued emails and the text of
@@ -147,9 +151,21 @@ a little, and wants to be able to follow and lightly edit the code. So:
   Shopify cart permalink built from variant ids and in-stock quantities.
 - Sign-in is by emailed link only. No passwords. Organizers add members on the Members page,
   one at a time or by pasting a list (name, email, household, phone). Adding sends no email.
-  A member who is not active can't sign in and gets no emails, and is signed out at once; past
-  orders keep their name. Only a member who has never used the site can be deleted. An organizer
-  can't switch off or delete their own account.
+  An archived member (`members.active = 0`) can't sign in and gets no emails, and is signed out
+  at once; past orders keep their name. Each member on the Members page has Edit, Send login and
+  Archive (or Restore) buttons. Only a member who has never used the site can be deleted. An
+  organizer can't archive or delete their own account. Renaming a household is on the member's
+  Edit page.
+- End-of-year tidy-up (`bin/yearly-archive.php`, `yearly_archive_candidates()`): on December 31
+  the site archives members whose household had nothing on any order that year (no order line
+  in a month with a deadline that year, and no claim on a share ordered that year; an unsubmitted
+  line counts). Organizers are never archived by it, nor is anyone added in the last 6 months
+  (`ARCHIVE_GRACE_MONTHS`, so from July on). Each gets a note saying they can come back by
+  emailing Brent, and the organizers are emailed the list. The script runs nightly and acts only
+  on December 31, or January 1 to 7 as a catch-up; `settings.archive_done_year` stops a repeat.
+  `--dry-run` lists who would be archived without changing anything.
+- Pickup is always after 4 pm: `pickup_text()` adds `PICKUP_TIME` to each month's pickup note
+  wherever members see it (order page, emails). Show the note with `pickup_text()`, never raw.
 - Payment happens at pickup by check, Venmo or cash. The organizer marks each household's order
   paid with the method (`orders.paid_at`, `paid_method`) on the report page, for a locked or a
   closed month. Paid or not, nothing is recorded about amounts.

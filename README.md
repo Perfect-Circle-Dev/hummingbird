@@ -72,6 +72,10 @@ After that:
   winter, 4:15 am in summer). Open orders are repriced and old shares expire then.
 - **The database is backed up each night**, half an hour later. The last 30 nights are kept in
   `data/backups/`, and once a week the newest is emailed to `admin_email`. See below.
+- **The member list is tidied on December 31.** Members whose household had nothing on any order
+  that year are archived and sent a note saying they can come back by emailing you. Organizers and
+  anyone added since July are left alone, and you are emailed the list. To see who it would
+  archive, any day: `sudo -u www-data php bin/yearly-archive.php --dry-run`.
 - **You get an email when a restart is needed** (usually a new kernel), with a reminder each
   week until it is done. To restart: `sudo reboot`. The site is offline for about a minute.
 

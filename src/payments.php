@@ -104,7 +104,7 @@ function pickup_emails_send(array $cycle): int
         $due = $h['summary']['due_cents'];
         $link = venmo_link($due, config('site_name') . ' ' . $cycle['label']);
         $body = "Your " . config('site_name') . " order for {$cycle['label']} is ready to pick up.\n\n"
-            . ($cycle['pickup_note'] ? $cycle['pickup_note'] . "\n\n" : '')
+            . (pickup_text($cycle) !== '' ? pickup_text($cycle) . "\n\n" : '')
             . "Amount due: " . money($due) . "\n"
             . "You can pay at pickup by check, Venmo or cash.\n"
             . ($link ? "To pay by Venmo now: $link\n" : '')

@@ -77,6 +77,9 @@ echo "==> Scheduled jobs"
     echo "# winter and 4:15 am in summer."
     echo "15 11 * * * www-data php $APP_DIR/bin/sync-catalog.php >> /var/log/hummingbird-sync.log 2>&1"
     echo "45 11 * * * www-data php $APP_DIR/bin/backup.php >> /var/log/hummingbird-sync.log 2>&1"
+    echo "# Each night, the end-of-year tidy-up of the member list. It does nothing except on"
+    echo "# December 31 (or the first week of January, to catch up if the server was off)."
+    echo "30 12 * * * www-data php $APP_DIR/bin/yearly-archive.php >> /var/log/hummingbird-sync.log 2>&1"
     echo "# Each morning, email the organizer if Debian is waiting for a restart."
     echo "0 15 * * * www-data php $APP_DIR/bin/check-reboot.php >> /var/log/hummingbird-sync.log 2>&1"
     echo "# Every minute: send emails waiting in the queue, and the ones the site sends by"
@@ -96,6 +99,7 @@ else
 fi
 echo "    Queued emails are sent every minute."
 echo "    Each night: catalog refresh at 11:15 UTC, database backup at 11:45 UTC."
+echo "    Each December 31: members with no order that year are archived."
 if systemctl is-active --quiet cron; then
     echo "    cron is running."
 else

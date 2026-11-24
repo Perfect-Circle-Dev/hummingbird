@@ -42,6 +42,10 @@ table { border-collapse: collapse; width: 100%; min-width: 520px; }
 th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
 td { padding: 10px; border-bottom: 1px solid #E6EAE6; font-size: 14px; vertical-align: middle; }
 th.center, td.center { text-align: center; }
+/* Money columns keep a steady width, so a total going from $99.99 to $100.00 doesn't push the row about. */
+.money { min-width: 84px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.money.total { min-width: 104px; }
+td.center { min-width: 146px; }
 .qty { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .qty button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: none; color: var(--green); font-size: 22px; font-weight: 600; line-height: 1; }
 .qty button:hover { background: var(--ground); }
@@ -72,3 +76,12 @@ table.wide { min-width: 760px; }
 input.price { width: 96px; }
 .plain { list-style: none; margin: 0; padding: 0; }
 .plain li + li { margin-top: 6px; }
+.people li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; border-top: 1px solid #E6EAE6; padding-top: 10px; }
+.people li + li { margin-top: 10px; }
+.btn.small { padding: 0 12px; font-size: 14px; }
+/* A card that folds away: the heading is the button, with a chevron at the right. */
+.fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0; color: inherit; list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: ""; flex: none; width: 10px; height: 10px; margin: 0 6px 4px 0; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); }
+.fold[open] > summary { margin-bottom: 12px; }
+.fold[open] > summary::after { margin-bottom: -4px; transform: rotate(-135deg); }
