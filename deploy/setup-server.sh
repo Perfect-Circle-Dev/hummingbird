@@ -18,7 +18,9 @@ OWNER="${SUDO_USER:-root}"
 echo "==> Installing packages"
 apt-get update
 apt-get install -y nginx php-fpm php-cli php-sqlite3 php-curl php-mbstring \
-    composer sqlite3 git unzip certbot python3-certbot-nginx
+    composer sqlite3 git unzip certbot python3-certbot-nginx cron
+# cron runs the nightly jobs. Debian's cloud images no longer include it.
+systemctl enable --now cron
 
 PHP_VER="$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')"
 echo "==> PHP $PHP_VER"
