@@ -53,6 +53,24 @@ function page_order(array $member, bool $isPost): void
         <?php
     };
 
+    $showResults = function () use ($query, $results, $itemRow): void {
+        if ($query === '') {
+            return;
+        }
+        $n = count($results);
+        echo '<p class="note">' . ($n ? $n . ' matching ' . ($n === 1 ? 'item' : 'items')
+            . ($n === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.') . '</p>';
+        foreach ($results as $v) {
+            $itemRow($v);
+        }
+    };
+
+    // Search-as-you-type asks for just the results, not the whole page.
+    if (isset($_GET['partial'])) {
+        $showResults();
+        return;
+    }
+
     page_start('My order');
     if (!$cycle) {
         echo '<div class="card"><h1>My order</h1><p>No order is open right now. You\'ll get an email when the next one opens. You can still set up your favorites below.</p></div>';
@@ -66,18 +84,15 @@ function page_order(array $member, bool $isPost): void
     <div class="columns">
       <div class="card stack">
         <h2>Find an item</h2>
-        <form method="get" action="/" class="row">
+        <form method="get" action="/" class="row" id="search-form">
           <input type="hidden" name="a" value="order">
           <div class="grow">
             <label for="q">Search by name or item number</label>
-            <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129">
+            <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129" autocomplete="off">
           </div>
           <button class="btn" type="submit">Search</button>
         </form>
-        <?php if ($query !== ''): ?>
-          <p class="note"><?= count($results) ? count($results) . ' matching ' . (count($results) === 1 ? 'item' : 'items') . (count($results) === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.' ?></p>
-          <?php foreach ($results as $v) { $itemRow($v); } ?>
-        <?php endif; ?>
+        <div id="results" class="stack" aria-live="polite"><?php $showResults(); ?></div>
       </div>
       <div class="card stack">
         <h2>My favorites</h2>
@@ -152,5 +167,6 @@ function page_order(array $member, bool $isPost): void
         </div>
         <?php
     }
+    echo '<script src="/site.js" defer></script>';
     page_end();
 }
