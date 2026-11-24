@@ -1,11 +1,140 @@
-{"products":[
-{"id":101,"title":"Quick Oats, Grain Millers","handle":"quick-oats","product_type":"Grain","tags":["Grains"],"variants":[
- {"id":1001,"title":"25 lb bag","sku":"G129","price":"35.83","grams":11340,"available":true}]},
-{"id":102,"title":"Honey, Orange Blossom","handle":"honey-orange-blossom","product_type":"Honey","tags":["Honey"],"variants":[
- {"id":1002,"title":"1 lb jar","sku":"B112","price":"16.75","grams":454,"available":true},
- {"id":1003,"title":"45 lb / 4 Gal Bucket","sku":"B235","price":"379.82","grams":20412,"available":true}]},
-{"id":103,"title":"Sample Oil (test item, not a real product)","handle":"sample-oil","product_type":"Organic Food","tags":"Oils","variants":[
- {"id":1004,"title":".5 Gallon glass jug","sku":"TEST-H","price":"40.00","grams":1900,"available":true},
- {"id":1005,"title":"1 Gallon glass jug","sku":"TEST-1","price":"75.00","grams":3800,"available":false},
- {"id":1006,"title":"16 oz bottle","sku":"TEST-16","price":"12.00","grams":500,"available":true}]}
-]}
+{
+ "products": [
+  {
+   "id": 101,
+   "title": "Quick Oats, Grain Millers",
+   "handle": "quick-oats",
+   "product_type": "Grain",
+   "tags": [
+    "Grains"
+   ],
+   "variants": [
+    {
+     "id": 1001,
+     "title": "25 lb bag",
+     "sku": "G129",
+     "price": "35.83",
+     "grams": 11340,
+     "available": true
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "title": "Honey, Orange Blossom",
+   "handle": "honey-orange-blossom",
+   "product_type": "Honey",
+   "tags": [
+    "Honey"
+   ],
+   "variants": [
+    {
+     "id": 1002,
+     "title": "1 lb jar",
+     "sku": "B112",
+     "price": "16.75",
+     "grams": 454,
+     "available": true
+    },
+    {
+     "id": 1003,
+     "title": "45 lb / 4 Gal Bucket",
+     "sku": "B235",
+     "price": "379.82",
+     "grams": 20412,
+     "available": true
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "title": "Sample Oil (test item, not a real product)",
+   "handle": "sample-oil",
+   "product_type": "Organic Food",
+   "tags": "Oils",
+   "variants": [
+    {
+     "id": 1004,
+     "title": "1/2 Gallon glass jar",
+     "sku": "TEST-H",
+     "price": "40.00",
+     "grams": 1900,
+     "available": true
+    },
+    {
+     "id": 1005,
+     "title": "1 Gallon glass jug",
+     "sku": "TEST-1",
+     "price": "75.00",
+     "grams": 3800,
+     "available": false
+    },
+    {
+     "id": 1006,
+     "title": "16 oz bottle",
+     "sku": "TEST-16",
+     "price": "12.00",
+     "grams": 500,
+     "available": true
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "title": "Almonds, Honey Roasted (test item)",
+   "handle": "t1",
+   "product_type": "Organic Food",
+   "tags": [
+    "Nuts"
+   ],
+   "variants": [
+    {
+     "id": 1007,
+     "title": "25 lb case",
+     "sku": "CO131",
+     "price": "300.00",
+     "grams": 11340,
+     "available": true
+    }
+   ]
+  },
+  {
+   "id": 105,
+   "title": "Oats, Rolled (test item)",
+   "handle": "t2",
+   "product_type": "Grain",
+   "tags": [
+    "Grains"
+   ],
+   "variants": [
+    {
+     "id": 1008,
+     "title": "25 lb bag",
+     "sku": "O131",
+     "price": "30.00",
+     "grams": 11340,
+     "available": true
+    }
+   ]
+  },
+  {
+   "id": 106,
+   "title": "Granola, Buckwheat Honey (test item)",
+   "handle": "t3",
+   "product_type": "Organic Food",
+   "tags": [
+    "Granola"
+   ],
+   "variants": [
+    {
+     "id": 1009,
+     "title": "10 lb bag",
+     "sku": "GR10",
+     "price": "60.00",
+     "grams": 4536,
+     "available": true
+    }
+   ]
+  }
+ ]
+}

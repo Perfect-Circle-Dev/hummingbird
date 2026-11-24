@@ -30,24 +30,38 @@ function variant_deposit_cents(array $variant): int
     return (int) ($variant['deposit_override_cents'] ?? $variant['deposit_cents']);
 }
 
-/** Search the catalog by words from the name, size or item number. Every word must match. */
+/**
+ * Search the catalog by words from the name, size or item number. Every word must match.
+ * Best matches come first: an exact item number, then item numbers and names that
+ * start with what was typed, then names with a word that starts with it, then the rest.
+ */
 function search_catalog(string $query, int $limit = 30): array
 {
-    $words = preg_split('/\s+/', trim($query), -1, PREG_SPLIT_NO_EMPTY);
+    $query = trim($query);
+    $words = preg_split('/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY);
     if (!$words) {
         return [];
     }
+    $esc = fn(string $text): string => addcslashes($text, '%_\\');
     $where = [];
-    $params = [];
+    $whereParams = [];
     foreach ($words as $word) {
         $where[] = "(p.title LIKE ? ESCAPE '\\' OR v.title LIKE ? ESCAPE '\\' OR v.sku LIKE ? ESCAPE '\\')";
-        $like = '%' . addcslashes($word, '%_\\') . '%';
-        array_push($params, $like, $like, $like);
+        $like = '%' . $esc($word) . '%';
+        array_push($whereParams, $like, $like, $like);
     }
-    $params[] = $limit;
-    return q('SELECT v.*, p.title AS product_title FROM variants v JOIN products p ON p.id = v.product_id
-              WHERE v.active = 1 AND ' . implode(' AND ', $where) . '
-              ORDER BY p.title, v.list_price_cents LIMIT ?', $params)->fetchAll();
+    $first = $esc($words[0]);
+    $rankParams = [$query, $esc($query) . '%', $first . '%', '% ' . $first . '%'];
+    return q("SELECT v.*, p.title AS product_title,
+                     CASE WHEN v.sku = ? COLLATE NOCASE THEN 0
+                          WHEN v.sku LIKE ? ESCAPE '\\' THEN 1
+                          WHEN p.title LIKE ? ESCAPE '\\' THEN 2
+                          WHEN p.title LIKE ? ESCAPE '\\' THEN 3
+                          ELSE 4 END AS match_rank
+              FROM variants v JOIN products p ON p.id = v.product_id
+              WHERE v.active = 1 AND " . implode(' AND ', $where) . "
+              ORDER BY match_rank, p.title, v.list_price_cents LIMIT ?",
+        array_merge($rankParams, $whereParams, [$limit]))->fetchAll();
 }
 
 function favorites_for(int $memberId): array

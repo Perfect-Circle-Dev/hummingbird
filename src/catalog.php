@@ -2,13 +2,29 @@
 // Copies Hummingbird's public catalog into our database.
 declare(strict_types=1);
 
-/** "25 lb bag" -> [25.0, 'lb'];  "45 lb / 4 Gal Bucket" -> [45.0, 'lb'];  no size found -> [null, null] */
+// A number as Hummingbird writes sizes: 25, 2.5, .5, 1/2, 1 1/2, ½ or "half".
+const SIZE_NUMBER = '(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.\d+|\d+|½|half)';
+
+/** "1/2" -> 0.5, "1 1/2" -> 1.5, "½" or "half" -> 0.5, "2.5" -> 2.5 */
+function size_number(string $raw): float
+{
+    $raw = strtolower(trim($raw));
+    if ($raw === '½' || $raw === 'half') {
+        return 0.5;
+    }
+    if (preg_match('/^(?:(\d+)\s+)?(\d+)\/(\d+)$/', $raw, $m)) {
+        return (float) ($m[1] !== '' ? $m[1] : 0) + ((int) $m[3] ? $m[2] / $m[3] : 0);
+    }
+    return (float) $raw;
+}
+
+/** "25 lb bag" -> [25.0, 'lb'];  "1/2 Gallon jar" -> [0.5, 'gal'];  no size found -> [null, null] */
 function parse_size(string $title): array
 {
-    if (preg_match('/(\d*\.\d+|\d+)\s*(lbs?\b|gal(?:lons?)?\b|oz\b|#)/i', $title, $m)) {
+    if (preg_match('/' . SIZE_NUMBER . '[\s-]*(lbs?\b|pounds?\b|gal(?:lons?)?\b|oz\b|#)/iu', $title, $m)) {
         $unit = strtolower($m[2]);
         $unit = str_starts_with($unit, 'gal') ? 'gal' : ($unit === 'oz' ? 'oz' : 'lb');
-        return [(float) $m[1], $unit];
+        return [size_number($m[1]), $unit];
     }
     return [null, null];
 }
@@ -16,10 +32,10 @@ function parse_size(string $title): array
 /** Container deposit, from the gallons mentioned in the size: half gallon, or one gallon and up. */
 function deposit_for(string $title): int
 {
-    if (!preg_match('/(\d*\.\d+|\d+)\s*gal/i', $title, $m)) {
+    if (!preg_match('/' . SIZE_NUMBER . '[\s-]*gal/iu', $title, $m)) {
         return 0;
     }
-    $gallons = (float) $m[1];
+    $gallons = size_number($m[1]);
     if ($gallons >= 1) {
         return (int) setting('deposit_gallon_plus_cents', '300');
     }
