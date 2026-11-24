@@ -17,7 +17,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 | Member price | List price less the group discount (30% assumed until confirmed) |
 | Deposits | $1.50 for a half-gallon glass jug; $3.00 for one gallon and larger. Added to regular orders only, not to shares |
 | Shares | Claimed by weight or volume, any amount. Names and amounts visible to all members. Unfilled shares stay listed and expire after 3 months |
-| Deadline | Members see Monday 7 pm. Nothing closes until the organizer locks the order (about 11 am Tuesday) |
+| Deadline | Members see Monday 7 pm. Nothing closes until the organizer locks the order (about 11 am Tuesday). A lock can be undone with Reopen |
+| Next month | Members can save items for next month at any time. When that month opens, the saved items are already on their order, and they still submit it |
 | Payment | At pickup by check, Venmo or cash; organizer marks each order paid |
 
 ## Monthly flow
@@ -44,8 +45,10 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Order page: search, favorites, quantities, submit, confirmation email
 - [x] Share board: start, claim, change, cancel; filled shares show on household totals
 - [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists
-- [ ] Organizer: months (open, lock, close), combined order, unfinished flags
-- [ ] At lock: fix prices, move filled shares onto the order, and settle the odd cent when a share's parts don't add up exactly
+- [x] Organizer: months (open, change, lock, close), combined order, unfinished flags
+- [x] At lock: fix prices, move filled shares onto the order, and settle the odd cent when a share's parts don't add up exactly (it goes to whoever started the share)
+- [x] Reopen a locked month
+- [x] "Save for next month" list, always available to members
 - [ ] Organizer: out-of-stock and price edits, with update emails
 - [ ] Organizer: split sheets, final report (saved and emailed), paid tracking
 - [ ] Organizer: members and households, settings (discount, deposits)

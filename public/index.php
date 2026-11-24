@@ -8,9 +8,11 @@ require dirname(__DIR__) . '/src/auth.php';
 require dirname(__DIR__) . '/src/catalog.php';
 require dirname(__DIR__) . '/src/orders.php';
 require dirname(__DIR__) . '/src/shares.php';
+require dirname(__DIR__) . '/src/organizer.php';
 require dirname(__DIR__) . '/src/layout.php';
 require dirname(__DIR__) . '/src/pages/order.php';
 require dirname(__DIR__) . '/src/pages/shares.php';
+require dirname(__DIR__) . '/src/pages/organizer.php';
 
 $action = (string) ($_GET['a'] ?? 'home');
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
@@ -97,6 +99,20 @@ if ($action === 'shares') {
     page_shares($member, $isPost);
     exit;
 }
+if ($action === 'organizer') {
+    // Organizer pages are for members marked is_admin. Everyone else is turned away
+    // here, before any organizer code runs.
+    if (!$member['is_admin']) {
+        http_response_code(403);
+        page_start('Organizers only');
+        echo '<div class="card narrow stack"><h1>Organizers only</h1>'
+            . '<p>This page is for the people who run the order.</p><p><a href="/">Back to home</a></p></div>';
+        page_end();
+        exit;
+    }
+    page_organizer($member, $isPost);
+    exit;
+}
 
 // Home
 $cycle = current_cycle();
@@ -105,11 +121,11 @@ page_start('Home');
 <div class="card stack">
   <h1>Hello, <?= e($member['name']) ?></h1>
   <?php if (!$cycle): ?>
-    <p>No order is open right now. You'll get an email when the next one opens.</p>
+    <p>No order is open right now. You'll get an email when the next one opens. You can save items for it any time from My order.</p>
   <?php elseif ($cycle['status'] === 'open'): ?>
     <p>The <strong><?= e($cycle['label']) ?></strong> order is open. Orders are due <?= e(fmt_local($cycle['due_at'])) ?>.</p>
   <?php else: ?>
-    <p>The <strong><?= e($cycle['label']) ?></strong> order is locked and being placed.</p>
+    <p>The <strong><?= e($cycle['label']) ?></strong> order is locked and being placed. Anything you add now is saved for next month.</p>
   <?php endif; ?>
   <p class="row">
     <a class="btn" href="/?a=order">My order</a>

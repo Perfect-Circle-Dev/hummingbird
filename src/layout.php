@@ -24,6 +24,7 @@ function page_start(string $title): void
   <nav class="nav" aria-label="Main">
     <a href="/?a=order">My order</a>
     <a href="/?a=shares">Share board</a>
+    <?php if ($member['is_admin']): ?><a href="/?a=organizer">Organizer</a><?php endif; ?>
   </nav>
   <form method="post" action="/?a=logout" class="who">
     <span><?= e($member['name']) ?></span>

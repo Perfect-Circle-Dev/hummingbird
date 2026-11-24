@@ -9,6 +9,25 @@ function current_cycle(): ?array
     return $row ?: null;
 }
 
+/**
+ * The standing "next month" list. It has no name or deadline yet: members can save
+ * items on it at any time, and when the organizer opens a month this is the row that
+ * becomes that month, so the saved items are already on each household's order.
+ * There is always exactly one; it is created here the first time it is needed.
+ */
+function next_cycle(): array
+{
+    $find = fn() => q("SELECT * FROM cycles WHERE status = 'next' ORDER BY id LIMIT 1")->fetch();
+    $row = $find();
+    if (!$row) {
+        // The name and deadline are placeholders (the columns can't be left empty).
+        // OR IGNORE: if two people load a page at the same moment, only one row is made.
+        q("INSERT OR IGNORE INTO cycles (label, due_at, status) VALUES ('Next month', '', 'next')");
+        $row = $find();
+    }
+    return $row;
+}
+
 /** "2026-12-15 03:00:00" (UTC, as stored) -> "Monday, December 14 at 7:00 pm" in the site's timezone. */
 function fmt_local(string $utc, string $format = 'l, F j \a\t g:i a'): string
 {
@@ -89,7 +108,7 @@ function household_order(int $cycleId, int $householdId): array
 
 function order_lines(int $orderId): array
 {
-    return q('SELECT l.*, v.sku, v.title AS size, p.title AS product_title
+    return q('SELECT l.*, v.sku, v.title AS size, v.active AS still_listed, p.title AS product_title
               FROM order_lines l JOIN variants v ON v.id = l.variant_id JOIN products p ON p.id = v.product_id
               WHERE l.order_id = ? ORDER BY p.title, v.title', [$orderId])->fetchAll();
 }
@@ -128,20 +147,18 @@ function order_set_qty(array $order, int $lineId, int $qty): void
 }
 
 /**
- * While a month is open, order lines follow the catalog's current prices.
- * Called after each catalog refresh; locking the month freezes them.
+ * While a month is open, order lines follow the catalog's current prices, and so do
+ * items saved for next month. Called after each catalog refresh; locking a month
+ * freezes its prices, because locked and closed months are left alone here.
  */
 function refresh_open_order_prices(): int
 {
-    $cycle = current_cycle();
-    if (!$cycle || $cycle['status'] !== 'open') {
-        return 0;
-    }
     $changed = 0;
-    $lines = q('SELECT l.id, l.unit_price_cents, l.deposit_cents, v.list_price_cents, v.deposit_cents AS v_dep,
+    $lines = q("SELECT l.id, l.unit_price_cents, l.deposit_cents, v.list_price_cents, v.deposit_cents AS v_dep,
                        v.deposit_override_cents
-                FROM order_lines l JOIN orders o ON o.id = l.order_id JOIN variants v ON v.id = l.variant_id
-                WHERE o.cycle_id = ?', [$cycle['id']])->fetchAll();
+                FROM order_lines l JOIN orders o ON o.id = l.order_id JOIN cycles c ON c.id = o.cycle_id
+                JOIN variants v ON v.id = l.variant_id
+                WHERE c.status IN ('open', 'next')")->fetchAll();
     foreach ($lines as $l) {
         $price = member_price_cents((int) $l['list_price_cents']);
         $deposit = (int) ($l['deposit_override_cents'] ?? $l['v_dep']);

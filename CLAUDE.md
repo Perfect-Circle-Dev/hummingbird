@@ -21,14 +21,17 @@ a little, and wants to be able to follow and lightly edit the code. So:
 ## How the code is laid out
 
 - `public/index.php` is the only entry point. `?a=` picks the page: `login`, `verify`,
-  `logout`, `order`, `shares`, default home. `public/site.css`, `public/site.js`.
+  `logout`, `order`, `shares`, `organizer` (admins only), default home. `public/site.css`, `public/site.js`.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()`; every message is written to `email_log`.
 - `src/catalog.php`: sync from Hummingbird's product feed, size and deposit rules, member price.
 - `src/orders.php`: months ("cycles"), household orders, search, favorites, totals, submit email.
-- `src/shares.php`: share board logic.
-- `src/pages/*.php`: one function per page (`page_order`, `page_shares`).
+- `src/shares.php`: share board logic, `shares_on_order()`, `share_split_cents()`.
+- `src/organizer.php`: open, change, lock and close a month (`cycle_open`, `cycle_update`,
+  `cycle_lock`, `cycle_reopen`, `cycle_close`), `combined_order()`, `unfinished_orders()`.
+- `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
+  `/?a=organizer` is the months page; `/?a=organizer&month=ID` is that month's combined order.
 - `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`).
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
@@ -60,6 +63,18 @@ a little, and wants to be able to follow and lightly edit the code. So:
   members. A member can change or cancel their own claim while the share is `open`.
   A fully claimed share goes on the next order. Unfilled shares stay listed and expire
   after 3 months. A share that fills after a month is locked waits for the next month.
+  A full share's parts always add up to its price: each part is rounded to the cent and any
+  odd cent goes to whoever started the share (the earliest claim, if the starter has
+  cancelled theirs). Parts are saved in
+  `share_claims.cost_cents` at lock.
+- Only one month at a time is open or locked. Beside it there is always a "next month" list
+  (a `cycles` row with status `next`, placeholder name, empty `due_at`; see `next_cycle()`).
+  Members can save items on it at any time, including while the current month is open or
+  locked. Opening a month turns that row into the month, so saved items are already on each
+  household's order as `draft`; the member still has to submit. Never show `due_at` for it.
+- A locked month can be reopened (`cycle_reopen`): members can change orders again, prices
+  follow the catalog again, and its shares go back to the board fully claimed. Closing can't
+  be undone. Lock, reopen and close each need a ticked box.
 - Deadline is soft: members see Monday 7 pm, but nothing closes until the organizer locks
   the month, around 11 am Tuesday. Late orders on Tuesday morning are welcome.
 - Several logins can share one household order.
@@ -68,11 +83,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 ## What to build next: organizer pages (members with `is_admin = 1`)
 
-1. Months: open a month (label, deadline, pickup note), lock it, close it.
-2. Combined order for Hummingbird, grouped by item number, with who ordered each. Orders
-   still in `draft` are included but flagged "unfinished" so Brent can text the person.
-3. At lock: fix prices on all lines; mark fully claimed shares `ordered` with `cycle_id` and
-   `price_cents`; settle the odd cent when a share's rounded parts don't add up to the price.
+Items 1 to 3 are built (months, combined order with unfinished flags, the lock step).
+Numbering is kept so older notes still match.
+
 4. After placing the order: per line and per share, an "out of stock" checkbox and an
    editable price. Saving emails an update to each household affected (for a share, everyone on it).
 5. Final report: every ordering household with its full list, prices, deposits, share parts

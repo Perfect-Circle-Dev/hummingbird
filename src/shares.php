@@ -17,7 +17,7 @@ function fmt_amount(float $n): string
 function board_shares(?int $cycleId): array
 {
     $shares = q("SELECT s.*, v.sku, v.title AS size, v.size_amount, v.size_unit, v.list_price_cents,
-                        p.title AS product_title, m.name AS started_by_name
+                        v.available, v.active, p.title AS product_title, m.name AS started_by_name
                  FROM shares s JOIN variants v ON v.id = s.variant_id JOIN products p ON p.id = v.product_id
                  JOIN members m ON m.id = s.started_by
                  WHERE s.status = 'open' OR (s.status = 'ordered' AND s.cycle_id IS ?)
@@ -47,16 +47,55 @@ function share_with_claims(array $s): array
     $claimed = 0.0;
     foreach ($claims as &$c) {
         $c['amount'] = (float) $c['amount'];
-        $c['cost_cents'] = (int) round($s['price_cents'] * $c['amount'] / $total);
         $claimed += $c['amount'];
     }
     unset($c);
-    $s['claims'] = $claims;
     $s['claimed'] = $claimed;
     $s['left'] = max(0.0, $total - $claimed);
     $s['full'] = $s['left'] < SHARE_EPSILON;
     $s['per_unit_cents'] = (int) round($s['price_cents'] / $total);
+
+    // What each person pays. Once the share is ordered the parts are saved on the claims
+    // and no longer move. Before that: a full share is split so the parts add up to the
+    // price exactly, and a share still filling just shows each part rounded to the cent.
+    $split = null;
+    if ($s['full']) {
+        // Any odd cent goes to whoever started the share. If they have since cancelled
+        // their own claim, it goes to the earliest claim instead.
+        $starter = array_search((int) $s['started_by'], array_map('intval', array_column($claims, 'member_id')), true);
+        $split = share_split_cents($s['price_cents'], $total, array_column($claims, 'amount'), $starter === false ? 0 : $starter);
+    }
+    foreach ($claims as $i => &$c) {
+        $saved = $c['cost_cents'] ?? null;
+        if ($saved !== null) {
+            $c['cost_cents'] = (int) $saved;
+        } elseif ($split) {
+            $c['cost_cents'] = $split[$i];
+        } else {
+            $c['cost_cents'] = (int) round($s['price_cents'] * $c['amount'] / $total);
+        }
+    }
+    unset($c);
+    $s['claims'] = $claims;
     return $s;
+}
+
+/**
+ * Splits a price between claims in proportion to their amounts, in whole cents.
+ * Rounding each part can leave the parts a cent or two off the price (three equal
+ * parts of $10.00 come to $9.99), so the difference goes on one claim: the one at
+ * position $oddCentTo in the list (the caller passes the share starter's claim).
+ */
+function share_split_cents(int $priceCents, float $total, array $amounts, int $oddCentTo = 0): array
+{
+    $parts = [];
+    foreach ($amounts as $i => $amount) {
+        $parts[$i] = (int) round($priceCents * $amount / $total);
+    }
+    if (isset($parts[$oddCentTo])) {
+        $parts[$oddCentTo] += $priceCents - array_sum($parts);
+    }
+    return $parts;
 }
 
 /** Starts a share of an item, with the starter's own amount. Returns the new share id, or null. */
@@ -122,14 +161,24 @@ function expire_shares(): int
 }
 
 /**
- * A household's parts of shares that count toward a month: shares that are fully
- * claimed and still open (they will be ordered), or already ordered in that month.
+ * The shares that are part of a month's order. While the month is open, that is every
+ * fully claimed share (they will be ordered when it locks). Once it is locked, only the
+ * shares that were moved onto it: one that fills later waits for the next month.
  */
+function shares_on_order(int $cycleId): array
+{
+    $status = q('SELECT status FROM cycles WHERE id = ?', [$cycleId])->fetchColumn();
+    $wanted = $status === 'open' ? 'open' : 'ordered';
+    return array_values(array_filter(board_shares($cycleId),
+        fn(array $s): bool => $s['full'] && $s['status'] === $wanted));
+}
+
+/** A household's parts of the shares on a month's order (see shares_on_order). */
 function household_share_portions(int $householdId, int $cycleId): array
 {
     $portions = [];
-    foreach (board_shares($cycleId) as $s) {
-        if (!$s['full'] || $s['out_of_stock']) {
+    foreach (shares_on_order($cycleId) as $s) {
+        if ($s['out_of_stock']) {
             continue;
         }
         foreach ($s['claims'] as $c) {

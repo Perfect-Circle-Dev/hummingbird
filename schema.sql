@@ -70,13 +70,15 @@ CREATE TABLE IF NOT EXISTS variants (
 );
 CREATE INDEX IF NOT EXISTS variants_sku ON variants(sku);
 
--- One row per monthly order.
+-- One row per monthly order. There is also always one row with status 'next': the
+-- standing "next month" list members can save items on. It has a placeholder name and
+-- an empty deadline until the organizer opens it, when it becomes that month.
 CREATE TABLE IF NOT EXISTS cycles (
     id INTEGER PRIMARY KEY,
     label TEXT NOT NULL UNIQUE,          -- e.g. "December 2026"
     due_at TEXT NOT NULL,                -- deadline shown to members (soft)
     pickup_note TEXT,
-    status TEXT NOT NULL DEFAULT 'open', -- open, locked, closed
+    status TEXT NOT NULL DEFAULT 'open', -- next, open, locked, closed
     locked_at TEXT,
     closed_at TEXT
 );
@@ -124,6 +126,7 @@ CREATE TABLE IF NOT EXISTS share_claims (
     share_id INTEGER NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
     member_id INTEGER NOT NULL REFERENCES members(id),
     amount REAL NOT NULL,                -- in the variant's unit (lb or gal)
+    cost_cents INTEGER,                  -- this person's part of the price, saved when the month is locked
     UNIQUE (share_id, member_id)
 );
 
