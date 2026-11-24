@@ -105,6 +105,8 @@ function organizer_member_fields(?array $m, array $households): void
     <label class="check"><input type="checkbox" name="is_admin" value="1" <?= !empty($m['is_admin']) ? 'checked' : '' ?>> Organizer (can see these pages and gets the reports)</label>
     <?php if ($m): ?>
       <label class="check"><input type="checkbox" name="active" value="1" <?= $m['active'] ? 'checked' : '' ?>> Active (can sign in and gets emails)</label>
+      <input type="hidden" name="has_group_box" value="1">
+      <label class="check"><input type="checkbox" name="group_emails" value="1" <?= $m['email_opt_out'] ? '' : 'checked' ?>> Gets group emails (time to order, last call, share reminders)</label>
     <?php endif; ?>
     <?php
 }
@@ -195,6 +197,7 @@ function organizer_members(array $member): void
               <strong><?= e($m['name']) ?></strong>
               <?= $m['is_admin'] ? ' <span class="flag">organizer</span>' : '' ?>
               <?= $m['active'] ? '' : ' <span class="flag">not active</span>' ?>
+              <?= $m['active'] && $m['email_opt_out'] ? ' <span class="flag">no group emails</span>' : '' ?>
               <div class="note"><?= e($m['email']) ?><?= $m['phone'] ? ' · ' . e($m['phone']) : '' ?></div>
               <a class="tap" href="/?a=organizer&amp;view=members&amp;edit=<?= (int) $m['id'] ?>" aria-label="Edit <?= e($m['name']) ?>">Edit</a>
             </li>
@@ -255,6 +258,11 @@ function organizer_settings(): void
           <label for="venmo_handle">Your Venmo name, without the @ (for the pay link in pickup emails)</label>
           <input id="venmo_handle" name="venmo_handle" type="text" value="<?= e(venmo_handle()) ?>" autocomplete="off">
         </div>
+        <div>
+          <label for="email_daily_cap">Most emails the site may send in 24 hours (Resend's free plan allows 100)</label>
+          <input id="email_daily_cap" name="email_daily_cap" type="number" min="1" value="<?= e((string) setting('email_daily_cap', '90')) ?>" required>
+        </div>
+        <p class="note">Group emails wait their turn when the limit is reached and go out the next day. Sign-in links and order confirmations are always sent at once, which is why the limit sits a little under 100.</p>
         <p class="note">A new discount or deposit takes effect straight away on open orders and on items saved for next month. Locked and closed months keep the prices they had. A new share expiry applies to shares started from now on.</p>
         <div><button class="btn" name="do" value="settings_save">Save settings</button></div>
       </form>
@@ -263,7 +271,7 @@ function organizer_settings(): void
       <h2>Good to know</h2>
       <ul class="plain">
         <li>Catalog last refreshed from Hummingbird: <?= $synced ? e(fmt_local($synced)) : 'not yet' ?>.</li>
-        <li>Emails sent in the last 24 hours: <?= emails_last_24h() ?>. Resend's free plan allows 100 a day.</li>
+        <li>Emails sent in the last 24 hours: <?= emails_last_24h() ?>. Waiting to go out: <?= queue_waiting()['count'] ?>.</li>
       </ul>
     </div>
     <?php

@@ -72,11 +72,23 @@ echo "==> Scheduled jobs"
     fi
     echo "# Each morning, email the organizer if Debian is waiting for a restart."
     echo "0 15 * * * www-data php $APP_DIR/bin/check-reboot.php >> /var/log/hummingbird-sync.log 2>&1"
+    echo "# Every minute: send emails waiting in the queue, and the ones the site sends by"
+    echo "# itself (last call before a deadline, share-expiry warnings)."
+    echo "* * * * * www-data php $APP_DIR/bin/mail-jobs.php >> /var/log/hummingbird-sync.log 2>&1"
 } > /etc/cron.d/hummingbird-auto
+touch /var/log/hummingbird-sync.log
+chown www-data /var/log/hummingbird-sync.log
 if [ "$CHECK_EVERY_MINUTES" -gt 0 ]; then
     echo "    The server looks at GitHub every $CHECK_EVERY_MINUTES minutes."
 else
     echo "    Automatic checks are off. Update with the Gitupdate command."
+fi
+echo "    Queued emails are sent every minute."
+if systemctl is-active --quiet cron; then
+    echo "    cron is running."
+else
+    echo "    PROBLEM: cron is not running, so none of the scheduled jobs will happen."
+    READY=0
 fi
 
 echo "==> The Gitupdate command"
@@ -89,15 +101,6 @@ exec bash $APP_DIR/deploy/gitupdate.sh "\$@"
 CMD
 chmod 755 /usr/local/bin/Gitupdate
 ln -sf Gitupdate /usr/local/bin/gitupdate
-
-touch /var/log/hummingbird-sync.log
-chown www-data /var/log/hummingbird-sync.log
-if systemctl is-active --quiet cron; then
-    echo "    cron is running."
-else
-    echo "    PROBLEM: cron is not running, so none of the scheduled jobs will happen."
-    READY=0
-fi
 
 echo "==> Test email"
 if echo "This is a test from deploy/setup-auto.sh. Notices about failed updates and pending restarts will come to this address." \

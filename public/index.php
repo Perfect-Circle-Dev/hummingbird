@@ -11,11 +11,13 @@ require dirname(__DIR__) . '/src/shares.php';
 require dirname(__DIR__) . '/src/organizer.php';
 require dirname(__DIR__) . '/src/payments.php';
 require dirname(__DIR__) . '/src/members.php';
+require dirname(__DIR__) . '/src/mailings.php';
 require dirname(__DIR__) . '/src/layout.php';
 require dirname(__DIR__) . '/src/pages/order.php';
 require dirname(__DIR__) . '/src/pages/shares.php';
 require dirname(__DIR__) . '/src/pages/organizer.php';
 require dirname(__DIR__) . '/src/pages/organizer_people.php';
+require dirname(__DIR__) . '/src/pages/unsubscribe.php';
 
 $action = (string) ($_GET['a'] ?? 'home');
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
@@ -77,6 +79,12 @@ if ($action === 'verify') {
     </div>
     <?php
     page_end();
+    exit;
+}
+
+if ($action === 'unsubscribe') {
+    // Reached from the link at the bottom of group emails; no sign-in needed.
+    page_unsubscribe($isPost);
     exit;
 }
 

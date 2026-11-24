@@ -111,17 +111,10 @@ function pickup_emails_send(array $cycle): int
             . "\nYour order:\n\n"
             . order_text($h['summary'], 'Total due at pickup') . "\n"
             . "You can see it any time at " . config('base_url') . "/?a=order\n";
-        email_household((int) $h['id'], config('site_name') . " pickup for {$cycle['label']}: " . money($due) . " due", $body);
+        email_household((int) $h['id'], config('site_name') . " pickup for {$cycle['label']}: " . money($due) . " due", $body, true);
     }
     q('UPDATE cycles SET pickup_emailed_at = ? WHERE id = ?', [now_utc(), $cycle['id']]);
     return count($households);
-}
-
-/** How many emails the site has sent in the last 24 hours. Resend's free plan allows 100 a day. */
-function emails_last_24h(): int
-{
-    return (int) q("SELECT COUNT(*) FROM email_log WHERE status IN ('sent', 'logged') AND created_at > ?",
-        [now_utc(-86400)])->fetchColumn();
 }
 
 /** How many people a list of households (from month_report) has to email. */

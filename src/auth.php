@@ -29,10 +29,17 @@ function send_login_link(string $email): void
     send_email($member['email'], 'Your ' . config('site_name') . ' sign-in link', $body);
 }
 
-/** Is this sign-in token still good? Returns the member id, or null. */
+/**
+ * Is this sign-in token still good? Returns the member id, or null.
+ * There are two kinds of link. The usual one, asked for on the sign-in page, works once
+ * and for a short time. The one in a "time to order" email (it has a cycle_id) works as
+ * often as needed, on any device, for as long as that month is open.
+ */
 function check_login_token(string $token): ?int
 {
-    $row = q('SELECT member_id FROM login_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?',
+    $row = q("SELECT t.member_id FROM login_tokens t LEFT JOIN cycles c ON c.id = t.cycle_id
+              WHERE t.token_hash = ? AND t.expires_at > ?
+                AND ((t.cycle_id IS NULL AND t.used_at IS NULL) OR c.status = 'open')",
         [token_hash($token), now_utc()])->fetch();
     return $row ? (int) $row['member_id'] : null;
 }
@@ -44,7 +51,8 @@ function complete_login(string $token): bool
     if ($memberId === null) {
         return false;
     }
-    q('UPDATE login_tokens SET used_at = ? WHERE token_hash = ?', [now_utc(), token_hash($token)]);
+    // A one-time link is used up here. A month's link (cycle_id set) is left to work again.
+    q('UPDATE login_tokens SET used_at = ? WHERE token_hash = ? AND cycle_id IS NULL', [now_utc(), token_hash($token)]);
 
     $session = bin2hex(random_bytes(32));
     $seconds = (int) config('session_days') * 86400;

@@ -296,12 +296,20 @@ function order_text(array $summary, string $totalLabel, string $sharesLabel = 'Y
         . "\n$totalLabel: " . money($summary['due_cents']) . "\n";
 }
 
-/** Sends one email to every active member of a household. Returns how many were sent. */
-function email_household(int $householdId, string $subject, string $body): int
+/**
+ * Emails every active member of a household. Returns how many people that is.
+ * With $queued the emails wait in the queue and go out within a few minutes; use that
+ * whenever many households are being emailed at once (see queue_email).
+ */
+function email_household(int $householdId, string $subject, string $body, bool $queued = false): int
 {
     $members = q('SELECT email FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchAll();
     foreach ($members as $m) {
-        send_email($m['email'], $subject, $body);
+        if ($queued) {
+            queue_email($m['email'], $subject, $body);
+        } else {
+            send_email($m['email'], $subject, $body);
+        }
     }
     return count($members);
 }

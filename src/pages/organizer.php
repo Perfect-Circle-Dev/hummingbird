@@ -6,7 +6,8 @@ declare(strict_types=1);
 // Sentences shown after a button is pressed. The address carries only the short
 // word on the left, so nobody can make the page show text of their own.
 const ORGANIZER_DONE = [
-    'opened' => 'The month is open and members can order. The "time to order" email is not sent from here yet.',
+    'opened' => 'The month is open and members can order. When you are ready, send the "time to order" email from the box below.',
+    'order_emailed' => 'The "time to order" email is on its way. Emails go out a few at a time over the next few minutes.',
     'saved'  => 'Saved.',
     'locked' => 'The month is locked. Prices are fixed and every fully claimed share is on the order. The report has been emailed to the organizers.',
     'reopened' => 'The month is open again. Members can change their orders, and prices follow the catalog until you lock it.',
@@ -28,6 +29,7 @@ const ORGANIZER_PROBLEMS = [
     'closed'     => 'A closed month can\'t be changed.',
     'price'      => 'A price could not be read and was left as it was. Type it like 25.08.',
     'not_payable' => 'Payments can be recorded once the month is locked.',
+    'not_open_email' => 'The "time to order" email can only be sent while a month is open.',
     'member_name'      => 'Give the member a name.',
     'member_email'     => 'That email address doesn\'t look right.',
     'member_duplicate' => 'Someone with that email address is already a member.',
@@ -40,6 +42,7 @@ const ORGANIZER_PROBLEMS = [
     'settings_discount' => 'Nothing was saved. The discount should be a number from 0 to 100.',
     'settings_deposit'  => 'Nothing was saved. Type each deposit as an amount, like 1.50.',
     'settings_months'   => 'Nothing was saved. The number of months should be from 1 to 24.',
+    'settings_cap'      => 'Nothing was saved. The email limit should be a whole number, 1 or more.',
 ];
 
 function page_organizer(array $member, bool $isPost): void
@@ -75,6 +78,19 @@ function page_organizer(array $member, bool $isPost): void
                 redirect('/?a=organizer&month=' . $cycleId . '&view=report&problem=unsure');
             }
             redirect('/?a=organizer&month=' . $cycleId . '&view=report&pickup=' . pickup_emails_send($cycle));
+        }
+
+        if ($do === 'time_to_order') {
+            $cycle = find_cycle($cycleId);
+            if (!$cycle || $cycle['status'] !== 'open') {
+                redirect('/?a=organizer&problem=not_open_email');
+            }
+            // Sending it a second time needs the box ticked, so a double tap can't email everyone twice.
+            if ($cycle['order_emailed_at'] && !$sure) {
+                redirect('/?a=organizer&problem=unsure');
+            }
+            time_to_order_queue($cycle, (string) ($_POST['note'] ?? ''));
+            redirect('/?a=organizer&done=order_emailed');
         }
 
         if ($do === 'stock') {
@@ -209,6 +225,7 @@ function organizer_months(): void
     if ($problem) {
         echo '<p class="notice warn" role="alert">' . e($problem) . '</p>';
     }
+    organizer_queue_notice();
 
     if (!$cycle):
         $saved = saved_for_next_count(); ?>
@@ -248,6 +265,7 @@ function organizer_months(): void
         </p>
 
         <?php if ($isOpen): ?>
+        <?php organizer_month_emails($cycle); ?>
         <form method="post" action="/?a=organizer" class="stack step">
           <?= csrf_field() ?>
           <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
@@ -517,7 +535,7 @@ function organizer_report(array $cycle): void
       <p class="notice" role="status">The report has been emailed to <?= (int) $_GET['sent'] ?> <?= (int) $_GET['sent'] === 1 ? 'organizer' : 'organizers' ?>.</p>
     <?php endif; ?>
     <?php if (isset($_GET['pickup'])): ?>
-      <p class="notice" role="status">Pickup emails went to <?= (int) $_GET['pickup'] ?> <?= (int) $_GET['pickup'] === 1 ? 'household' : 'households' ?>.</p>
+      <p class="notice" role="status">Pickup emails are on their way to <?= (int) $_GET['pickup'] ?> <?= (int) $_GET['pickup'] === 1 ? 'household' : 'households' ?>. They go out a few at a time over the next few minutes.</p>
     <?php endif; ?>
     <?php if ($problem): ?><p class="notice warn" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
@@ -693,4 +711,62 @@ function organizer_split_sheets(array $cycle): void
     <?php endforeach; ?>
     <?php
     page_end();
+}
+
+/** A line on the Organizer page when emails are waiting in the queue, and why if they are stuck. */
+function organizer_queue_notice(): void
+{
+    $queue = queue_waiting();
+    if ($queue['count'] === 0) {
+        return;
+    }
+    $waiting = $queue['count'] . ' ' . ($queue['count'] === 1 ? 'email is' : 'emails are') . ' waiting to go out.';
+    $cap = (int) setting('email_daily_cap', '90');
+    if (emails_last_24h() >= $cap) {
+        echo '<p class="notice warn" role="status">' . $waiting . ' The site has reached its limit of ' . $cap
+            . ' emails in 24 hours, so they will go out as room frees up, most likely tomorrow.</p>';
+    } elseif ($queue['oldest'] < now_utc(-600)) {
+        echo '<p class="notice warn" role="alert">' . $waiting . ' They have been waiting more than ten minutes, so the'
+            . ' background sender may not be running. On the server, run: sudo bash deploy/setup-auto.sh</p>';
+    } else {
+        echo '<p class="notice" role="status">' . $waiting . ' They are sent a few at a time, over the next few minutes.</p>';
+    }
+}
+
+/** On the Organizer page of an open month: the "time to order" email, and when the last call goes. */
+function organizer_month_emails(array $cycle): void
+{
+    $count = count(group_recipients());
+    $off = (int) q('SELECT COUNT(*) FROM members WHERE active = 1 AND email_opt_out = 1')->fetchColumn();
+    // A sample of the email, written as it would be for the organizer looking at this page.
+    $sample = time_to_order_text($cycle, current_member(), '(your note goes here)', '(their own sign-in link)')
+        . group_footer('(their own unsubscribe link)');
+    ?>
+    <form method="post" action="/?a=organizer" class="stack step">
+      <?= csrf_field() ?>
+      <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
+      <h3>The "time to order" email</h3>
+      <div>
+        <label for="note">A note from you, for the top of the email (optional)</label>
+        <textarea id="note" name="note" rows="3"></textarea>
+      </div>
+      <p class="note">Goes to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?><?= $off ? ' (' . $off . ' ' . ($off === 1 ? 'has' : 'have') . ' turned group emails off)' : '' ?>.
+        After your note it gives the deadline, the pickup note, each person's own sign-in link, and the shares still looking for takers. The sign-in link works until you lock the month.</p>
+      <details>
+        <summary>See what it says</summary>
+        <pre class="email"><?= e($sample) ?></pre>
+      </details>
+      <?php if ($cycle['order_emailed_at']): ?>
+        <p class="note">Sent <?= e(fmt_local($cycle['order_emailed_at'])) ?>.</p>
+        <label class="check"><input type="checkbox" name="sure" value="1" required> Send it to everyone again</label>
+      <?php endif; ?>
+      <div><button class="btn" name="do" value="time_to_order">Send "time to order"</button></div>
+    </form>
+    <div class="stack step">
+      <h3>Last call</h3>
+      <p class="note"><?= $cycle['last_call_at']
+          ? 'Sent ' . e(fmt_local($cycle['last_call_at'])) . ' to members whose household had not submitted an order.'
+          : 'Goes out by itself on ' . e(fmt_local(last_call_time($cycle))) . ', a day before the deadline, to members whose household has not submitted an order by then. Households that have submitted hear nothing.' ?></p>
+    </div>
+    <?php
 }

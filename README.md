@@ -64,6 +64,9 @@ After that:
   server waits for a newer change before trying again. The log is `/var/lib/hummingbird/deploy.log`.
 - **Debian keeps itself up to date** with stable and security updates each day. It never
   restarts by itself.
+- **Queued emails go out every minute.** Group emails and pickup emails wait in a queue and
+  `bin/mail-jobs.php` sends a few at a time, under the daily limit set on the Settings page.
+  The same job sends the last-call reminder a day before a deadline, and share-expiry warnings.
 - **You get an email when a restart is needed** (usually a new kernel), with a reminder each
   week until it is done. To restart: `sudo reboot`. The site is offline for about a minute.
 
