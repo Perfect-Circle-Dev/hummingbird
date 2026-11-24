@@ -9,11 +9,11 @@ return [
     'timezone'    => 'America/Los_Angeles',
 
     // Email. 'log' writes emails to the email_log table only (for testing).
-    // 'smtp' sends through Amazon SES (settings below) and also logs.
+    // 'smtp' sends through Resend's SMTP service (settings below) and also logs.
     'mail_driver' => 'log',
     'mail_from'   => 'brent@schefley.net',
     'mail_from_name' => 'Holy Frijoles',
-    'smtp' => ['host' => '', 'port' => 587, 'user' => '', 'pass' => ''],
+    'smtp' => ['host' => 'smtp.resend.com', 'port' => 587, 'user' => 'resend', 'pass' => ''], // pass = Resend API key
 
     // Where the catalog comes from.
     'catalog_url' => 'https://hummingbirdwholesale.com/products.json',

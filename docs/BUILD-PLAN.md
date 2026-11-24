@@ -12,7 +12,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 | Stack | PHP 8.2+, SQLite database (one file, easy to back up), no framework |
 | Sign-in | Emailed link, no passwords. Devices stay signed in for 180 days |
 | Households | Several logins can share one household order |
-| Email | Sent by the site from brent@schefley.net through Amazon SES, replacing Mailchimp |
+| Email | Sent by the site from brent@schefley.net through Resend (SMTP), replacing Mailchimp. Free plan: 100 emails a day |
 | Catalog | Copied nightly from Hummingbird's public product feed; prices fixed when the order is locked |
 | Member price | List price less the group discount (30% assumed until confirmed) |
 | Deposits | $1.50 for a half-gallon glass jug; $3.00 for one gallon and larger. Added to regular orders only, not to shares |
@@ -39,6 +39,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Sign-in by emailed link, sign out
 - [x] Catalog sync from Hummingbird, with size and deposit rules
 - [x] Add members from the command line
+- [x] Server live at hummingbird.schefley.net with HTTPS; email sending through Resend
+- [x] Search ranked by best match, with results while typing
 - [x] Order page: search, favorites, quantities, submit, confirmation email
 - [x] Share board: start, claim, change, cancel; filled shares show on household totals
 - [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists
@@ -48,6 +50,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [ ] Organizer: split sheets, final report (saved and emailed), paid tracking
 - [ ] Organizer: members and households, settings (discount, deposits)
 - [ ] Emails: time to order, last call, pickup notice, share expiry warning
+- [ ] Put each member's personal sign-in link in the "time to order" email, to stay under Resend's daily cap
+- [ ] Deposits on a case of several jugs (currently charged once)
 - [ ] Unsubscribe link and footer on group emails
 - [ ] Fill-the-Hummingbird-cart link (needs a test from the organizer's login)
 - [ ] Group name and dancing bean logo on every page
@@ -56,8 +60,6 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 ## Waiting on
 
 - Actual discount, checked against a past invoice
-- Amazon SES approval and DNS records for schefley.net
-- DNS record pointing hummingbird.schefley.net at the new server
 - Venmo handle for the pickup email
 - Dancing bean logo file
 - Member list (names, emails, households) exported from Mailchimp

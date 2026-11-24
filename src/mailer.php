@@ -14,7 +14,7 @@ function send_email(string $to, string $subject, string $body): bool
     return $status !== 'failed';
 }
 
-/** Sends through Amazon SES using PHPMailer (installed with "composer install"). */
+/** Sends by SMTP (Resend) using PHPMailer (installed with "composer install"). */
 function smtp_send(string $to, string $subject, string $body): bool
 {
     $autoload = dirname(__DIR__) . '/vendor/autoload.php';
