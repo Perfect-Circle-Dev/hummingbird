@@ -85,13 +85,14 @@ function page_order(array $member, bool $isPost): void
     }
 
     // One row of an order table, used for this month's order and for the saved list.
+    // "Retail price" is Hummingbird's list price; "Our price" is that less the group discount.
     // $qtyAction is the "do" value its plus and minus buttons send, or '' for no buttons.
     $lineRow = function (array $l, string $qtyAction): void {
         ?>
         <tr>
           <td><?= e($l['product_title']) ?><div class="note"><?= e($l['sku']) ?><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?><?= $l['still_listed'] ? '' : ' · no longer in Hummingbird\'s catalog' ?></div></td>
           <td><?= e($l['size']) ?></td>
-          <td>
+          <td class="center">
             <?php if ($qtyAction !== ''): ?>
             <form method="post" action="/?a=order" class="qty">
               <?= csrf_field() ?>
@@ -103,6 +104,7 @@ function page_order(array $member, bool $isPost): void
             </form>
             <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
           </td>
+          <td><?= money((int) $l['list_price_cents']) ?></td>
           <td><?= money((int) $l['unit_price_cents']) ?></td>
           <td><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
           <td><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
@@ -133,7 +135,7 @@ function page_order(array $member, bool $isPost): void
         </form>
         <div id="results" class="stack" aria-live="polite"><?php $showResults(); ?></div>
       </div>
-      <div class="card stack">
+      <div class="card stack" id="favorites">
         <h2>My favorites</h2>
         <?php if (!$favorites): ?>
           <p class="note">No favorites yet. Tap the star beside any item to keep it here.</p>
@@ -141,6 +143,7 @@ function page_order(array $member, bool $isPost): void
         <?php foreach ($favorites as $v) { $itemRow($v); } ?>
       </div>
     </div>
+    <div id="order-lists">
     <?php
     if ($cycle) {
         $summary = order_summary($order);
@@ -153,14 +156,14 @@ function page_order(array $member, bool $isPost): void
           <?php else: ?>
           <div class="scroll">
             <table>
-              <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
+              <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th>Retail price</th><th>Our price</th><th>Deposit</th><th>Total</th></tr></thead>
               <tbody>
               <?php foreach ($summary['lines'] as $l) { $lineRow($l, $open ? 'qty' : ''); } ?>
               <?php foreach ($summary['shares'] as $s): ?>
                 <tr>
                   <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
                   <td><?= e(fmt_amount($s['amount']) . ' ' . $s['size_unit']) ?> of <?= e($s['size']) ?></td>
-                  <td></td><td></td><td>None</td>
+                  <td></td><td></td><td></td><td>None</td>
                   <td><?= money($s['cost_cents']) ?></td>
                 </tr>
               <?php endforeach; ?>
@@ -200,7 +203,7 @@ function page_order(array $member, bool $isPost): void
         <p class="note"><?= $cycle ? 'These are not part of the ' . e($cycle['label']) . ' order. ' : '' ?>When the next month opens they will already be on your order. You will still need to look it over and submit it. Prices are today's and may change by then.</p>
         <div class="scroll">
           <table>
-            <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
+            <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th>Retail price</th><th>Our price</th><th>Deposit</th><th>Total</th></tr></thead>
             <tbody>
             <?php foreach ($saved['lines'] as $l) { $lineRow($l, 'qty_later'); } ?>
             </tbody>
@@ -210,6 +213,7 @@ function page_order(array $member, bool $isPost): void
           <div class="due"><dt>Estimated total so far</dt><dd><?= money($saved['items_cents'] + $saved['deposits_cents']) ?></dd></div>
         </dl>
       <?php endif; ?>
+    </div>
     </div>
     <?php
     echo '<script src="/site.js" defer></script>';
