@@ -125,14 +125,17 @@ function page_order(array $member, bool $isPost): void
     <div class="columns">
       <div class="card stack">
         <h2>Find an item</h2>
-        <form method="get" action="/" class="row" id="search-form">
+        <form method="get" action="/" class="search" id="search-form">
           <input type="hidden" name="a" value="order">
-          <div class="grow">
-            <label for="q">Spill the beans: what are you after?</label>
-            <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129" autocomplete="off">
-          </div>
+          <label for="q">Spill the beans: what are you after?</label>
+          <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129" autocomplete="off">
           <button class="btn" type="submit">Search</button>
+          <?php // Clear is a plain link to this page with no search, so it works without the
+                // script. With the script it empties the box on the spot and puts the cursor in it. ?>
+          <a class="btn quiet small clear" id="clear-search" href="/?a=order" aria-label="Clear the search">Clear</a>
         </form>
+        <?php // Read out by screen readers when an item is added or saved; nothing to see. ?>
+        <p class="visually-hidden" id="order-said" role="status"></p>
         <div id="results" class="stack" aria-live="polite"><?php $showResults(); ?></div>
       </div>
       <details class="card fold" id="favorites-box" open>

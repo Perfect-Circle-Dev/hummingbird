@@ -27,7 +27,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
   on My order, buttons update the page in place (the server still answers with the whole page,
   and the script swaps in the parts with ids `results`, `favorites` and `order-lists`); and the
   organizer's "out of stock for everyone" box ticking the others. It also remembers whether
-  "My favorites" was left folded away (the folding itself is a plain `<details>`).
+  "My favorites" was left folded away (the folding itself is a plain `<details>`), turns
+  "Add" and "Save for next month" into "Added" and "Saved" for a moment after they work (the
+  `done` class), and makes the Clear button under the search box empty it on the spot (without
+  the script Clear is a link that reloads the page with no search).
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.

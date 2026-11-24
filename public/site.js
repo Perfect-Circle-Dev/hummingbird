@@ -30,6 +30,19 @@
     clearTimeout(timer);
     timer = setTimeout(search, 200);
   });
+
+  // The Clear button: empty the box and the results on the spot, and put the cursor in the
+  // box ready for the next search. (Without JavaScript it is a link that reloads the page.)
+  var clear = document.getElementById('clear-search');
+  if (clear) {
+    clear.addEventListener('click', function (event) {
+      event.preventDefault();
+      clearTimeout(timer);
+      input.value = '';
+      search();
+      input.focus();
+    });
+  }
 })();
 
 // Organizer's combined order: ticking "Out of stock for everyone" ticks each
@@ -82,6 +95,29 @@
     return null;
   }
 
+  // Shows on the button itself that the item went on. For a moment "Add" reads "Added" and
+  // "Save for next month" reads "Saved", in another colour with a check mark (the "done"
+  // style in site.css). Then it goes back, ready to be pressed again.
+  function showDone(button, mark) {
+    var word = mark.kind === 'do:add' ? 'Added' : (mark.kind === 'do:later' ? 'Saved' : '');
+    if (!word) return;
+    var was = button.textContent;
+    button.style.minWidth = button.offsetWidth + 'px'; // keep its width, so nothing beside it moves
+    button.textContent = word;
+    button.classList.add('done');
+    // The same news for someone using a screen reader, with the item's name.
+    var said = document.getElementById('order-said');
+    var name = button.closest('.item') && button.closest('.item').querySelector('.item-name');
+    if (said && name) {
+      said.textContent = (word === 'Added' ? 'Added to your order: ' : 'Saved for next month: ') + name.textContent;
+    }
+    setTimeout(function () {
+      button.textContent = was;
+      button.classList.remove('done');
+      button.style.minWidth = '';
+    }, 1600);
+  }
+
   document.addEventListener('submit', function (event) {
     var form = event.target;
     var button = event.submitter;
@@ -102,6 +138,11 @@
 
     var data = new FormData(form);
     if (button.name) data.append(button.name, button.value);
+    // Send what is in the search box now, so the page that comes back shows the same results
+    // as are on screen. (The form remembers the search from when it was drawn, which may be
+    // out of date after more typing or after Clear.)
+    var box = document.getElementById('q');
+    if (box) data.set('q', box.value.trim().length < 2 ? '' : box.value.trim());
 
     fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin' })
       .then(function (response) {
@@ -122,7 +163,10 @@
           if (now && next) now.innerHTML = next.innerHTML;
         });
         var same = findAgain(mark);
-        if (same) same.focus({ preventScroll: true });
+        if (same) {
+          same.focus({ preventScroll: true });
+          showDone(same, mark);
+        }
         busy = false;
         // Carry out the next remembered tap, if its button is still on the page.
         while (waiting.length) {

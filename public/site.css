@@ -38,7 +38,9 @@
   --success-bg: #1E40AF;   /* "done" messages */
   --success-ink: #FFFFFF;
   --success-icon: #FFC53D; /* the check mark in them */
-  --warn-bg: #FFF1C7;      /* warnings: locked order, unfinished flags */
+  --done-bg: #F2B01E;      /* a button just after it worked ("Added"); must differ from --primary */
+  --done-ink: #14213D;
+  --warn-bg: #FFF1C7;     /* warnings: locked order, unfinished flags */
   --warn-ink: #5A3D00;
   --danger: #B3261E;       /* error text, destructive actions */
   --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -62,6 +64,8 @@
     --success-bg: #7FA4FF;
     --success-ink: #0E1630;
     --success-icon: #0E1630;
+    --done-bg: #7FA4FF;
+    --done-ink: #0E1630;
     --warn-bg: #3A2F0B;
     --warn-ink: #FFE08A;
     --danger: #FFA59A;
@@ -138,6 +142,30 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .link { min-height: 48px; padding: 0; border: 0; background: none; color: var(--link); font-weight: 700; text-decoration: underline; }
 .link.danger { color: var(--danger); }
 .tap { display: inline-flex; align-items: center; min-height: 48px; font-weight: 700; }
+/* A button gives a little under the finger, so a press is felt at once. */
+.btn:active, .star:active, .qty button:active { transform: scale(0.96); }
+/* "Add" is as wide as "Added" with its check mark, so nothing beside it moves when it changes. */
+.item .btn[value="add"] { min-width: 118px; }
+/* For a moment after an item goes on the order, its button changes colour and reads "Added"
+   or "Saved" with a check mark (site.js adds and removes "done"). */
+.btn.done { background: var(--done-bg); color: var(--done-ink); border-color: var(--done-bg); }
+.btn.done::before { content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 6px; vertical-align: -3px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat; }
+/* The small bounce is left out for anyone who has asked their device for less movement. */
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .star, .qty button { transition: transform 0.08s; }
+  .btn.done { animation: pop 0.35s ease-out; }
+}
+@keyframes pop { 0% { transform: scale(0.9); } 55% { transform: scale(1.07); } 100% { transform: scale(1); } }
+/* Text for screen readers only: there to be read out, not seen. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* ---- The search box on My order: the label on top, the box with Search beside it, and
+   Clear underneath, lined up with the right-hand end of the box. ---- */
+.search { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; }
+.search label { grid-column: 1 / -1; }
+.search .clear { grid-column: 1; justify-self: end; margin-top: 8px; }
 
 /* ---- Messages ---- */
 /* A plain .notice says something went well: solid colour, with a check mark at the left. */
