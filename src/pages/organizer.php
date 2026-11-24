@@ -21,6 +21,7 @@ const ORGANIZER_PROBLEMS = [
     'not_open'   => 'That month is not open, so it can\'t be locked.',
     'not_locked' => 'That month is not locked, so nothing was changed.',
     'closed'     => 'A closed month can\'t be changed.',
+    'price'      => 'A price could not be read and was left as it was. Type it like 25.08.',
 ];
 
 function page_organizer(array $member, bool $isPost): void
@@ -34,6 +35,23 @@ function page_organizer(array $member, bool $isPost): void
         $sure = !empty($_POST['sure']);
         $problem = null;
         $done = '';
+
+        if ($do === 'stock') {
+            // Out-of-stock ticks and corrected prices from the combined order page.
+            $cycle = find_cycle($cycleId);
+            if (!$cycle || $cycle['status'] !== 'locked') {
+                redirect('/?a=organizer&problem=not_locked');
+            }
+            // Keep only the parts of the form this needs, each as a list.
+            $form = [];
+            foreach (['price', 'all', 'was_all', 'out', 'share_out'] as $group) {
+                $form[$group] = is_array($_POST[$group] ?? null) ? $_POST[$group] : [];
+            }
+            $result = stock_and_prices_save($cycle, $form);
+            $emailed = !empty($_POST['email']) ? stock_and_prices_email($cycle, $result['notes']) : 0;
+            redirect('/?a=organizer&month=' . $cycleId . '&saved=' . $result['changes'] . '&emailed=' . $emailed
+                . '&told=' . count($result['notes']) . ($result['bad_prices'] ? '&problem=price' : ''));
+        }
 
         if ($do === 'open') {
             $problem = cycle_open($label, $due, $note);
@@ -153,7 +171,7 @@ function organizer_months(): void
           <?= csrf_field() ?>
           <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
           <h3>Close the month</h3>
-          <p class="note">Do this when pickup is over and everyone has paid. Members stop seeing this order, and you can open the next month. It can't be undone.</p>
+          <p class="note">Do this when pickup is over and everyone has paid. Members stop seeing this order, and you can open the next month. Anything marked out of stock is carried over: items go to each household's "Saved for next month" list and shares go back on the share board. It can't be undone.</p>
           <label class="check"><input type="checkbox" name="sure" value="1" required> <?= e($cycle['label']) ?> is finished</label>
           <button class="btn" name="do" value="close">Close the month</button>
         </form>
@@ -162,7 +180,7 @@ function organizer_months(): void
           <form method="post" action="/?a=organizer" class="stack">
             <?= csrf_field() ?>
             <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
-            <p class="note">Members can change their orders again and prices go back to following the catalog. Shares on this order return to the share board, still fully claimed, and come back when you lock again. Best not done once the order has been placed with Hummingbird.</p>
+            <p class="note">Members can change their orders again and prices go back to following the catalog. Shares on this order return to the share board, still fully claimed, and come back when you lock again. Any out-of-stock ticks and corrected prices are cleared. Best not done once the order has been placed with Hummingbird.</p>
             <label class="check"><input type="checkbox" name="sure" value="1" required> Reopen <?= e($cycle['label']) ?> for changes</label>
             <button class="btn" name="do" value="reopen">Reopen the month</button>
           </form>
@@ -204,15 +222,34 @@ function organizer_combined_order(array $cycle): void
     $combined = combined_order($cycle);
     $status = [
         'open'   => 'Still open, so this list can change. Fully claimed shares are included; they go onto the order when you lock the month.',
-        'locked' => 'Locked ' . fmt_local((string) $cycle['locked_at']) . '. Prices are fixed.',
+        'locked' => 'Locked ' . fmt_local((string) $cycle['locked_at']) . '. Prices are fixed unless you correct them below.',
         'closed' => 'Closed ' . fmt_local((string) $cycle['closed_at'], 'F j, Y') . '.',
     ][$cycle['status']];
+    // Out of stock and prices can be changed only between locking and closing.
+    $canEdit = $cycle['status'] === 'locked';
+
+    // What the last save did. The address carries only numbers, never text.
+    $saved = null;
+    if (isset($_GET['saved'])) {
+        $changes = (int) $_GET['saved'];
+        $told = (int) ($_GET['told'] ?? 0);
+        $emailed = (int) ($_GET['emailed'] ?? 0);
+        if ($changes === 0) {
+            $saved = 'Nothing was changed.';
+        } else {
+            $saved = 'Saved. ' . $told . ' ' . ($told === 1 ? 'household is' : 'households are') . ' affected'
+                . ($emailed ? ' and ' . ($told === 1 ? 'has' : 'have') . ' been emailed.' : '; no email was sent.');
+        }
+    }
+    $problem = ORGANIZER_PROBLEMS[(string) ($_GET['problem'] ?? '')] ?? null;
 
     page_start('Combined order');
     ?>
     <p><a href="/?a=organizer">Back to Organizer</a></p>
     <h1>Combined order for <?= e($cycle['label']) ?></h1>
     <p class="note"><?= e($status) ?></p>
+    <?php if ($saved): ?><p class="notice" role="status"><?= e($saved) ?></p><?php endif; ?>
+    <?php if ($problem): ?><p class="notice warn" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
     <?php if ($combined['unfinished']): ?>
       <div class="card stack">
@@ -243,11 +280,23 @@ function organizer_combined_order(array $cycle): void
       <?php if (!$combined['items']): ?>
         <p>Nothing has been ordered yet.</p>
       <?php else: ?>
+      <?php if ($canEdit): ?>
+        <p class="note">When Hummingbird confirms the order, tick anything that was out of stock and correct any price that changed, then save. Each household affected gets one email saying what changed, with their new total.</p>
+        <form method="post" action="/?a=organizer" class="stack">
+          <?= csrf_field() ?>
+          <input type="hidden" name="do" value="stock">
+          <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
+      <?php endif; ?>
       <div class="scroll">
-        <table>
+        <table class="wide">
           <thead><tr><th>Item no.</th><th>Item</th><th>Qty</th><th>Price each</th><th>Total</th><th>Who it is for</th></tr></thead>
           <tbody>
-          <?php foreach ($combined['items'] as $item): ?>
+          <?php foreach ($combined['items'] as $item):
+              $id = (int) $item['variant_id'];
+              $entries = count($item['buyers']) + count($item['shares']);
+              $allOut = $item['qty'] === 0;           // nothing of this item is left in stock
+              $ownBoxes = $canEdit && $entries > 1;   // each household gets its own tick box
+              $itemName = $item['product_title'] . ', ' . $item['size']; ?>
             <tr>
               <td><strong><?= e($item['sku']) ?></strong></td>
               <td>
@@ -259,17 +308,58 @@ function organizer_combined_order(array $cycle): void
                   <div><span class="flag">Hummingbird shows this out of stock</span></div>
                 <?php endif; ?>
               </td>
-              <td><strong><?= (int) $item['qty'] ?></strong></td>
-              <td><?= money($item['price_cents']) ?></td>
+              <td>
+                <strong><?= (int) $item['qty'] ?></strong>
+                <?php if ($item['out_qty']): ?><div class="note"><?= (int) $item['out_qty'] ?> out of stock</div><?php endif; ?>
+              </td>
+              <td>
+                <?php if ($canEdit): ?>
+                  <input class="price" type="text" inputmode="decimal" name="price[<?= $id ?>]"
+                         value="<?= e(number_format($item['price_cents'] / 100, 2, '.', '')) ?>"
+                         aria-label="Price each for <?= e($itemName) ?>">
+                <?php else: ?>
+                  <?= money($item['price_cents']) ?>
+                <?php endif; ?>
+              </td>
               <td><?= money($item['total_cents']) ?></td>
               <td>
+                <?php if ($canEdit): ?>
+                  <label class="check">
+                    <input type="checkbox" name="all[<?= $id ?>]" value="1" data-all-for="<?= $id ?>" <?= $allOut ? 'checked' : '' ?>>
+                    Out of stock<?= $entries > 1 ? ' for everyone' : '' ?>
+                  </label>
+                  <?php if ($allOut): ?><input type="hidden" name="was_all[<?= $id ?>]" value="1"><?php endif; ?>
+                <?php endif; ?>
                 <ul class="plain">
-                  <?php foreach ($item['buyers'] as $b): ?>
-                    <li><?= e($b['household']) ?> × <?= (int) $b['qty'] ?><?= $b['unfinished'] ? ' <span class="flag">unfinished</span>' : '' ?></li>
+                  <?php foreach ($item['buyers'] as $b):
+                      $who = $b['household'] . ' × ' . $b['qty']; ?>
+                    <li>
+                      <?php if ($ownBoxes): ?>
+                        <label class="check">
+                          <input type="checkbox" name="out[<?= (int) $b['line_id'] ?>]" value="1" data-item="<?= $id ?>" <?= $b['out'] ? 'checked' : '' ?>>
+                          <span><?= e($who) ?> <span class="note">didn't get it</span></span>
+                        </label>
+                      <?php else: ?>
+                        <?= e($who) ?>
+                        <?= $b['out'] && !$canEdit ? ' <span class="flag">out of stock</span>' : '' ?>
+                      <?php endif; ?>
+                      <?= $b['unfinished'] ? ' <span class="flag">unfinished</span>' : '' ?>
+                    </li>
                   <?php endforeach; ?>
                   <?php foreach ($item['shares'] as $s):
-                      $parts = array_map(fn(array $c): string => $c['name'] . ' ' . fmt_amount($c['amount']) . ' ' . $s['size_unit'], $s['claims']); ?>
-                    <li>Share × 1: <?= e(implode(', ', $parts)) ?></li>
+                      $parts = array_map(fn(array $c): string => $c['name'] . ' ' . fmt_amount($c['amount']) . ' ' . $s['size_unit'], $s['claims']);
+                      $who = 'Share × 1: ' . implode(', ', $parts); ?>
+                    <li>
+                      <?php if ($ownBoxes): ?>
+                        <label class="check">
+                          <input type="checkbox" name="share_out[<?= (int) $s['id'] ?>]" value="1" data-item="<?= $id ?>" <?= $s['out_of_stock'] ? 'checked' : '' ?>>
+                          <span><?= e($who) ?> <span class="note">didn't arrive</span></span>
+                        </label>
+                      <?php else: ?>
+                        <?= e($who) ?>
+                        <?= $s['out_of_stock'] && !$canEdit ? ' <span class="flag">out of stock</span>' : '' ?>
+                      <?php endif; ?>
+                    </li>
                   <?php endforeach; ?>
                 </ul>
               </td>
@@ -278,15 +368,28 @@ function organizer_combined_order(array $cycle): void
           </tbody>
         </table>
       </div>
+      <?php if ($canEdit): ?>
+          <div class="row end">
+            <label class="check grow"><input type="checkbox" name="email" value="1" checked> Email the households affected</label>
+            <button class="btn" type="submit">Save changes</button>
+          </div>
+        </form>
+      <?php endif; ?>
       <dl class="totals">
         <div><dt>Households ordering</dt><dd><?= (int) $combined['household_count'] ?></dd></div>
         <div><dt>Items to order</dt><dd><?= (int) $combined['unit_count'] ?></dd></div>
+        <?php if ($combined['out_count']): ?>
+          <div><dt>Marked out of stock</dt><dd><?= (int) $combined['out_count'] ?></dd></div>
+        <?php endif; ?>
         <div><dt>Container deposits charged to members</dt><dd><?= money($combined['deposits_cents']) ?></dd></div>
         <div class="due"><dt>Order total at member prices</dt><dd><?= money($combined['total_cents']) ?></dd></div>
       </dl>
-      <p class="note">The total is before deposits. Deposits are not charged on shares.</p>
+      <p class="note">The total is before deposits and leaves out anything out of stock. Deposits are not charged on shares.</p>
       <?php endif; ?>
     </div>
     <?php
+    // Lets the "for everyone" box tick each household's box as you click it.
+    // Saving works the same without it.
+    echo '<script src="/site.js" defer></script>';
     page_end();
 }

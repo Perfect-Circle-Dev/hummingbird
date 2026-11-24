@@ -77,7 +77,15 @@ a little, and wants to be able to follow and lightly edit the code. So:
   Members can save items on it at any time, including while the current month is open or
   locked. Opening a month turns that row into the month, so saved items are already on each
   household's order as `draft`; the member still has to submit. Never show `due_at` for it.
-- A locked month can be reopened (`cycle_reopen`): members can change orders again, prices
+- Out of stock and price corrections happen on the combined order while a month is locked
+  (`stock_and_prices_save`). One price per item per month, applied to every household's line and
+  to shares of that item (share parts are worked out again). Out of stock is per household line
+  or per share; the item's "for everyone" box is a shortcut that sets them all. Each household
+  affected gets one email per save, unless the organizer unticks the email box. Out-of-stock
+  lines and shares are not charged. At close they carry over: lines to the household's next-month
+  list, shares back to the board as open and fully claimed (`carry_over_out_of_stock`).
+- A locked month can be reopened (`cycle_reopen`), which also clears out-of-stock ticks and
+  price corrections: members can change orders again, prices
   follow the catalog again, and its shares go back to the board fully claimed. Closing can't
   be undone. Lock, reopen and close each need a ticked box.
 - Deadline is soft: members see Monday 7 pm, but nothing closes until the organizer locks
@@ -88,11 +96,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 ## What to build next: organizer pages (members with `is_admin = 1`)
 
-Items 1 to 3 are built (months, combined order with unfinished flags, the lock step).
+Items 1 to 4 are built (months, combined order with unfinished flags, the lock step,
+out of stock and price corrections with update emails).
 Numbering is kept so older notes still match.
 
-4. After placing the order: per line and per share, an "out of stock" checkbox and an
-   editable price. Saving emails an update to each household affected (for a share, everyone on it).
 5. Final report: every ordering household with its full list, prices, deposits, share parts
    and total. Saved on the site per month and emailed to Brent when the month is locked.
    He never prints.

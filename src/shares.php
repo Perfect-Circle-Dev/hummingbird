@@ -145,6 +145,21 @@ function share_set_claim(int $shareId, int $memberId, float $amount): bool
     return true;
 }
 
+/**
+ * Sets the price of a share that is on an order, and saves each person's part of it.
+ * Used when the month is locked and again if the organizer corrects the price.
+ */
+function share_set_price(int $shareId, int $priceCents): void
+{
+    q('UPDATE shares SET price_cents = ? WHERE id = ?', [$priceCents, $shareId]);
+    // Clearing the saved parts makes find_share work them out afresh from the new price.
+    q('UPDATE share_claims SET cost_cents = NULL WHERE share_id = ?', [$shareId]);
+    $share = find_share($shareId);
+    foreach ($share['claims'] as $c) {
+        q('UPDATE share_claims SET cost_cents = ? WHERE id = ?', [$c['cost_cents'], $c['id']]);
+    }
+}
+
 /** Takes unfilled shares off the board once they pass their expiry date. Run nightly. */
 function expire_shares(): int
 {
@@ -173,20 +188,21 @@ function shares_on_order(int $cycleId): array
         fn(array $s): bool => $s['full'] && $s['status'] === $wanted));
 }
 
-/** A household's parts of the shares on a month's order (see shares_on_order). */
+/**
+ * A household's parts of the shares on a month's order (see shares_on_order).
+ * A share Hummingbird was out of stock on stays in the list, marked, and costs nothing.
+ */
 function household_share_portions(int $householdId, int $cycleId): array
 {
     $portions = [];
     foreach (shares_on_order($cycleId) as $s) {
-        if ($s['out_of_stock']) {
-            continue;
-        }
         foreach ($s['claims'] as $c) {
             if ((int) $c['household_id'] === $householdId) {
                 $portions[] = [
                     'share_id' => $s['id'], 'product_title' => $s['product_title'], 'size' => $s['size'],
                     'sku' => $s['sku'], 'size_unit' => $s['size_unit'], 'amount' => $c['amount'],
-                    'cost_cents' => $c['cost_cents'], 'member_name' => $c['name'],
+                    'cost_cents' => $s['out_of_stock'] ? 0 : $c['cost_cents'], 'member_name' => $c['name'],
+                    'out_of_stock' => (bool) $s['out_of_stock'],
                 ];
             }
         }

@@ -30,6 +30,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 4. Tuesday: organizer reviews the combined order (unfinished orders are flagged), locks it,
    and places it with Hummingbird.
 5. Organizer ticks anything out of stock and corrects any price. Saving emails the members affected.
+   Out-of-stock items are not charged and are carried over to next month when the month is closed.
 6. Final report is saved on the site for the month and emailed to the organizer.
 7. Pickup email goes to each household with the amount due and a Venmo link.
 8. Organizer marks orders paid.
@@ -49,7 +50,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] At lock: fix prices, move filled shares onto the order, and settle the odd cent when a share's parts don't add up exactly (it goes to whoever started the share)
 - [x] Reopen a locked month
 - [x] "Save for next month" list, always available to members
-- [ ] Organizer: out-of-stock and price edits, with update emails
+- [x] Organizer: out-of-stock and price edits, with update emails; out-of-stock items and shares carry over to next month at close
 - [ ] Organizer: split sheets, final report (saved and emailed), paid tracking
 - [ ] Organizer: members and households, settings (discount, deposits)
 - [ ] Emails: time to order, last call, pickup notice, share expiry warning

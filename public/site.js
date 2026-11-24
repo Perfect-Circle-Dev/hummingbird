@@ -31,3 +31,16 @@
     timer = setTimeout(search, 200);
   });
 })();
+
+// Organizer's combined order: ticking "Out of stock for everyone" ticks each
+// household's box for that item, and unticking it clears them.
+// Without JavaScript nothing moves on screen, but saving gives the same result.
+(function () {
+  var everyoneBoxes = document.querySelectorAll('input[data-all-for]');
+  Array.prototype.forEach.call(everyoneBoxes, function (everyone) {
+    everyone.addEventListener('change', function () {
+      var own = document.querySelectorAll('input[data-item="' + everyone.getAttribute('data-all-for') + '"]');
+      Array.prototype.forEach.call(own, function (box) { box.checked = everyone.checked; });
+    });
+  });
+})();
