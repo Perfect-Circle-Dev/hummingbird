@@ -47,6 +47,12 @@ function pickup_text(array $cycle): string
     return str_contains($squash($note), $squash(PICKUP_TIME)) ? $note : rtrim($note, '. ') . ' ' . PICKUP_TIME;
 }
 
+/** A month's name without the year, for headings: "December 2026" -> "December". */
+function cycle_month_name(array $cycle): string
+{
+    return trim((string) preg_replace('/\s*\d{4}\s*$/', '', (string) $cycle['label']));
+}
+
 /** "2026-12-15 03:00:00" (UTC, as stored) -> "Monday, December 14 at 7:00 pm" in the site's timezone. */
 function fmt_local(string $utc, string $format = 'l, F j \a\t g:i a'): string
 {

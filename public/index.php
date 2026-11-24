@@ -141,17 +141,21 @@ $cycle = current_cycle();
 page_start('Home');
 ?>
 <div class="card stack">
-  <h1>Hello, <?= e($member['name']) ?></h1>
+  <?php if ($cycle && $cycle['status'] === 'open'): ?>
+    <h1>Place your <?= e(cycle_month_name($cycle)) ?> order</h1>
+  <?php else: ?>
+    <h1>Hello, <?= e($member['name']) ?></h1>
+  <?php endif; ?>
   <?php if (!$cycle): ?>
     <p>No order is open right now. You'll get an email when the next one opens. You can save items for it any time from My order.</p>
   <?php elseif ($cycle['status'] === 'open'): ?>
-    <p>The <strong><?= e($cycle['label']) ?></strong> order is open. Orders are due <?= e(fmt_local($cycle['due_at'])) ?>.</p>
+    <p>Hello, <?= e($member['name']) ?>. Orders are due <?= e(fmt_local($cycle['due_at'])) ?>.</p>
   <?php else: ?>
     <p>The <strong><?= e($cycle['label']) ?></strong> order is locked and being placed. Anything you add now is saved for next month.</p>
   <?php endif; ?>
   <p class="row">
     <a class="btn" href="/?a=order">My order</a>
-    <a class="btn" href="/?a=shares">Share board</a>
+    <a class="btn" href="/?a=shares">Share items</a>
     <a class="btn quiet" href="/?a=household">My household</a>
   </p>
 </div>

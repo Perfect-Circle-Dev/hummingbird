@@ -77,7 +77,7 @@ function organizer_messages(): void
         echo '<p class="notice" role="status">' . e($done) . '</p>';
     }
     if ($problem) {
-        echo '<p class="notice warn" role="alert">' . e($problem) . '</p>';
+        echo '<p class="notice error" role="alert">' . e($problem) . '</p>';
     }
 }
 
@@ -103,7 +103,7 @@ function organizer_member_fields(?array $m, array $households): void
       <div class="grow">
         <label for="m-household">Household</label>
         <select id="m-household" name="household_id">
-          <?php if (!$m): ?><option value="0">A new household (name it in the next box)</option><?php endif; ?>
+          <?php if (!$m): ?><option value="0">A new household</option><?php endif; ?>
           <?php foreach ($households as $h): ?>
             <option value="<?= (int) $h['id'] ?>" <?= $m && (int) $m['household_id'] === (int) $h['id'] ? 'selected' : '' ?>><?= e($h['name']) ?></option>
           <?php endforeach; ?>
@@ -174,7 +174,7 @@ function organizer_members(array $member): void
             <?= csrf_field() ?>
             <input type="hidden" name="member_id" value="<?= (int) $editing['id'] ?>">
             <p class="note"><?= e($editing['name']) ?> has never signed in or ordered, so they can be deleted outright if they were added by mistake.</p>
-            <button class="link" name="do" value="member_delete">Delete <?= e($editing['name']) ?></button>
+            <button class="link danger" name="do" value="member_delete">Delete <?= e($editing['name']) ?></button>
           </form>
         <?php endif; ?>
         <?php $editingHousehold = (string) q('SELECT name FROM households WHERE id = ?', [$editing['household_id']])->fetchColumn(); ?>
@@ -277,7 +277,7 @@ function organizer_settings(): void
           </div>
         </div>
         <div>
-          <label for="share_expiry_months">Months an unfilled share stays on the share board</label>
+          <label for="share_expiry_months">Months an unfilled share stays listed under Share items</label>
           <input id="share_expiry_months" name="share_expiry_months" type="number" min="1" max="24" value="<?= e((string) setting('share_expiry_months', '3')) ?>" required>
         </div>
         <div>

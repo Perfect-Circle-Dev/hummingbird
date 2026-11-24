@@ -77,8 +77,18 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Orders belong to a household, not a person. Check `household_id` / `order_id` on every
   change so one household can never edit another's order.
 - Any change to an order sets it back to `draft`; the member must submit again.
-- Interface text: plain, friendly, sentence case, no jargon. Touch targets at least 44px.
+- Interface text: plain, friendly, sentence case, no jargon. Touch targets at least 48px.
   Pages must work on a phone.
+- The look is the Talavera theme (`docs/THEME.md`), light and dark, following the device's
+  setting. Every colour in `public/site.css` is a variable set in the two blocks at the top of
+  the file (light, then dark); never write a colour straight into a rule. Body text is 17px and
+  nothing is under 15px. The three fonts are in `public/fonts/` and nothing loads from another
+  site. The star and the icons in messages are drawn (SVG or a CSS mask), because the fonts
+  have no star or check mark.
+- Messages: `notice` is good news (with a check mark), `notice warn` a caution, `notice error`
+  a problem (add `role="alert"`), `notice info` something neutral.
+- Members see the share page as "Share items". The code and these notes still say shares and
+  the share board.
 
 ## Business rules (already decided)
 
@@ -208,6 +218,8 @@ Members said no to a "reorder last month" button; favorites cover it.
 - The Venmo pay link (`https://venmo.com/HANDLE?txn=pay&amount=..&note=..`) has not been tried
   with a real Venmo account.
 - No per-item deposit override on the Settings page yet (`variants.deposit_override_cents` exists).
+- The theme was checked in Chrome on Brent's laptop (phone and desktop widths, light and dark),
+  not in Firefox, Safari or on a real phone.
 - Search-as-you-type and the server scripts were verified by Brent on the live site, not by automated tests. There is no test suite yet; `tests/catalog-sample.json` is a small catalog for local runs.
 
 ## Working agreement

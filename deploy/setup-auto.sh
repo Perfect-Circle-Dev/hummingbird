@@ -107,6 +107,29 @@ else
     READY=0
 fi
 
+echo "==> Web server: let browsers keep the fonts"
+# The site file is not rewritten once HTTPS is set up (certbot keeps its settings there), so
+# this one addition is slipped in if it is missing. The old file is kept beside it, and put
+# back if nginx does not like the result.
+SITE=/etc/nginx/sites-available/hummingbird
+if [ ! -f "$SITE" ]; then
+    echo "    No site file yet; deploy/setup-server.sh writes it."
+elif grep -q 'location /fonts/' "$SITE"; then
+    echo "    Already set."
+else
+    cp "$SITE" "$SITE.before-fonts"
+    # Puts the rule in just above the "location ~ /\." block (the one that hides dot-files).
+    perl -0pi -e 's|(\n[ \t]*location ~ /\\\. \{)|\n    # Fonts never change once published, so browsers may keep them for a year.\n    location /fonts/ {\n        expires 1y;\n        add_header Cache-Control "public, immutable";\n    }\n$1|' "$SITE"
+    if grep -q 'location /fonts/' "$SITE" && nginx -t 2>/dev/null; then
+        systemctl reload nginx
+        echo "    Fonts may now be kept by browsers for a year."
+    else
+        cp "$SITE.before-fonts" "$SITE"
+        echo "    PROBLEM: could not add the fonts rule to $SITE; it has been left as it was."
+        READY=0
+    fi
+fi
+
 echo "==> The Gitupdate command"
 # A tiny launcher, so typing "Gitupdate" anywhere on the server runs deploy/gitupdate.sh.
 # "gitupdate" in small letters works too.

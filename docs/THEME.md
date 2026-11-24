@@ -184,3 +184,14 @@ get the same colours, type and components as the member pages.
 - Keyboard focus is visible on every control in both modes.
 - The three font files load from `/fonts/` and nothing is requested from another domain.
 - Brent has seen a warning and an error message in both modes.
+
+## Where it stands
+
+Applied on 2026-11-24. The first four points above were checked in Chrome at phone and desktop
+widths, in both modes. The last is Brent's to do. Three things differ from the picture, each
+for a reason:
+
+- The header keeps "Hummingbird Wholesale buying group" under the name (Brent's choice).
+- The label over a share reads "Up for sharing?" and shows only while the share still has room.
+- On a phone the order table is wider than the screen and slides sideways inside its box, so
+  that the item name and size keep enough room to be read.

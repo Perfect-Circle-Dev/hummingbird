@@ -57,7 +57,7 @@ function page_household(array $member, bool $isPost): void
     <h1><?= e($member['household_name']) ?></h1>
     <p class="note">Everyone here shares one order: any of you can add to it and submit it. You can each sign in with your own email address.</p>
     <?php if ($done): ?><p class="notice" role="status"><?= e($done) ?></p><?php endif; ?>
-    <?php if ($problem): ?><p class="notice warn" role="alert"><?= e($problem) ?></p><?php endif; ?>
+    <?php if ($problem): ?><p class="notice error" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
     <div class="columns">
     <?php foreach ($people as $p):
@@ -88,7 +88,7 @@ function page_household(array $member, bool $isPost): void
             <?php if (!$isMe): ?>
               <p class="note">Only <?= e($p['name']) ?> can change this address, from their own sign-in.</p>
             <?php elseif ($pending): ?>
-              <p class="notice">Waiting for you to confirm <strong><?= e($pending) ?></strong>. We sent a link there; your address changes when you press the button it leads to. Until then you sign in with the address above.</p>
+              <p class="notice info">Waiting for you to confirm <strong><?= e($pending) ?></strong>. We sent a link there; your address changes when you press the button it leads to. Until then you sign in with the address above.</p>
               <form method="post" action="/?a=household">
                 <?= csrf_field() ?>
                 <button class="link" name="do" value="email_cancel">Cancel this change</button>

@@ -124,7 +124,7 @@ function open_shares_text(): string
         if ($s['status'] === 'open' && !$s['full']) {
             $lines[] = "- {$s['product_title']}, {$s['size']}: " . fmt_amount($s['left']) . " {$s['size_unit']} left of "
                 . fmt_amount((float) $s['size_amount']) . ", " . money($s['per_unit_cents']) . " per {$s['size_unit']}"
-                . " (on the board until " . fmt_local($s['expires_at'], 'M j') . ")";
+                . " (listed until " . fmt_local($s['expires_at'], 'M j') . ")";
         }
     }
     return $lines
@@ -237,10 +237,10 @@ function share_expiry_warnings(): int
             }
             $text = "Hi {$member['name']},\n\n"
                 . "The share of {$share['product_title']}, {$share['size']} that you are part of still has "
-                . fmt_amount($share['left']) . " {$share['size_unit']} unclaimed, and it comes off the share board on "
+                . fmt_amount($share['left']) . " {$share['size_unit']} unclaimed, and it comes off Share items on "
                 . fmt_local($share['expires_at'], 'l, F j') . " unless it fills.\n\n"
                 . "If you know someone who might want some, now is a good time to ask. You can also raise your own amount.\n\n"
-                . "The share board: " . config('base_url') . "/?a=shares\n";
+                . "Share items: " . config('base_url') . "/?a=shares\n";
             queue_group_email($member, config('site_name') . ": a share you are on is about to expire", $text);
             $queued++;
         }
