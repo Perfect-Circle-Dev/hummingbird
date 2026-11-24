@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-INSERT OR IGNORE INTO settings (key, value) VALUES ('discount_percent', '30');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_half_gallon_cents', '150');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_gallon_plus_cents', '300');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('discount_percent', '30.2163');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_glass_cents', '150');   -- per glass jug or jar
+INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_plastic_cents', '300'); -- per plastic jug, cube, bucket or pail
 INSERT OR IGNORE INTO settings (key, value) VALUES ('share_expiry_months', '3');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('venmo_handle', '');  -- for the pay link in pickup emails
 INSERT OR IGNORE INTO settings (key, value) VALUES ('email_daily_cap', '90'); -- most emails to send in 24 hours (Resend allows 100)

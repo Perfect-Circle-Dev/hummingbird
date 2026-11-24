@@ -72,11 +72,19 @@ a little, and wants to be able to follow and lightly edit the code. So:
 ## Business rules (already decided)
 
 - Member price = Hummingbird list price less the group discount (`settings.discount_percent`,
-  30 until Brent confirms it from an invoice). Prices follow the catalog while a month is
+  30.2163, the figure Brent gave on 2026-11-24). Prices follow the catalog while a month is
   open and are fixed when the organizer locks it.
-- Deposits: $1.50 for a half-gallon glass container, $3.00 for one gallon and larger.
+- Deposits go by what the container is made of, read from Hummingbird's wording in
+  `deposit_for($size, $product)`:
+  - Glass, $1.50 each (`settings.deposit_glass_cents`): half-gallon and one-gallon glass jugs,
+    64 oz jars, and 5.5 lb honey jars.
+  - Plastic, $3.00 each (`settings.deposit_plastic_cents`): jugs, cubes, buckets and pails.
+  - A case is charged for each container in it: "Case of 6 x 1/2 gal Glass Jugs" is $9.00.
+  - None on smaller jars and bottles, barrels, totes, bag-in-a-box, or empty jugs, jars, buckets
+    and lids sold as products.
   Added to regular order lines only, never to shares (whoever takes the container handles it).
-  Worked out from the size text in `deposit_for()`; `deposit_override_cents` is there for exceptions.
+  `deposit_override_cents` is there for exceptions. When Hummingbird adds a new kind of
+  container, check it with `php bin/list-deposits.php`.
 - Shares: claimed by weight or volume in any amount; names and amounts are visible to all
   members. A member can change or cancel their own claim while the share is `open`.
   A fully claimed share goes on the next order. Unfilled shares stay listed and expire
@@ -153,8 +161,6 @@ Members said no to a "reorder last month" button; favorites cover it.
 
 ## Known gaps
 
-- A case of several jugs is charged one deposit.
-- The wholesale discount is assumed, not confirmed.
 - The Venmo pay link (`https://venmo.com/HANDLE?txn=pay&amount=..&note=..`) has not been tried
   with a real Venmo account.
 - No per-item deposit override on the Settings page yet (`variants.deposit_override_cents` exists).

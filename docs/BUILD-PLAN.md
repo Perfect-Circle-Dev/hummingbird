@@ -14,8 +14,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 | Households | Several logins can share one household order |
 | Email | Sent by the site from brent@schefley.net through Resend (SMTP), replacing Mailchimp. Free plan: 100 emails a day |
 | Catalog | Copied nightly from Hummingbird's public product feed; prices fixed when the order is locked |
-| Member price | List price less the group discount (30% assumed until confirmed) |
-| Deposits | $1.50 for a half-gallon glass jug; $3.00 for one gallon and larger. Added to regular orders only, not to shares |
+| Member price | List price less the group discount, 30.2163% |
+| Deposits | By container material: $1.50 for each glass jug or jar (half gallon, 64 oz, one gallon, 5.5 lb honey jar); $3.00 for each plastic jug, cube, bucket or pail. A case is charged per container. Added to regular orders only, not to shares |
 | Shares | Claimed by weight or volume, any amount. Names and amounts visible to all members. Unfilled shares stay listed and expire after 3 months |
 | Deadline | Members see Monday 7 pm. Nothing closes until the organizer locks the order (about 11 am Tuesday). A lock can be undone with Reopen |
 | Next month | Members can save items for next month at any time. When that month opens, the saved items are already on their order, and they still submit it |
@@ -58,7 +58,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Emails: time to order (button, with a note), last call (automatic), pickup notice, share expiry warning (automatic)
 - [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is locked
 - [x] Email queue with a daily limit, so a big mailing can't go over Resend's cap
-- [ ] Deposits on a case of several jugs (currently charged once)
+- [x] Deposits on a case of several jugs: one deposit for each container in the case
 - [x] Unsubscribe link and footer on group emails
 - [ ] Fill-the-Hummingbird-cart link (needs a test from the organizer's login)
 - [ ] Group name and dancing bean logo on every page
@@ -68,7 +68,6 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 
 ## Waiting on
 
-- Actual discount, checked against a past invoice
 - Venmo name for the pickup email: Brent types it in under Organizer, Settings. The pay link needs one try with a real account
 - Dancing bean logo file
 - Member list (names, emails, households) exported from Mailchimp: paste it in under Organizer, Members

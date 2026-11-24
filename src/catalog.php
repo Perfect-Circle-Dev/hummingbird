@@ -29,28 +29,47 @@ function parse_size(string $title): array
     return [null, null];
 }
 
-/** Container deposit, from the gallons mentioned in the size: half gallon, or one gallon and up. */
-function deposit_for(string $title): int
+/**
+ * Container deposit for one size of one product, read from how Hummingbird words it.
+ * Deposits go by what the container is made of:
+ *   glass, $1.50 each:   half-gallon and one-gallon glass jugs, 64 oz jars, 5.5 lb honey jars
+ *   plastic, $3.00 each: jugs, cubes, buckets and pails
+ * A case is charged for every container in it: "Case of 6 x 1/2 gal Glass Jugs" is 6 deposits.
+ * No deposit on smaller jars and bottles, barrels, totes or bag-in-a-box, nor on empty
+ * jugs, jars, buckets and lids sold as products (there you are buying the container).
+ * $size is the size text ("1/2 gal Glass Jug"); $product is the product's name.
+ */
+function deposit_for(string $size, string $product = ''): int
 {
-    if (!preg_match('/' . SIZE_NUMBER . '[\s-]*gal/iu', $title, $m)) {
+    // Empty containers and lids sold as products in their own right.
+    if (preg_match('/\b(lids?|empty)\b/i', $size) || preg_match('/\bglass (jugs|jars)\b|\blids\b|^bucket\b/i', $product)) {
         return 0;
     }
-    $gallons = size_number($m[1]);
-    if ($gallons >= 1) {
-        return (int) setting('deposit_gallon_plus_cents', '300');
+    // "Case of 6 x ..." or "Case 6 x ..." holds that many containers.
+    $count = preg_match('/\bcase\s+(?:of\s+)?(\d+)\s*x\b/i', $size, $m) ? (int) $m[1] : 1;
+
+    // Glass: the size has to be one of the returnable ones (half gallon, one gallon,
+    // 64 oz or the 5.5 lb honey jar) and the container has to be glass or a jar.
+    // The patterns take care not to read "2.5 gal" as half a gallon or "11 gal" as one.
+    $returnableGlassSize = '/(?:1\/2|½|half|(?<!\d)0?\.5)[\s-]*gal|(?<![\d.\/])1[\s-]*gal|\b64\s*(?:fl\.?\s*)?oz|\b5\.5\s*lb/iu';
+    if (preg_match($returnableGlassSize, $size) && preg_match('/\bglass\b|\bjars?\b/i', $size)) {
+        return $count * (int) setting('deposit_glass_cents', '150');
     }
-    if ($gallons >= 0.5) {
-        return (int) setting('deposit_half_gallon_cents', '150');
+    // Plastic: any jug, cube, bucket or pail that was not glass above.
+    if (preg_match('/\b(jug|cube|bucket|pail)s?\b/i', $size)) {
+        return $count * (int) setting('deposit_plastic_cents', '300');
     }
     return 0;
 }
 
-/** Works out every size's deposit again from its title. Run after the deposit amounts change. */
+/** Works out every size's deposit again. Run after the deposit amounts or rules change. */
 function recompute_deposits(): void
 {
     db()->beginTransaction(); // one write to disk instead of one per size
-    foreach (q('SELECT id, title FROM variants')->fetchAll() as $v) {
-        q('UPDATE variants SET deposit_cents = ? WHERE id = ?', [deposit_for((string) $v['title']), $v['id']]);
+    $variants = q('SELECT v.id, v.title, p.title AS product_title FROM variants v JOIN products p ON p.id = v.product_id')->fetchAll();
+    foreach ($variants as $v) {
+        q('UPDATE variants SET deposit_cents = ? WHERE id = ?',
+            [deposit_for((string) $v['title'], (string) $v['product_title']), $v['id']]);
     }
     db()->commit();
 }
@@ -78,7 +97,8 @@ function save_products(array $products, string $syncedAt): int
                    active = 1, synced_at = excluded.synced_at',
                 [$v['id'], $p['id'], $v['sku'] ?? null, $v['title'],
                  (int) round(((float) $v['price']) * 100), $v['grams'] ?? null,
-                 empty($v['available']) ? 0 : 1, $amount, $unit, deposit_for((string) $v['title']), $syncedAt]);
+                 empty($v['available']) ? 0 : 1, $amount, $unit,
+                 deposit_for((string) $v['title'], (string) $p['title']), $syncedAt]);
             $count++;
         }
     }

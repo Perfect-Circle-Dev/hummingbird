@@ -242,12 +242,12 @@ function organizer_settings(): void
         </div>
         <div class="row">
           <div class="grow">
-            <label for="deposit_half_gallon">Deposit, half-gallon glass container ($)</label>
-            <input id="deposit_half_gallon" name="deposit_half_gallon" type="text" inputmode="decimal" value="<?= e($dollars('deposit_half_gallon_cents', '150')) ?>" required>
+            <label for="deposit_glass">Deposit on each glass jug or jar ($)</label>
+            <input id="deposit_glass" name="deposit_glass" type="text" inputmode="decimal" value="<?= e($dollars('deposit_glass_cents', '150')) ?>" required>
           </div>
           <div class="grow">
-            <label for="deposit_gallon_plus">Deposit, one gallon and larger ($)</label>
-            <input id="deposit_gallon_plus" name="deposit_gallon_plus" type="text" inputmode="decimal" value="<?= e($dollars('deposit_gallon_plus_cents', '300')) ?>" required>
+            <label for="deposit_plastic">Deposit on each plastic jug, cube, bucket or pail ($)</label>
+            <input id="deposit_plastic" name="deposit_plastic" type="text" inputmode="decimal" value="<?= e($dollars('deposit_plastic_cents', '300')) ?>" required>
           </div>
         </div>
         <div>
@@ -263,6 +263,7 @@ function organizer_settings(): void
           <input id="email_daily_cap" name="email_daily_cap" type="number" min="1" value="<?= e((string) setting('email_daily_cap', '90')) ?>" required>
         </div>
         <p class="note">Group emails wait their turn when the limit is reached and go out the next day. Sign-in links and order confirmations are always sent at once, which is why the limit sits a little under 100.</p>
+        <p class="note">Glass means half-gallon and one-gallon glass jugs, 64 oz jars and 5.5 lb honey jars. A case is charged for each container in it. Smaller jars, barrels, bag-in-a-box and empty containers carry no deposit.</p>
         <p class="note">A new discount or deposit takes effect straight away on open orders and on items saved for next month. Locked and closed months keep the prices they had. A new share expiry applies to shares started from now on.</p>
         <div><button class="btn" name="do" value="settings_save">Save settings</button></div>
       </form>
