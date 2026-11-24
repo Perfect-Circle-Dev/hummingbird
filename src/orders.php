@@ -49,6 +49,11 @@ function variant_deposit_cents(array $variant): int
     return (int) ($variant['deposit_override_cents'] ?? $variant['deposit_cents']);
 }
 
+// A typed word has to match the START of a word in the item ("le" finds Lentil, not
+// whoLE or appLEs). Once this many letters are typed, matches in the middle of a word
+// are shown too, after the others, so "nuts" still finds Walnuts and "berry" Blueberry.
+const SEARCH_INSIDE_WORDS_FROM = 4;
+
 /**
  * Search the catalog by words from the name, size or item number. Every word must match.
  * Best matches come first: an exact item number, then item numbers and names that
@@ -61,26 +66,84 @@ function search_catalog(string $query, int $limit = 30): array
     if (!$words) {
         return [];
     }
+    // Step 1: the database picks out every item that contains each word somewhere.
     $esc = fn(string $text): string => addcslashes($text, '%_\\');
     $where = [];
-    $whereParams = [];
+    $params = [];
     foreach ($words as $word) {
         $where[] = "(p.title LIKE ? ESCAPE '\\' OR v.title LIKE ? ESCAPE '\\' OR v.sku LIKE ? ESCAPE '\\')";
         $like = '%' . $esc($word) . '%';
-        array_push($whereParams, $like, $like, $like);
+        array_push($params, $like, $like, $like);
     }
-    $first = $esc($words[0]);
-    $rankParams = [$query, $esc($query) . '%', $first . '%', '% ' . $first . '%'];
-    return q("SELECT v.*, p.title AS product_title,
-                     CASE WHEN v.sku = ? COLLATE NOCASE THEN 0
-                          WHEN v.sku LIKE ? ESCAPE '\\' THEN 1
-                          WHEN p.title LIKE ? ESCAPE '\\' THEN 2
-                          WHEN p.title LIKE ? ESCAPE '\\' THEN 3
-                          ELSE 4 END AS match_rank
-              FROM variants v JOIN products p ON p.id = v.product_id
-              WHERE v.active = 1 AND " . implode(' AND ', $where) . "
-              ORDER BY match_rank, p.title, v.list_price_cents LIMIT ?",
-        array_merge($rankParams, $whereParams, [$limit]))->fetchAll();
+    $candidates = q("SELECT v.*, p.title AS product_title
+                     FROM variants v JOIN products p ON p.id = v.product_id
+                     WHERE v.active = 1 AND " . implode(' AND ', $where) . "
+                     ORDER BY p.title, v.list_price_cents", $params)->fetchAll();
+
+    // Step 2: keep the ones where the words sit sensibly, best matches first.
+    $found = [];
+    foreach ($candidates as $v) {
+        $rank = search_rank($v, $words, $query);
+        if ($rank !== null) {
+            $v['match_rank'] = $rank;
+            $found[] = $v;
+        }
+    }
+    // Sorting by rank keeps the name-and-price order from step 1 within each rank.
+    usort($found, fn(array $a, array $b): int => $a['match_rank'] <=> $b['match_rank']);
+    return array_slice($found, 0, $limit);
+}
+
+/** How well one catalog item matches the typed words: 0 is best; null means leave it out. */
+function search_rank(array $v, array $words, string $query): ?int
+{
+    $sku = (string) $v['sku'];
+    // True when some word in $text starts with $word. "Starts" means the letter before
+    // is not a letter or digit, so "du" matches "(Du Puy)" and "320" matches "Whole-320's".
+    $startsAWord = fn(string $word, string $text): bool
+        => preg_match('/(?<![\p{L}\p{N}])' . preg_quote($word, '/') . '/iu', $text) === 1;
+
+    $insideAWord = false;
+    $inNameOrNumber = false;
+    foreach ($words as $word) {
+        // Item numbers: the start always counts ("g12" finds G129), and anything with
+        // a digit in it may sit anywhere ("129" finds G129).
+        $inSku = stripos($sku, $word) === 0 || (preg_match('/\d/', $word) && stripos($sku, $word) !== false);
+        if ($inSku || $startsAWord($word, $v['product_title'])) {
+            $inNameOrNumber = true;
+            continue;
+        }
+        if ($startsAWord($word, (string) $v['title'])) {
+            continue; // matches the size, which narrows a search but can't be all of it (see below)
+        }
+        // Step 1 already found the word somewhere, so here it is in the middle of a word.
+        if (mb_strlen($word) < SEARCH_INSIDE_WORDS_FROM) {
+            return null;
+        }
+        $insideAWord = true;
+        if (stripos($v['product_title'], $word) !== false) {
+            $inNameOrNumber = true;
+        }
+    }
+    // At least one word has to be in the name or item number. Otherwise "ba", typed on
+    // the way to "barley", would list every bag, and "ca" every case. Sizes still narrow
+    // a search: "oats 25" or "oil gal" work as expected.
+    if (!$inNameOrNumber) {
+        return null;
+    }
+    if ($insideAWord) {
+        return 5;
+    }
+    if (strcasecmp($sku, $query) === 0) {
+        return 0;
+    }
+    if (stripos($sku, $query) === 0) {
+        return 1;
+    }
+    if (stripos($v['product_title'], $words[0]) === 0) {
+        return 2;
+    }
+    return $startsAWord($words[0], $v['product_title']) ? 3 : 4;
 }
 
 function favorites_for(int $memberId): array
