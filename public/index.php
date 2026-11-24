@@ -9,10 +9,13 @@ require dirname(__DIR__) . '/src/catalog.php';
 require dirname(__DIR__) . '/src/orders.php';
 require dirname(__DIR__) . '/src/shares.php';
 require dirname(__DIR__) . '/src/organizer.php';
+require dirname(__DIR__) . '/src/payments.php';
+require dirname(__DIR__) . '/src/members.php';
 require dirname(__DIR__) . '/src/layout.php';
 require dirname(__DIR__) . '/src/pages/order.php';
 require dirname(__DIR__) . '/src/pages/shares.php';
 require dirname(__DIR__) . '/src/pages/organizer.php';
+require dirname(__DIR__) . '/src/pages/organizer_people.php';
 
 $action = (string) ($_GET['a'] ?? 'home');
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';

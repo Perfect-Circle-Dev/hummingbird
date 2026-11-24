@@ -173,6 +173,9 @@ function page_order(array $member, bool $isPost): void
             <div><dt>Our part of filled shares</dt><dd><?= money($summary['shares_cents']) ?></dd></div>
             <div class="due"><dt><?= $open ? 'Estimated due at pickup' : 'Due at pickup' ?></dt><dd><?= money($summary['due_cents']) ?></dd></div>
           </dl>
+          <?php if ($order['paid_at']): ?>
+            <p class="notice"><?= e(paid_text($order['paid_at'], $order['paid_method'])) ?>. Thank you!</p>
+          <?php endif; ?>
           <?php endif; ?>
           <?php if ($open): ?>
           <form method="post" action="/?a=order" class="row end">

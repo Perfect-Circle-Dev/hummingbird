@@ -16,5 +16,6 @@ function add_column_if_missing(string $table, string $column, string $definition
     }
 }
 add_column_if_missing('share_claims', 'cost_cents', 'INTEGER');
+add_column_if_missing('cycles', 'pickup_emailed_at', 'TEXT');
 
 echo "Database is ready at " . config('db_path') . "\n";

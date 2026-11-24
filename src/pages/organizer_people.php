@@ -1,0 +1,271 @@
+<?php
+// Organizer pages for people and settings: members, households, and the group's settings.
+// Only members marked as organizers get here; index.php checks that.
+declare(strict_types=1);
+
+/** The row of links at the top of the main organizer pages. */
+function organizer_nav(string $current): void
+{
+    $pages = ['' => 'Months', 'members' => 'Members', 'settings' => 'Settings'];
+    echo '<nav class="subnav" aria-label="Organizer">';
+    foreach ($pages as $view => $label) {
+        echo $view === $current
+            ? '<strong aria-current="page">' . $label . '</strong>'
+            : '<a href="/?a=organizer' . ($view ? '&amp;view=' . $view : '') . '">' . $label . '</a>';
+    }
+    echo '</nav>';
+}
+
+/**
+ * Handles the forms on the Members and Settings pages, then redirects.
+ * Returns without doing anything when $do belongs to another page.
+ */
+function organizer_people_post(string $do, array $member): void
+{
+    $actingId = (int) $member['id'];
+    $memberId = (int) ($_POST['member_id'] ?? 0);
+    $members = '/?a=organizer&view=members';
+
+    if ($do === 'member_add') {
+        // A new member starts out active; the form has no box for it.
+        $problem = member_save(null, ['active' => 1] + $_POST, $actingId);
+        redirect($members . ($problem ? '&problem=' . $problem : '&done=member_added'));
+    }
+    if ($do === 'member_save') {
+        $problem = find_member($memberId) ? member_save($memberId, $_POST, $actingId) : 'member_gone';
+        redirect($members . ($problem ? '&edit=' . $memberId . '&problem=' . $problem : '&done=member_saved'));
+    }
+    if ($do === 'member_delete') {
+        $problem = member_delete($memberId, $actingId);
+        redirect($members . ($problem ? '&edit=' . $memberId . '&problem=' . $problem : '&done=member_deleted'));
+    }
+    if ($do === 'members_import') {
+        $result = members_import((string) ($_POST['list'] ?? ''));
+        // The address carries only numbers: how many were added, how many were already
+        // members, and which line numbers could not be read.
+        redirect($members . '&added=' . $result['added'] . '&already=' . $result['already']
+            . '&bad=' . implode(',', $result['bad']));
+    }
+    if ($do === 'household_rename') {
+        $problem = household_rename((int) ($_POST['household_id'] ?? 0), (string) ($_POST['name'] ?? ''));
+        redirect($members . ($problem ? '&problem=' . $problem : '&done=household_saved'));
+    }
+    if ($do === 'settings_save') {
+        $problem = settings_save($_POST);
+        redirect('/?a=organizer&view=settings' . ($problem ? '&problem=' . $problem : '&done=settings_saved'));
+    }
+}
+
+/** Shows the "done" or "problem" message for the last button pressed, if any. */
+function organizer_messages(): void
+{
+    $done = ORGANIZER_DONE[(string) ($_GET['done'] ?? '')] ?? null;
+    $problem = ORGANIZER_PROBLEMS[(string) ($_GET['problem'] ?? '')] ?? null;
+    if ($done) {
+        echo '<p class="notice" role="status">' . e($done) . '</p>';
+    }
+    if ($problem) {
+        echo '<p class="notice warn" role="alert">' . e($problem) . '</p>';
+    }
+}
+
+/** The boxes for one member, used to add someone and to edit someone. */
+function organizer_member_fields(?array $m, array $households): void
+{
+    ?>
+    <div class="row">
+      <div class="grow">
+        <label for="m-name">Name</label>
+        <input id="m-name" name="name" type="text" value="<?= e($m['name'] ?? '') ?>" autocomplete="off" required>
+      </div>
+      <div class="grow">
+        <label for="m-email">Email address (this is how they sign in)</label>
+        <input id="m-email" name="email" type="email" value="<?= e($m['email'] ?? '') ?>" autocomplete="off" required>
+      </div>
+    </div>
+    <div class="row">
+      <div class="grow">
+        <label for="m-phone">Phone, for texts (optional)</label>
+        <input id="m-phone" name="phone" type="text" inputmode="tel" value="<?= e($m['phone'] ?? '') ?>" autocomplete="off">
+      </div>
+      <div class="grow">
+        <label for="m-household">Household</label>
+        <select id="m-household" name="household_id">
+          <?php if (!$m): ?><option value="0">A new household (name it in the next box)</option><?php endif; ?>
+          <?php foreach ($households as $h): ?>
+            <option value="<?= (int) $h['id'] ?>" <?= $m && (int) $m['household_id'] === (int) $h['id'] ? 'selected' : '' ?>><?= e($h['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="grow">
+        <label for="m-new-household"><?= $m ? 'Or move to a new household named' : 'Name for the new household' ?></label>
+        <input id="m-new-household" name="new_household" type="text" autocomplete="off">
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" name="is_admin" value="1" <?= !empty($m['is_admin']) ? 'checked' : '' ?>> Organizer (can see these pages and gets the reports)</label>
+    <?php if ($m): ?>
+      <label class="check"><input type="checkbox" name="active" value="1" <?= $m['active'] ? 'checked' : '' ?>> Active (can sign in and gets emails)</label>
+    <?php endif; ?>
+    <?php
+}
+
+/** Members page: add, edit and switch off members, rename households. */
+function organizer_members(array $member): void
+{
+    $households = households_with_members();
+    $editing = isset($_GET['edit']) ? find_member((int) $_GET['edit']) : null;
+    $activeMembers = 0;
+    $activeHouseholds = 0;
+    foreach ($households as $h) {
+        $activeMembers += $h['active_count'];
+        $activeHouseholds += $h['active_count'] > 0 ? 1 : 0;
+    }
+
+    page_start('Members');
+    organizer_nav('members');
+    echo '<h1>Members</h1>';
+    organizer_messages();
+
+    // What the last pasted list did.
+    if (isset($_GET['added'])) {
+        $added = (int) $_GET['added'];
+        $already = (int) ($_GET['already'] ?? 0);
+        $bad = array_filter(array_map('intval', explode(',', (string) ($_GET['bad'] ?? ''))));
+        echo '<p class="notice" role="status">' . $added . ' ' . ($added === 1 ? 'member' : 'members') . ' added.'
+            . ($already ? ' ' . $already . ' ' . ($already === 1 ? 'was' : 'were') . ' already on the list and left as they are.' : '') . '</p>';
+        if ($bad) {
+            echo '<p class="notice warn" role="alert">' . (count($bad) === 1 ? 'Line ' : 'Lines ') . e(implode(', ', $bad))
+                . ' could not be read (no email address, or no name) and ' . (count($bad) === 1 ? 'was' : 'were') . ' skipped.</p>';
+        }
+    }
+    ?>
+    <p class="note"><?= $activeMembers ?> active <?= $activeMembers === 1 ? 'member' : 'members' ?> in <?= $activeHouseholds ?> <?= $activeHouseholds === 1 ? 'household' : 'households' ?>. People in the same household share one order.</p>
+
+    <?php if ($editing): ?>
+      <div class="card stack">
+        <h2>Edit <?= e($editing['name']) ?></h2>
+        <form method="post" action="/?a=organizer" class="stack">
+          <?= csrf_field() ?>
+          <input type="hidden" name="member_id" value="<?= (int) $editing['id'] ?>">
+          <?php organizer_member_fields($editing, $households); ?>
+          <p class="note">Someone who is not active can't sign in and gets no emails. Their past orders stay on record.</p>
+          <div class="row">
+            <button class="btn" name="do" value="member_save">Save</button>
+            <a class="btn quiet" href="/?a=organizer&amp;view=members">Cancel</a>
+          </div>
+        </form>
+        <?php if (member_is_unused((int) $editing['id']) && (int) $editing['id'] !== (int) $member['id']): ?>
+          <form method="post" action="/?a=organizer" class="step">
+            <?= csrf_field() ?>
+            <input type="hidden" name="member_id" value="<?= (int) $editing['id'] ?>">
+            <p class="note"><?= e($editing['name']) ?> has never signed in or ordered, so they can be deleted outright if they were added by mistake.</p>
+            <button class="link" name="do" value="member_delete">Delete <?= e($editing['name']) ?></button>
+          </form>
+        <?php endif; ?>
+      </div>
+    <?php else: ?>
+      <div class="card stack">
+        <h2>Add a member</h2>
+        <form method="post" action="/?a=organizer" class="stack">
+          <?= csrf_field() ?>
+          <?php organizer_member_fields(null, $households); ?>
+          <p class="note">Adding someone doesn't email them. They sign in by asking for a link with this email address.</p>
+          <div><button class="btn" name="do" value="member_add">Add member</button></div>
+        </form>
+        <details class="step">
+          <summary>Add several at once</summary>
+          <form method="post" action="/?a=organizer" class="stack">
+            <?= csrf_field() ?>
+            <label for="list">One person per line: name, email, household, phone</label>
+            <textarea id="list" name="list" rows="8" placeholder="Ana Alder, ana@example.com, Alder House, 541-555-0100&#10;Ben Alder, ben@example.com, Alder House&#10;Cora Cedar, cora@example.com"></textarea>
+            <p class="note">Put commas between the parts, or paste straight from a spreadsheet. Household and phone can be left off; someone with no household gets one named after them. People in the same household need the same household name. Anyone whose email is already on the list is skipped, so pasting the same list twice does no harm. A heading row is ignored.</p>
+            <div><button class="btn" name="do" value="members_import">Add everyone in the list</button></div>
+          </form>
+        </details>
+      </div>
+    <?php endif; ?>
+
+    <div class="columns">
+    <?php foreach ($households as $h): ?>
+      <div class="card stack">
+        <h2><?= e($h['name']) ?><?= $h['active_count'] === 0 ? ' <span class="flag">nobody active</span>' : '' ?></h2>
+        <ul class="plain">
+          <?php foreach ($h['members'] as $m): ?>
+            <li>
+              <strong><?= e($m['name']) ?></strong>
+              <?= $m['is_admin'] ? ' <span class="flag">organizer</span>' : '' ?>
+              <?= $m['active'] ? '' : ' <span class="flag">not active</span>' ?>
+              <div class="note"><?= e($m['email']) ?><?= $m['phone'] ? ' · ' . e($m['phone']) : '' ?></div>
+              <a class="tap" href="/?a=organizer&amp;view=members&amp;edit=<?= (int) $m['id'] ?>" aria-label="Edit <?= e($m['name']) ?>">Edit</a>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <details>
+          <summary>Rename this household</summary>
+          <form method="post" action="/?a=organizer" class="row">
+            <?= csrf_field() ?>
+            <input type="hidden" name="household_id" value="<?= (int) $h['id'] ?>">
+            <div class="grow">
+              <label for="h-name-<?= (int) $h['id'] ?>">Household name</label>
+              <input id="h-name-<?= (int) $h['id'] ?>" name="name" type="text" value="<?= e($h['name']) ?>" required>
+            </div>
+            <button class="btn" name="do" value="household_rename">Save</button>
+          </form>
+        </details>
+      </div>
+    <?php endforeach; ?>
+    </div>
+    <?php
+    page_end();
+}
+
+/** Settings page: discount, deposits, share expiry, Venmo name. */
+function organizer_settings(): void
+{
+    $dollars = fn(string $key, string $default): string => number_format(((int) setting($key, $default)) / 100, 2, '.', '');
+    $synced = setting('catalog_synced_at');
+
+    page_start('Settings');
+    organizer_nav('settings');
+    echo '<h1>Settings</h1>';
+    organizer_messages();
+    ?>
+    <div class="card stack narrow-form">
+      <form method="post" action="/?a=organizer" class="stack">
+        <?= csrf_field() ?>
+        <div>
+          <label for="discount_percent">Group discount off Hummingbird's list price (percent)</label>
+          <input id="discount_percent" name="discount_percent" type="text" inputmode="decimal" value="<?= e((string) setting('discount_percent', '0')) ?>" required>
+        </div>
+        <div class="row">
+          <div class="grow">
+            <label for="deposit_half_gallon">Deposit, half-gallon glass container ($)</label>
+            <input id="deposit_half_gallon" name="deposit_half_gallon" type="text" inputmode="decimal" value="<?= e($dollars('deposit_half_gallon_cents', '150')) ?>" required>
+          </div>
+          <div class="grow">
+            <label for="deposit_gallon_plus">Deposit, one gallon and larger ($)</label>
+            <input id="deposit_gallon_plus" name="deposit_gallon_plus" type="text" inputmode="decimal" value="<?= e($dollars('deposit_gallon_plus_cents', '300')) ?>" required>
+          </div>
+        </div>
+        <div>
+          <label for="share_expiry_months">Months an unfilled share stays on the share board</label>
+          <input id="share_expiry_months" name="share_expiry_months" type="number" min="1" max="24" value="<?= e((string) setting('share_expiry_months', '3')) ?>" required>
+        </div>
+        <div>
+          <label for="venmo_handle">Your Venmo name, without the @ (for the pay link in pickup emails)</label>
+          <input id="venmo_handle" name="venmo_handle" type="text" value="<?= e(venmo_handle()) ?>" autocomplete="off">
+        </div>
+        <p class="note">A new discount or deposit takes effect straight away on open orders and on items saved for next month. Locked and closed months keep the prices they had. A new share expiry applies to shares started from now on.</p>
+        <div><button class="btn" name="do" value="settings_save">Save settings</button></div>
+      </form>
+    </div>
+    <div class="card stack narrow-form">
+      <h2>Good to know</h2>
+      <ul class="plain">
+        <li>Catalog last refreshed from Hummingbird: <?= $synced ? e(fmt_local($synced)) : 'not yet' ?>.</li>
+        <li>Emails sent in the last 24 hours: <?= emails_last_24h() ?>. Resend's free plan allows 100 a day.</li>
+      </ul>
+    </div>
+    <?php
+    page_end();
+}

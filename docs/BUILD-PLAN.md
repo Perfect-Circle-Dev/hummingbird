@@ -52,8 +52,9 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] "Save for next month" list, always available to members
 - [x] Organizer: out-of-stock and price edits, with update emails; out-of-stock items and shares carry over to next month at close
 - [x] Organizer: report by household, on the site for every month and emailed to the organizers at lock, at close and on request
-- [ ] Organizer: split sheets, paid tracking
-- [ ] Organizer: members and households, settings (discount, deposits)
+- [x] Organizer: split sheets for shared items, with amounts as read on a scale
+- [x] Organizer: mark each order paid (check, Venmo or cash); pickup emails with the amount due and a Venmo link
+- [x] Organizer: members and households (add, paste a list, edit, switch off), settings (discount, deposits, share expiry, Venmo name)
 - [ ] Emails: time to order, last call, pickup notice, share expiry warning
 - [ ] Put each member's personal sign-in link in the "time to order" email, to stay under Resend's daily cap
 - [ ] Deposits on a case of several jugs (currently charged once)
@@ -67,6 +68,6 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 ## Waiting on
 
 - Actual discount, checked against a past invoice
-- Venmo handle for the pickup email
+- Venmo name for the pickup email: Brent types it in under Organizer, Settings. The pay link needs one try with a real account
 - Dancing bean logo file
-- Member list (names, emails, households) exported from Mailchimp
+- Member list (names, emails, households) exported from Mailchimp: paste it in under Organizer, Members
