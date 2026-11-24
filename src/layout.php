@@ -2,9 +2,29 @@
 // Shared page frame: header with the group name, then the page content.
 declare(strict_types=1);
 
+/**
+ * The group's logo, if there is one. To add or change it, put a file named logo.svg,
+ * logo.webp or logo.png in the public/ folder; nothing else needs editing.
+ * Returns its address and size, or null when no file is there.
+ */
+function site_logo(): ?array
+{
+    foreach (['svg', 'webp', 'png'] as $type) {
+        $file = dirname(__DIR__) . '/public/logo.' . $type;
+        if (is_file($file)) {
+            $size = $type === 'svg' ? null : @getimagesize($file);
+            // The number on the end changes when the file does, so browsers fetch the new one.
+            return ['src' => '/logo.' . $type . '?v=' . filemtime($file),
+                    'width' => $size[0] ?? null, 'height' => $size[1] ?? null];
+        }
+    }
+    return null;
+}
+
 function page_start(string $title): void
 {
     $member = current_member();
+    $logo = site_logo();
     ?><!doctype html>
 <html lang="en">
 <head>
@@ -13,12 +33,18 @@ function page_start(string $title): void
 <meta name="robots" content="noindex">
 <title><?= e($title) ?> · <?= e(config('site_name')) ?></title>
 <link rel="stylesheet" href="/site.css">
-</head>
+<?php if ($logo): ?><link rel="icon" href="<?= e($logo['src']) ?>">
+<?php endif; ?></head>
 <body>
 <header class="top">
   <a class="brand" href="/">
-    <span class="brand-name"><?= e(config('site_name')) ?></span>
-    <span class="brand-tag"><?= e(config('site_tagline')) ?></span>
+    <?php if ($logo): ?>
+    <img class="brand-logo" src="<?= e($logo['src']) ?>" alt=""<?= $logo['width'] ? ' width="' . (int) $logo['width'] . '" height="' . (int) $logo['height'] . '"' : '' ?>>
+    <?php endif; ?>
+    <span class="brand-text">
+      <span class="brand-name"><?= e(config('site_name')) ?></span>
+      <span class="brand-tag"><?= e(config('site_tagline')) ?></span>
+    </span>
   </a>
   <?php if ($member): ?>
   <nav class="nav" aria-label="Main">

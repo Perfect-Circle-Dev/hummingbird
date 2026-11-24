@@ -60,14 +60,15 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Email queue with a daily limit, so a big mailing can't go over Resend's cap
 - [x] Deposits on a case of several jugs: one deposit for each container in the case
 - [x] Unsubscribe link and footer on group emails
-- [ ] Fill-the-Hummingbird-cart link (needs a test from the organizer's login)
-- [ ] Group name and dancing bean logo on every page
-- [ ] Nightly jobs: catalog sync, share expiry, database backup
+- [x] Fill-the-Hummingbird-cart link on the combined order (still needs a test from the organizer's login)
+- [x] Group name on every page, and a slot for the dancing bean logo (waiting for the file)
+- [x] Nightly jobs: catalog sync, share expiry, database backup (30 kept, one emailed weekly)
 - [x] Server follows GitHub: merging into `main` deploys within about 2 minutes (`deploy/setup-auto.sh`)
 - [x] Debian updates itself daily; email to the organizer when a restart is needed
 
 ## Waiting on
 
 - Venmo name for the pickup email: Brent types it in under Organizer, Settings. The pay link needs one try with a real account
-- Dancing bean logo file
+- Dancing bean logo file: add it to `public/` as `logo.webp`, `logo.png` or `logo.svg`
+- A try of the "Fill my Hummingbird cart" link from Brent's wholesale login
 - Member list (names, emails, households) exported from Mailchimp: paste it in under Organizer, Members

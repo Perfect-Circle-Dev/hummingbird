@@ -57,10 +57,8 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
-echo "==> Nightly catalog refresh (3:15 am)"
-cat > /etc/cron.d/hummingbird <<CRON
-15 3 * * * www-data php $APP_DIR/bin/sync-catalog.php >> /var/log/hummingbird-sync.log 2>&1
-CRON
+# The nightly jobs (catalog refresh, backup) and everything else the server does by
+# itself are scheduled by deploy/setup-auto.sh, the last step printed below.
 touch /var/log/hummingbird-sync.log
 chown www-data /var/log/hummingbird-sync.log
 

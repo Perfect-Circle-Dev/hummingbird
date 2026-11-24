@@ -39,6 +39,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   paid (`order_set_paid()`), the pickup email (`pickup_emails_send()`, `venmo_link()`).
 - `src/members.php`: members and households (`member_save()`, `member_delete()`,
   `members_import()`, `household_rename()`) and `settings_save()`.
+- `src/layout.php`: the page frame. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
+  the header and as the tab icon when such a file exists.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
   Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=settings`;
   `&month=ID` that month's combined order; `&month=ID&view=report` report and payments;
@@ -46,7 +48,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
   settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
   a `do` value; messages come back as short codes looked up in `ORGANIZER_DONE` / `ORGANIZER_PROBLEMS`.
 - `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`,
-  `notify-admin`, `check-reboot`, `mail-jobs`).
+  `notify-admin`, `check-reboot`, `mail-jobs`, `backup`).
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
 - `deploy/`: server setup, nginx template, `update.sh`, and `setup-auto.sh` / `auto-update.sh`
@@ -130,6 +132,15 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Two kinds of sign-in link (`check_login_token`): the one requested on the sign-in page works
   once for 30 minutes; the one in a group email (`login_tokens.cycle_id` set) works as often as
   needed while that month is open, and again if the month is reopened.
+- Scheduled jobs all live in `/etc/cron.d/hummingbird-auto`, written by `deploy/setup-auto.sh`.
+  The server's clock is UTC, so times there are UTC: catalog refresh 11:15 (3:15 am Pacific in
+  winter), backup 11:45, restart check 15:00, GitHub check every 2 minutes, mail jobs every minute.
+  A change to that schedule needs `sudo bash deploy/setup-auto.sh` run on the server again.
+- Backups (`bin/backup.php`): nightly, gzipped, 30 kept in `data/backups/`, with the newest
+  emailed to `admin_email` once a week. Sessions, sign-in links, queued emails and the text of
+  logged emails are stripped from every copy. Restore steps are in README.md.
+- The "Fill my Hummingbird cart" link on the combined order (`hummingbird_cart_link()`) is a
+  Shopify cart permalink built from variant ids and in-stock quantities.
 - Sign-in is by emailed link only. No passwords. Organizers add members on the Members page,
   one at a time or by pasting a list (name, email, household, phone). Adding sends no email.
   A member who is not active can't sign in and gets no emails, and is signed out at once; past
@@ -149,13 +160,15 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 Items 1 to 9 are built (months, combined order with unfinished flags, the lock step,
 out of stock and price corrections with update emails, the report by household, split sheets,
-paid marking and pickup emails, members, households and settings, group emails).
-Numbering is kept so older notes still match.
+paid marking and pickup emails, members, households and settings, group emails, the
+Hummingbird cart link, the logo slot, nightly backups). All twelve items are built.
 
-10. "Fill my Hummingbird cart" link built from variant ids (Shopify cart permalink:
-    `/cart/VARIANT_ID:QTY,VARIANT_ID:QTY`). Untested; needs a try from Brent's wholesale login.
-11. Group name and the dancing bean logo on every page (Brent will supply the file).
-12. Nightly: database backup, alongside the existing catalog sync and share expiry.
+Still open from that list:
+
+- The cart link has not been tried with Brent's wholesale login. The combined order page
+  carries a warning saying so; take the warning out once he confirms it works.
+- The dancing bean logo file has not been supplied. The header shows it as soon as a
+  `logo.*` file is added to `public/` (WebP preferred, per Brent's usual practice).
 
 Members said no to a "reorder last month" button; favorites cover it.
 

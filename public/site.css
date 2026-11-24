@@ -3,7 +3,9 @@
 body { margin: 0; background: var(--ground); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: var(--green); }
 .top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid var(--line); }
-.brand { display: flex; flex-direction: column; text-decoration: none; color: var(--ink); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.brand-logo { height: 48px; width: auto; }
+.brand-text { display: flex; flex-direction: column; }
 .brand-name { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .brand-tag { font-size: 13px; color: var(--muted); }
 .who { display: flex; gap: 12px; align-items: center; font-size: 14px; }
