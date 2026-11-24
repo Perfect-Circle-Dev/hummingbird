@@ -29,7 +29,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - `src/orders.php`: months ("cycles"), household orders, search, favorites, totals, submit email.
 - `src/shares.php`: share board logic, `shares_on_order()`, `share_split_cents()`.
 - `src/organizer.php`: open, change, lock and close a month (`cycle_open`, `cycle_update`,
-  `cycle_lock`, `cycle_reopen`, `cycle_close`), `combined_order()`, `unfinished_orders()`.
+  `cycle_lock`, `cycle_reopen`, `cycle_close`), `combined_order()`, `unfinished_orders()`,
+  `stock_and_prices_save()`, and the report by household (`month_report()`, `month_report_text()`,
+  `month_report_email()`; page at `/?a=organizer&month=ID&view=report`).
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
   `/?a=organizer` is the months page; `/?a=organizer&month=ID` is that month's combined order.
 - `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`,
@@ -84,6 +86,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   affected gets one email per save, unless the organizer unticks the email box. Out-of-stock
   lines and shares are not charged. At close they carry over: lines to the household's next-month
   list, shares back to the board as open and fully claimed (`carry_over_out_of_stock`).
+- The report by household is never stored: the page works it out from the current figures, so
+  it is an estimate while a month is open and final once closed. A plain-text copy is emailed to
+  every active organizer (`is_admin = 1`) when a month is locked and again when it is closed,
+  and on request from a button. The close-time copy is written before out-of-stock shares move
+  back to the board, so it still lists them; the page for a closed month no longer does.
 - A locked month can be reopened (`cycle_reopen`), which also clears out-of-stock ticks and
   price corrections: members can change orders again, prices
   follow the catalog again, and its shares go back to the board fully claimed. Closing can't
@@ -96,13 +103,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 ## What to build next: organizer pages (members with `is_admin = 1`)
 
-Items 1 to 4 are built (months, combined order with unfinished flags, the lock step,
-out of stock and price corrections with update emails).
+Items 1 to 5 are built (months, combined order with unfinished flags, the lock step,
+out of stock and price corrections with update emails, the report by household).
 Numbering is kept so older notes still match.
 
-5. Final report: every ordering household with its full list, prices, deposits, share parts
-   and total. Saved on the site per month and emailed to Brent when the month is locked.
-   He never prints.
 6. Split sheet per shared item (who gets how much) for divide-up day.
 7. Mark each order paid, with the method. Pickup email per household with the amount due
    and a Venmo link (handle still needed from Brent).
