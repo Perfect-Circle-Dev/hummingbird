@@ -272,6 +272,8 @@ function organizer_settings(): void
       <h2>Good to know</h2>
       <ul class="plain">
         <li>Catalog last refreshed from Hummingbird: <?= $synced ? e(fmt_local($synced)) : 'not yet' ?>.</li>
+        <li>Last database backup: <?= setting('backup_last_at') ? e(fmt_local(setting('backup_last_at'))) : 'none yet' ?>.
+          Last copy emailed to you: <?= setting('backup_emailed_at') ? e(fmt_local(setting('backup_emailed_at'), 'l, F j')) : 'none yet' ?>.</li>
         <li>Emails sent in the last 24 hours: <?= emails_last_24h() ?>. Waiting to go out: <?= queue_waiting()['count'] ?>.</li>
       </ul>
     </div>

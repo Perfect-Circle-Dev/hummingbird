@@ -5,13 +5,14 @@ declare(strict_types=1);
 
 /**
  * Sends one email now. $headers are extra mail headers, used for the "unsubscribe"
- * line on group emails. Returns false if it could not be sent.
+ * line on group emails. $attachments are paths of files to attach (the weekly backup).
+ * Returns false if it could not be sent.
  */
-function send_email(string $to, string $subject, string $body, array $headers = []): bool
+function send_email(string $to, string $subject, string $body, array $headers = [], array $attachments = []): bool
 {
     $status = 'logged';
     if (config('mail_driver') === 'smtp') {
-        $status = smtp_send($to, $subject, $body, $headers) ? 'sent' : 'failed';
+        $status = smtp_send($to, $subject, $body, $headers, $attachments) ? 'sent' : 'failed';
     }
     q('INSERT INTO email_log (to_email, subject, body, status) VALUES (?, ?, ?, ?)',
         [$to, $subject, $body, $status]);
@@ -33,7 +34,7 @@ function emails_last_24h(): int
 }
 
 /** Sends by SMTP (Resend) using PHPMailer (installed with "composer install"). */
-function smtp_send(string $to, string $subject, string $body, array $headers = []): bool
+function smtp_send(string $to, string $subject, string $body, array $headers = [], array $attachments = []): bool
 {
     $autoload = dirname(__DIR__) . '/vendor/autoload.php';
     if (!is_file($autoload)) {
@@ -58,6 +59,9 @@ function smtp_send(string $to, string $subject, string $body, array $headers = [
         $mail->Body = $body;
         foreach ($headers as $name => $value) {
             $mail->addCustomHeader($name, $value);
+        }
+        foreach ($attachments as $path) {
+            $mail->addAttachment($path);
         }
         return $mail->send();
     } catch (Throwable $err) {

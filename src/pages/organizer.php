@@ -495,6 +495,18 @@ function organizer_combined_order(array $cycle): void
         <div class="due"><dt>Order total at member prices</dt><dd><?= money($combined['total_cents']) ?></dd></div>
       </dl>
       <p class="note">The total is before deposits and leaves out anything out of stock. Deposits are not charged on shares.</p>
+      <?php $cart = hummingbird_cart_link($combined); ?>
+      <?php if ($cart['url'] && $cycle['status'] !== 'closed'): ?>
+      <div class="stack step">
+        <h3>Fill your Hummingbird cart</h3>
+        <p class="note">Sign in to your wholesale account on Hummingbird's site first, in this same browser. Then this button opens their cart with <?= $cart['items'] === 1 ? 'the 1 item' : 'all ' . $cart['items'] . ' items' ?> above already in it, in the right quantities, so you don't have to type them in.<?= $cycle['status'] === 'open' ? ' The month is still open, so this is the order so far.' : '' ?></p>
+        <?php if ($cart['skipped']): ?>
+          <p class="notice warn">Not in the link, because Hummingbird no longer lists <?= count($cart['skipped']) === 1 ? 'it' : 'them' ?>: <?= e(implode('; ', $cart['skipped'])) ?>. Ask Hummingbird about <?= count($cart['skipped']) === 1 ? 'it' : 'these' ?>.</p>
+        <?php endif; ?>
+        <p class="notice warn">This link has not been tried with a real wholesale login yet. The first time you use it, check every line of the cart against the list above.</p>
+        <div><a class="btn" href="<?= e($cart['url']) ?>" target="_blank" rel="noopener">Fill my Hummingbird cart</a></div>
+      </div>
+      <?php endif; ?>
       <?php endif; ?>
     </div>
     <?php

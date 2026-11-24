@@ -9,6 +9,8 @@
 #   3. The site follows GitHub: a change merged into main goes live by itself a few
 #      minutes later (see CHECK_EVERY_MINUTES below).
 #   4. The "Gitupdate" command, to check GitHub and update at once, by hand.
+#   5. Each night: the catalog refresh, then a database backup (a copy is emailed weekly).
+#   6. Every minute: emails waiting in the queue are sent.
 set -euo pipefail
 
 # How often the server looks at GitHub by itself, in minutes (1 to 30).
@@ -70,12 +72,21 @@ echo "==> Scheduled jobs"
         echo "# Follow GitHub: look every $CHECK_EVERY_MINUTES minutes, update when the main branch has moved."
         echo "*/$CHECK_EVERY_MINUTES * * * * $OWNER bash $APP_DIR/deploy/auto-update.sh"
     fi
+    echo "# Each night: refresh the catalog from Hummingbird (which also reprices open orders and"
+    echo "# expires old shares), then back up the database. 11:15 UTC is 3:15 am Pacific in"
+    echo "# winter and 4:15 am in summer."
+    echo "15 11 * * * www-data php $APP_DIR/bin/sync-catalog.php >> /var/log/hummingbird-sync.log 2>&1"
+    echo "45 11 * * * www-data php $APP_DIR/bin/backup.php >> /var/log/hummingbird-sync.log 2>&1"
     echo "# Each morning, email the organizer if Debian is waiting for a restart."
     echo "0 15 * * * www-data php $APP_DIR/bin/check-reboot.php >> /var/log/hummingbird-sync.log 2>&1"
     echo "# Every minute: send emails waiting in the queue, and the ones the site sends by"
     echo "# itself (last call before a deadline, share-expiry warnings)."
     echo "* * * * * www-data php $APP_DIR/bin/mail-jobs.php >> /var/log/hummingbird-sync.log 2>&1"
 } > /etc/cron.d/hummingbird-auto
+# The catalog refresh used to have a schedule file of its own, set for 3:15 by the
+# server's clock. That clock is UTC, so it ran at 7:15 in the evening, Pacific time.
+# It is in the file above now, so the old one goes.
+rm -f /etc/cron.d/hummingbird
 touch /var/log/hummingbird-sync.log
 chown www-data /var/log/hummingbird-sync.log
 if [ "$CHECK_EVERY_MINUTES" -gt 0 ]; then
@@ -84,6 +95,7 @@ else
     echo "    Automatic checks are off. Update with the Gitupdate command."
 fi
 echo "    Queued emails are sent every minute."
+echo "    Each night: catalog refresh at 11:15 UTC, database backup at 11:45 UTC."
 if systemctl is-active --quiet cron; then
     echo "    cron is running."
 else

@@ -536,3 +536,34 @@ function month_report_email(array $cycle, string $occasion, ?string $text = null
     }
     return count($organizers);
 }
+
+/**
+ * A link that fills a cart on Hummingbird's site with everything on the combined order,
+ * so the organizer doesn't have to type each item in. It uses Shopify's "cart permalink"
+ * (/cart/VARIANT:QTY,VARIANT:QTY); "storefront=true" asks for the cart page, not checkout.
+ * Items marked out of stock are left out. Items Hummingbird no longer lists can't be
+ * added by a link, so they come back in 'skipped' to be shown beside it.
+ */
+function hummingbird_cart_link(array $combined): array
+{
+    $parts = [];
+    $skipped = [];
+    foreach ($combined['items'] as $item) {
+        if ($item['qty'] < 1) {
+            continue;
+        }
+        if (!$item['active']) {
+            $skipped[] = "{$item['sku']}: {$item['product_title']}, {$item['size']} x {$item['qty']}";
+            continue;
+        }
+        $parts[] = $item['variant_id'] . ':' . $item['qty'];
+    }
+    // The shop's address is the catalog feed's address without the file name.
+    $feed = (string) config('catalog_url');
+    $shop = parse_url($feed, PHP_URL_SCHEME) . '://' . parse_url($feed, PHP_URL_HOST);
+    return [
+        'url' => $parts ? $shop . '/cart/' . implode(',', $parts) . '?storefront=true' : null,
+        'items' => count($parts),
+        'skipped' => $skipped,
+    ];
+}
