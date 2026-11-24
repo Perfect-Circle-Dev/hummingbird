@@ -76,7 +76,7 @@ function page_shares(array $member, bool $isPost): void
           <?php endforeach; ?>
         </ul>
         <?php if ($s['status'] === 'ordered'): ?>
-          <p class="notice">On the <?= e($cycle['label'] ?? '') ?> order<?= $s['out_of_stock'] ? ', but Hummingbird was out of stock. Nobody is charged.' : '.' ?></p>
+          <p class="notice">On the <?= e($cycle['label'] ?? '') ?> order<?= $s['out_of_stock'] ? ', but Hummingbird was out of stock. Nobody is charged, and it comes back to the board for next month.' : '.' ?></p>
         <?php elseif ($s['full']): ?>
           <p class="notice">Fully claimed. It goes on the next order.</p>
         <?php endif; ?>

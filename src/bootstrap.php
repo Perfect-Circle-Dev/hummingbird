@@ -54,6 +54,16 @@ function money(int $cents): string
     return '$' . number_format($cents / 100, 2);
 }
 
+/** "12.34", "$12.34", "1,300.27" or "12" as typed into a form -> cents. Null if it isn't an amount. */
+function money_to_cents(string $text): ?int
+{
+    $clean = str_replace(['$', ',', ' '], '', $text);
+    if (!preg_match('/^(\d+(\.\d{1,2})?|\.\d{1,2})$/', $clean)) {
+        return null;
+    }
+    return (int) round(((float) $clean) * 100);
+}
+
 /** Current time as a UTC string, the format used throughout the database. */
 function now_utc(int $offsetSeconds = 0): string
 {

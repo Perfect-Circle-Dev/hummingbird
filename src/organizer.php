@@ -113,13 +113,10 @@ function cycle_lock(int $cycleId): ?int
             if (!$share || !$share['full']) {
                 continue; // unfilled shares stay on the board for a later month
             }
-            // Save what each person pays. For a full share these parts already
-            // add up to the price exactly (see share_split_cents).
-            foreach ($share['claims'] as $c) {
-                q('UPDATE share_claims SET cost_cents = ? WHERE id = ?', [$c['cost_cents'], $c['id']]);
-            }
-            q("UPDATE shares SET status = 'ordered', cycle_id = ?, price_cents = ? WHERE id = ?",
-                [$cycleId, $share['price_cents'], $share['id']]);
+            // Fix the price and save what each person pays. The parts add up to the
+            // price exactly (see share_split_cents).
+            share_set_price((int) $share['id'], (int) $share['price_cents']);
+            q("UPDATE shares SET status = 'ordered', cycle_id = ? WHERE id = ?", [$cycleId, $share['id']]);
             $moved++;
         }
         q("UPDATE cycles SET status = 'locked', locked_at = ? WHERE id = ?", [now_utc(), $cycleId]);
@@ -150,6 +147,9 @@ function cycle_reopen(int $cycleId): bool
            WHERE share_id IN (SELECT id FROM shares WHERE status = 'ordered' AND cycle_id = ?)", [$cycleId]);
         q("UPDATE shares SET status = 'open', cycle_id = NULL, price_cents = NULL, out_of_stock = 0
            WHERE status = 'ordered' AND cycle_id = ?", [$cycleId]);
+        // Out-of-stock ticks belong to the order as it was placed, so they are cleared too.
+        // Corrected prices go back to following the catalog (the refresh below).
+        q('UPDATE order_lines SET out_of_stock = 0 WHERE order_id IN (SELECT id FROM orders WHERE cycle_id = ?)', [$cycleId]);
         q("UPDATE cycles SET status = 'open', locked_at = NULL WHERE id = ?", [$cycleId]);
         refresh_open_order_prices(); // catch up with any catalog changes made while it was locked
         db()->exec('COMMIT');
@@ -160,11 +160,184 @@ function cycle_reopen(int $cycleId): bool
     return true;
 }
 
-/** Closes a locked month once pickup and payment are done. Returns false if it was not locked. */
+/**
+ * Closes a locked month once pickup and payment are done. Anything that was out of stock
+ * is carried over: items go onto each household's "saved for next month" list, and shares
+ * go back on the share board, still fully claimed. Returns false if the month was not locked.
+ */
 function cycle_close(int $cycleId): bool
 {
-    return q("UPDATE cycles SET status = 'closed', closed_at = ? WHERE id = ? AND status = 'locked'",
-        [now_utc(), $cycleId])->rowCount() === 1;
+    db()->exec('BEGIN IMMEDIATE');
+    try {
+        $cycle = find_cycle($cycleId);
+        if (!$cycle || $cycle['status'] !== 'locked') {
+            db()->exec('ROLLBACK');
+            return false;
+        }
+        carry_over_out_of_stock($cycleId);
+        q("UPDATE cycles SET status = 'closed', closed_at = ? WHERE id = ?", [now_utc(), $cycleId]);
+        db()->exec('COMMIT');
+    } catch (Throwable $err) {
+        db()->exec('ROLLBACK');
+        throw $err;
+    }
+    return true;
+}
+
+/** Moves a month's out-of-stock items and shares along to next month. Called once, at close. */
+function carry_over_out_of_stock(int $cycleId): void
+{
+    $next = next_cycle();
+    $lines = q('SELECT l.variant_id, l.qty, l.added_by, o.household_id
+                FROM order_lines l JOIN orders o ON o.id = l.order_id
+                WHERE o.cycle_id = ? AND l.out_of_stock = 1', [$cycleId])->fetchAll();
+    foreach ($lines as $l) {
+        $variant = find_variant((int) $l['variant_id']);
+        if (!$variant || !$variant['active']) {
+            continue; // Hummingbird no longer lists it, so there is nothing to order next month
+        }
+        $order = household_order((int) $next['id'], (int) $l['household_id']);
+        // If they had already saved the same item for next month, the amounts are added.
+        q('INSERT INTO order_lines (order_id, variant_id, qty, unit_price_cents, deposit_cents, added_by)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(order_id, variant_id) DO UPDATE SET qty = MIN(99, qty + excluded.qty)',
+            [$order['id'], $l['variant_id'], $l['qty'], member_price_cents((int) $variant['list_price_cents']),
+             variant_deposit_cents($variant), $l['added_by']]);
+    }
+
+    // Shares go back to being open and fully claimed, with a fresh expiry date, so they
+    // go onto the next order. Anyone who has changed their mind can cancel their claim.
+    $months = (int) setting('share_expiry_months', '3');
+    $expires = gmdate('Y-m-d H:i:s', strtotime("+$months months"));
+    q("UPDATE share_claims SET cost_cents = NULL WHERE share_id IN
+           (SELECT id FROM shares WHERE status = 'ordered' AND cycle_id = ? AND out_of_stock = 1)", [$cycleId]);
+    q("UPDATE shares SET status = 'open', cycle_id = NULL, price_cents = NULL, out_of_stock = 0, expires_at = ?
+       WHERE status = 'ordered' AND cycle_id = ? AND out_of_stock = 1", [$expires, $cycleId]);
+}
+
+/**
+ * Saves the organizer's out-of-stock ticks and corrected prices for a locked month.
+ * $form is what the combined-order page sent:
+ *   price[variant id]      the price each, as typed
+ *   all[variant id]        "out of stock for everyone" is ticked
+ *   was_all[variant id]    it was already ticked when the page was shown
+ *   out[line id]           one household's line is ticked
+ *   share_out[share id]    one share is ticked
+ * Returns how many things changed, how many prices could not be read, and for each
+ * household affected a list of sentences describing what changed (for the email).
+ */
+function stock_and_prices_save(array $cycle, array $form): array
+{
+    $changes = 0;
+    $badPrices = 0;
+    $notes = []; // household id => sentences
+    $ticked = fn(string $group, $id): bool => !empty($form[$group][$id]);
+
+    db()->exec('BEGIN IMMEDIATE');
+    try {
+        foreach (combined_order($cycle)['items'] as $item) {
+            $variantId = $item['variant_id'];
+            $name = "{$item['product_title']}, {$item['size']} ({$item['sku']})";
+
+            // The price each, if a different one was typed.
+            $oldPrice = (int) $item['price_cents'];
+            $newPrice = $oldPrice;
+            $typed = trim((string) ($form['price'][$variantId] ?? ''));
+            if ($typed !== '') {
+                $cents = money_to_cents($typed);
+                if ($cents === null) {
+                    $badPrices++;
+                } else {
+                    $newPrice = $cents;
+                }
+            }
+
+            // Out of stock. $everyone is true or false when the one tick box decides for the
+            // whole item, and null when each household's own box decides.
+            $all = $ticked('all', $variantId);
+            $wasAll = $ticked('was_all', $variantId);
+            $ownBoxes = array_merge(
+                array_map(fn(array $b): bool => $ticked('out', $b['line_id']), $item['buyers']),
+                array_map(fn(array $s): bool => $ticked('share_out', $s['id']), $item['shares']));
+            if (count($ownBoxes) === 1) {
+                $everyone = $all;                 // only one entry, so it has just the one box
+            } elseif ($all && !$wasAll) {
+                $everyone = true;                 // "everyone" was just ticked
+            } elseif (!$all && $wasAll && !in_array(false, $ownBoxes, true)) {
+                $everyone = false;                // "everyone" was just unticked and nothing else was touched
+            } else {
+                $everyone = null;
+            }
+
+            foreach ($item['buyers'] as $b) {
+                $out = $everyone ?? $ticked('out', $b['line_id']);
+                if ($out !== $b['out']) {
+                    q('UPDATE order_lines SET out_of_stock = ? WHERE id = ?', [$out ? 1 : 0, $b['line_id']]);
+                    $notes[$b['household_id']][] = $out
+                        ? "Out of stock: {$b['qty']} x $name. You won't be charged for it, and it will be saved to your list for next month."
+                        : "Not out of stock after all: {$b['qty']} x $name is back on your order.";
+                    $changes++;
+                }
+                if ($newPrice !== $oldPrice) {
+                    q('UPDATE order_lines SET unit_price_cents = ? WHERE id = ?', [$newPrice, $b['line_id']]);
+                    if (!$out) {
+                        $notes[$b['household_id']][] = "Price change: $name was " . money($oldPrice)
+                            . " each and is now " . money($newPrice) . " each.";
+                    }
+                    $changes++;
+                }
+            }
+
+            foreach ($item['shares'] as $s) {
+                $out = $everyone ?? $ticked('share_out', $s['id']);
+                if ($out !== (bool) $s['out_of_stock']) {
+                    q('UPDATE shares SET out_of_stock = ? WHERE id = ?', [$out ? 1 : 0, $s['id']]);
+                    foreach ($s['claims'] as $c) {
+                        $notes[$c['household_id']][] = $out
+                            ? "Out of stock: the share of $name. Nobody is charged for it, and it goes back on the share board for next month."
+                            : "Not out of stock after all: the share of $name is back on the order.";
+                    }
+                    $changes++;
+                }
+                if ($newPrice !== $oldPrice) {
+                    share_set_price((int) $s['id'], $newPrice);
+                    $after = find_share((int) $s['id']);
+                    foreach ($s['claims'] as $i => $c) {
+                        if (!$out) {
+                            $notes[$c['household_id']][] = "Price change: the shared $name was " . money($oldPrice)
+                                . " and is now " . money($newPrice) . ". {$c['name']}'s part (" . fmt_amount($c['amount'])
+                                . " {$s['size_unit']}) was " . money($c['cost_cents']) . " and is now "
+                                . money($after['claims'][$i]['cost_cents']) . ".";
+                        }
+                    }
+                    $changes++;
+                }
+            }
+        }
+        db()->exec('COMMIT');
+    } catch (Throwable $err) {
+        db()->exec('ROLLBACK');
+        throw $err;
+    }
+    return ['changes' => $changes, 'bad_prices' => $badPrices, 'notes' => $notes];
+}
+
+/**
+ * Emails each household affected by out-of-stock or price changes: what changed, then
+ * their whole order as it now stands. Returns how many households were emailed.
+ */
+function stock_and_prices_email(array $cycle, array $notes): int
+{
+    foreach ($notes as $householdId => $sentences) {
+        $order = household_order((int) $cycle['id'], (int) $householdId);
+        $body = "There is news about your " . config('site_name') . " order for {$cycle['label']}.\n\n"
+            . "- " . implode("\n- ", $sentences) . "\n\n"
+            . "Your order now:\n\n"
+            . order_text(order_summary($order), 'Total due at pickup') . "\n"
+            . "You can see it any time at " . config('base_url') . "/?a=order\n";
+        email_household((int) $householdId, config('site_name') . " order update for {$cycle['label']}", $body);
+    }
+    return count($notes);
 }
 
 /**
@@ -179,44 +352,52 @@ function combined_order(array $cycle): array
     $households = [];
     $startItem = function (array $row, int $priceCents) use (&$items): void {
         $items[$row['variant_id']] ??= [
+            'variant_id' => (int) $row['variant_id'],
             'sku' => (string) $row['sku'], 'product_title' => $row['product_title'], 'size' => $row['size'],
             'available' => (int) $row['available'], 'active' => (int) $row['active'],
-            'price_cents' => $priceCents, 'qty' => 0, 'total_cents' => 0, 'deposits_cents' => 0,
+            // qty and the totals count only what is in stock; out_qty is what was marked out of stock.
+            'price_cents' => $priceCents, 'qty' => 0, 'out_qty' => 0, 'total_cents' => 0, 'deposits_cents' => 0,
             'buyers' => [], 'shares' => [],
         ];
     };
 
-    $lines = q('SELECT l.variant_id, l.qty, l.unit_price_cents, l.deposit_cents, o.status AS order_status,
-                       h.id AS household_id, h.name AS household_name,
+    $lines = q('SELECT l.id AS line_id, l.variant_id, l.qty, l.unit_price_cents, l.deposit_cents, l.out_of_stock,
+                       o.status AS order_status, h.id AS household_id, h.name AS household_name,
                        v.sku, v.title AS size, v.available, v.active, p.title AS product_title
                 FROM order_lines l
                 JOIN orders o ON o.id = l.order_id
                 JOIN households h ON h.id = o.household_id
                 JOIN variants v ON v.id = l.variant_id
                 JOIN products p ON p.id = v.product_id
-                WHERE o.cycle_id = ? AND l.out_of_stock = 0
+                WHERE o.cycle_id = ?
                 ORDER BY h.name', [$cycleId])->fetchAll();
     foreach ($lines as $l) {
         $startItem($l, (int) $l['unit_price_cents']);
         $item = &$items[$l['variant_id']];
-        $item['qty'] += (int) $l['qty'];
-        $item['total_cents'] += $l['qty'] * $l['unit_price_cents'];
-        $item['deposits_cents'] += $l['qty'] * $l['deposit_cents'];
-        $item['buyers'][] = ['household' => $l['household_name'], 'qty' => (int) $l['qty'],
-                             'unfinished' => $l['order_status'] !== 'submitted'];
+        if ($l['out_of_stock']) {
+            $item['out_qty'] += (int) $l['qty'];
+        } else {
+            $item['qty'] += (int) $l['qty'];
+            $item['total_cents'] += $l['qty'] * $l['unit_price_cents'];
+            $item['deposits_cents'] += $l['qty'] * $l['deposit_cents'];
+        }
+        $item['buyers'][] = ['line_id' => (int) $l['line_id'], 'household_id' => (int) $l['household_id'],
+                             'household' => $l['household_name'], 'qty' => (int) $l['qty'],
+                             'unfinished' => $l['order_status'] !== 'submitted', 'out' => (bool) $l['out_of_stock']];
         unset($item);
         $households[$l['household_id']] = true;
     }
 
     // Each share is one more of that item to order.
     foreach (shares_on_order($cycleId) as $s) {
-        if ($s['out_of_stock']) {
-            continue;
-        }
         $startItem($s, (int) $s['price_cents']);
         $item = &$items[$s['variant_id']];
-        $item['qty'] += 1;
-        $item['total_cents'] += $s['price_cents'];
+        if ($s['out_of_stock']) {
+            $item['out_qty'] += 1;
+        } else {
+            $item['qty'] += 1;
+            $item['total_cents'] += $s['price_cents'];
+        }
         $item['shares'][] = $s;
         unset($item);
         foreach ($s['claims'] as $c) {
@@ -233,6 +414,7 @@ function combined_order(array $cycle): array
         'unfinished' => unfinished_orders($cycleId),
         'household_count' => count($households),
         'unit_count' => array_sum(array_column($items, 'qty')),
+        'out_count' => array_sum(array_column($items, 'out_qty')),
         'total_cents' => array_sum(array_column($items, 'total_cents')),
         'deposits_cents' => array_sum(array_column($items, 'deposits_cents')),
     ];

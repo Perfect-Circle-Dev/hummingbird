@@ -57,5 +57,7 @@ h3 { font-size: 16px; line-height: 1.25; margin: 0; }
 .check input { flex: none; width: 22px; height: 22px; }
 .step { border-top: 1px solid #E6EAE6; padding-top: 12px; }
 summary { padding: 10px 0; color: var(--green); font-weight: 600; cursor: pointer; }
+table.wide { min-width: 760px; }
+input.price { width: 96px; }
 .plain { list-style: none; margin: 0; padding: 0; }
 .plain li + li { margin-top: 6px; }

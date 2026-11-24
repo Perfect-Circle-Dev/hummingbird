@@ -158,7 +158,7 @@ function page_order(array $member, bool $isPost): void
               <?php foreach ($summary['lines'] as $l) { $lineRow($l, $open ? 'qty' : ''); } ?>
               <?php foreach ($summary['shares'] as $s): ?>
                 <tr>
-                  <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?></div></td>
+                  <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
                   <td><?= e(fmt_amount($s['amount']) . ' ' . $s['size_unit']) ?> of <?= e($s['size']) ?></td>
                   <td></td><td></td><td>None</td>
                   <td><?= money($s['cost_cents']) ?></td>
@@ -171,7 +171,7 @@ function page_order(array $member, bool $isPost): void
             <div><dt>Regular items</dt><dd><?= money($summary['items_cents']) ?></dd></div>
             <div><dt>Container deposits</dt><dd><?= money($summary['deposits_cents']) ?></dd></div>
             <div><dt>Our part of filled shares</dt><dd><?= money($summary['shares_cents']) ?></dd></div>
-            <div class="due"><dt>Estimated due at pickup</dt><dd><?= money($summary['due_cents']) ?></dd></div>
+            <div class="due"><dt><?= $open ? 'Estimated due at pickup' : 'Due at pickup' ?></dt><dd><?= money($summary['due_cents']) ?></dd></div>
           </dl>
           <?php endif; ?>
           <?php if ($open): ?>

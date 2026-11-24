@@ -260,29 +260,45 @@ function order_submit(array $order, array $cycle): void
 {
     q("UPDATE orders SET status = 'submitted', submitted_at = ?, updated_at = ? WHERE id = ?",
         [now_utc(), now_utc(), $order['id']]);
-    $summary = order_summary($order);
-    $body = "Thanks! Here is your " . config('site_name') . " order for {$cycle['label']}.\n\n";
+    $body = "Thanks! Here is your " . config('site_name') . " order for {$cycle['label']}.\n\n"
+        . order_text(order_summary($order), 'Estimated total due at pickup') . "\n"
+        . "Prices are estimates until the order is placed. You can change your order until it is locked: "
+        . config('base_url') . "/?a=order\nIf you make changes, submit again to get an updated summary.\n";
+    email_household((int) $order['household_id'], config('site_name') . " order received for {$cycle['label']}", $body);
+}
+
+/** An order written out as plain text for an email: each item, each share part, then the totals. */
+function order_text(array $summary, string $totalLabel): string
+{
+    $text = '';
     foreach ($summary['lines'] as $l) {
-        $body .= sprintf("%d x %s, %s (%s) at %s = %s%s\n", $l['qty'], $l['product_title'], $l['size'], $l['sku'],
+        if ($l['out_of_stock']) {
+            $text .= sprintf("%d x %s, %s (%s): OUT OF STOCK, not charged\n", $l['qty'], $l['product_title'], $l['size'], $l['sku']);
+            continue;
+        }
+        $text .= sprintf("%d x %s, %s (%s) at %s = %s%s\n", $l['qty'], $l['product_title'], $l['size'], $l['sku'],
             money((int) $l['unit_price_cents']), money($l['line_cents']),
             $l['line_deposit_cents'] ? ' + ' . money($l['line_deposit_cents']) . ' deposit' : '');
     }
     foreach ($summary['shares'] as $s) {
-        $body .= sprintf("Share: %s %s of %s, %s = %s\n", rtrim(rtrim(number_format((float) $s['amount'], 2), '0'), '.'),
-            $s['size_unit'], $s['product_title'], $s['size'], money($s['cost_cents']));
+        $text .= sprintf("Share: %s %s of %s, %s = %s\n", fmt_amount((float) $s['amount']), $s['size_unit'],
+            $s['product_title'], $s['size'], $s['out_of_stock'] ? 'OUT OF STOCK, not charged' : money($s['cost_cents']));
     }
     if (!$summary['lines'] && !$summary['shares']) {
-        $body .= "(Nothing on the order yet.)\n";
+        $text .= "(Nothing on the order yet.)\n";
     }
-    $body .= "\nRegular items: " . money($summary['items_cents'])
+    return $text . "\nRegular items: " . money($summary['items_cents'])
         . "\nContainer deposits: " . money($summary['deposits_cents'])
         . "\nYour part of filled shares: " . money($summary['shares_cents'])
-        . "\nEstimated total due at pickup: " . money($summary['due_cents']) . "\n\n"
-        . "Prices are estimates until the order is placed. You can change your order until it is locked: "
-        . config('base_url') . "/?a=order\nIf you make changes, submit again to get an updated summary.\n";
+        . "\n$totalLabel: " . money($summary['due_cents']) . "\n";
+}
 
-    $members = q('SELECT email FROM members WHERE household_id = ? AND active = 1', [$order['household_id']])->fetchAll();
+/** Sends one email to every active member of a household. Returns how many were sent. */
+function email_household(int $householdId, string $subject, string $body): int
+{
+    $members = q('SELECT email FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchAll();
     foreach ($members as $m) {
-        send_email($m['email'], config('site_name') . " order received for {$cycle['label']}", $body);
+        send_email($m['email'], $subject, $body);
     }
+    return count($members);
 }
