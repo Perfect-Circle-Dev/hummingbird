@@ -437,3 +437,92 @@ function unfinished_orders(int $cycleId): array
     }
     return $orders;
 }
+
+/**
+ * The report for a month: every household on the order with its items, share parts and
+ * what it owes, plus the totals for the whole group. Always worked out from the current
+ * figures, so out-of-stock ticks and corrected prices show up straight away.
+ */
+function month_report(array $cycle): array
+{
+    $cycleId = (int) $cycle['id'];
+    // Households with items of their own, and households that are only on a share.
+    $ids = q('SELECT DISTINCT o.household_id FROM orders o JOIN order_lines l ON l.order_id = o.id
+              WHERE o.cycle_id = ?', [$cycleId])->fetchAll(PDO::FETCH_COLUMN);
+    foreach (shares_on_order($cycleId) as $s) {
+        foreach ($s['claims'] as $c) {
+            $ids[] = $c['household_id'];
+        }
+    }
+
+    $households = [];
+    foreach (array_unique(array_map('intval', $ids)) as $householdId) {
+        $order = household_order($cycleId, $householdId);
+        $summary = order_summary($order);
+        $households[] = [
+            'id' => $householdId,
+            'name' => (string) q('SELECT name FROM households WHERE id = ?', [$householdId])->fetchColumn(),
+            'people' => q('SELECT name FROM members WHERE household_id = ? AND active = 1 ORDER BY id',
+                [$householdId])->fetchAll(PDO::FETCH_COLUMN),
+            // Has items of its own that were never submitted (or were changed after submitting).
+            'unfinished' => $summary['lines'] && $order['status'] !== 'submitted',
+            'summary' => $summary,
+        ];
+    }
+    usort($households, fn(array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+
+    $total = fn(string $key): int => array_sum(array_map(fn(array $h): int => $h['summary'][$key], $households));
+    return [
+        'households' => $households,
+        'items_cents' => $total('items_cents'), 'deposits_cents' => $total('deposits_cents'),
+        'shares_cents' => $total('shares_cents'), 'due_cents' => $total('due_cents'),
+    ];
+}
+
+/** The report as plain text, for the email. $occasion says why it is being sent. */
+function month_report_text(array $cycle, string $occasion): string
+{
+    $report = month_report($cycle);
+    $count = count($report['households']);
+    $text = config('site_name') . " report for {$cycle['label']}\n$occasion\n\n";
+    if ($count === 0) {
+        return $text . "Nobody has ordered anything.\n";
+    }
+
+    // A short list first: one line per household with what it owes.
+    $width = max(array_map(fn(array $h): int => mb_strlen($h['name']), $report['households'])) + 2;
+    $pad = fn(string $name): string => $name . str_repeat(' ', max(1, $width - mb_strlen($name)));
+    foreach ($report['households'] as $h) {
+        $text .= $pad($h['name']) . str_pad(money($h['summary']['due_cents']), 10, ' ', STR_PAD_LEFT)
+            . ($h['unfinished'] ? '  (unfinished)' : '') . "\n";
+    }
+    $text .= $pad('Total') . str_pad(money($report['due_cents']), 10, ' ', STR_PAD_LEFT) . "\n\n"
+        . "$count " . ($count === 1 ? 'household' : 'households') . ". Regular items " . money($report['items_cents'])
+        . ", container deposits " . money($report['deposits_cents'])
+        . ", shares " . money($report['shares_cents']) . ".\n";
+
+    // Then each household in full.
+    foreach ($report['households'] as $h) {
+        $text .= "\n" . str_repeat('-', 40) . "\n" . mb_strtoupper($h['name'])
+            . ($h['people'] ? ' (' . implode(', ', $h['people']) . ')' : '')
+            . ($h['unfinished'] ? "\nUNFINISHED: this order was not submitted." : '') . "\n\n"
+            . order_text($h['summary'], 'Total due', 'Part of filled shares');
+    }
+    return $text . "\n" . str_repeat('-', 40) . "\nOn the site: " . config('base_url')
+        . '/?a=organizer&month=' . (int) $cycle['id'] . "&view=report\n";
+}
+
+/**
+ * Emails the report to every active organizer. Pass $text to send a report that was
+ * written out earlier (closing a month writes it before out-of-stock shares move on).
+ * Returns how many organizers it went to.
+ */
+function month_report_email(array $cycle, string $occasion, ?string $text = null): int
+{
+    $text ??= month_report_text($cycle, $occasion);
+    $organizers = q('SELECT email FROM members WHERE is_admin = 1 AND active = 1')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($organizers as $email) {
+        send_email($email, config('site_name') . " report for {$cycle['label']}", $text);
+    }
+    return count($organizers);
+}

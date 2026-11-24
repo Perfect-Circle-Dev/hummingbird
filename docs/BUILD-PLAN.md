@@ -51,7 +51,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Reopen a locked month
 - [x] "Save for next month" list, always available to members
 - [x] Organizer: out-of-stock and price edits, with update emails; out-of-stock items and shares carry over to next month at close
-- [ ] Organizer: split sheets, final report (saved and emailed), paid tracking
+- [x] Organizer: report by household, on the site for every month and emailed to the organizers at lock, at close and on request
+- [ ] Organizer: split sheets, paid tracking
 - [ ] Organizer: members and households, settings (discount, deposits)
 - [ ] Emails: time to order, last call, pickup notice, share expiry warning
 - [ ] Put each member's personal sign-in link in the "time to order" email, to stay under Resend's daily cap

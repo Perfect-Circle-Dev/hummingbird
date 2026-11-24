@@ -267,8 +267,11 @@ function order_submit(array $order, array $cycle): void
     email_household((int) $order['household_id'], config('site_name') . " order received for {$cycle['label']}", $body);
 }
 
-/** An order written out as plain text for an email: each item, each share part, then the totals. */
-function order_text(array $summary, string $totalLabel): string
+/**
+ * An order written out as plain text for an email: each item, each share part, then the totals.
+ * The two labels differ by reader: "Your part of filled shares" to a member, plainer for the organizer.
+ */
+function order_text(array $summary, string $totalLabel, string $sharesLabel = 'Your part of filled shares'): string
 {
     $text = '';
     foreach ($summary['lines'] as $l) {
@@ -289,7 +292,7 @@ function order_text(array $summary, string $totalLabel): string
     }
     return $text . "\nRegular items: " . money($summary['items_cents'])
         . "\nContainer deposits: " . money($summary['deposits_cents'])
-        . "\nYour part of filled shares: " . money($summary['shares_cents'])
+        . "\n$sharesLabel: " . money($summary['shares_cents'])
         . "\n$totalLabel: " . money($summary['due_cents']) . "\n";
 }
 
