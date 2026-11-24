@@ -1,23 +1,35 @@
 <?php
-// "My order" page: search, favorites, the household's order, submit.
+// "My order" page: search, favorites, the household's order for this month,
+// the list saved for next month, and submit.
 declare(strict_types=1);
 
 function page_order(array $member, bool $isPost): void
 {
     $cycle = current_cycle();
     $open = $cycle && $cycle['status'] === 'open';
-    $order = $cycle ? household_order((int) $cycle['id'], (int) $member['household_id']) : null;
+    $householdId = (int) $member['household_id'];
+    $order = $cycle ? household_order((int) $cycle['id'], $householdId) : null;
+    // Every household also has a "saved for next month" list, whatever state this month
+    // is in. When the organizer opens the next month, that list becomes its order.
+    $nextOrder = household_order((int) next_cycle()['id'], $householdId);
     $query = trim((string) ($_REQUEST['q'] ?? ''));
     $back = '/?a=order' . ($query !== '' ? '&q=' . urlencode($query) : '');
 
     if ($isPost) {
         $do = (string) ($_POST['do'] ?? '');
+        $variantId = (int) ($_POST['variant_id'] ?? 0);
+        $lineId = (int) ($_POST['line_id'] ?? 0);
+        $qty = (int) ($_POST['qty'] ?? 0);
         if ($do === 'fav') {
-            toggle_favorite((int) $member['id'], (int) ($_POST['variant_id'] ?? 0));
+            toggle_favorite((int) $member['id'], $variantId);
+        } elseif ($do === 'later') {
+            order_add($nextOrder, $variantId, (int) $member['id']);
+        } elseif ($do === 'qty_later') {
+            order_set_qty($nextOrder, $lineId, $qty);
         } elseif ($open && $do === 'add') {
-            order_add($order, (int) ($_POST['variant_id'] ?? 0), (int) $member['id']);
+            order_add($order, $variantId, (int) $member['id']);
         } elseif ($open && $do === 'qty') {
-            order_set_qty($order, (int) ($_POST['line_id'] ?? 0), (int) ($_POST['qty'] ?? 0));
+            order_set_qty($order, $lineId, $qty);
         } elseif ($open && $do === 'submit') {
             order_submit($order, $cycle);
             redirect('/?a=order&sent=1');
@@ -45,6 +57,7 @@ function page_order(array $member, bool $isPost): void
             <input type="hidden" name="variant_id" value="<?= (int) $v['id'] ?>">
             <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>">★</button>
             <?php if ($open): ?><button class="btn" name="do" value="add">Add</button><?php endif; ?>
+            <button class="btn<?= $open ? ' quiet' : '' ?>" name="do" value="later">Save for next month</button>
           </form>
           <?php if ($v['size_amount']): ?>
             <a class="note" href="/?a=shares&amp;start=<?= (int) $v['id'] ?>">Share it</a>
@@ -71,11 +84,37 @@ function page_order(array $member, bool $isPost): void
         return;
     }
 
+    // One row of an order table, used for this month's order and for the saved list.
+    // $qtyAction is the "do" value its plus and minus buttons send, or '' for no buttons.
+    $lineRow = function (array $l, string $qtyAction): void {
+        ?>
+        <tr>
+          <td><?= e($l['product_title']) ?><div class="note"><?= e($l['sku']) ?><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?><?= $l['still_listed'] ? '' : ' · no longer in Hummingbird\'s catalog' ?></div></td>
+          <td><?= e($l['size']) ?></td>
+          <td>
+            <?php if ($qtyAction !== ''): ?>
+            <form method="post" action="/?a=order" class="qty">
+              <?= csrf_field() ?>
+              <input type="hidden" name="do" value="<?= e($qtyAction) ?>">
+              <input type="hidden" name="line_id" value="<?= (int) $l['id'] ?>">
+              <button name="qty" value="<?= $l['qty'] - 1 ?>" aria-label="One fewer">−</button>
+              <span><?= (int) $l['qty'] ?></span>
+              <button name="qty" value="<?= $l['qty'] + 1 ?>" aria-label="One more">+</button>
+            </form>
+            <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
+          </td>
+          <td><?= money((int) $l['unit_price_cents']) ?></td>
+          <td><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
+          <td><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
+        </tr>
+        <?php
+    };
+
     page_start('My order');
     if (!$cycle) {
-        echo '<div class="card"><h1>My order</h1><p>No order is open right now. You\'ll get an email when the next one opens. You can still set up your favorites below.</p></div>';
+        echo '<div class="card"><h1>My order</h1><p>No order is open right now. You\'ll get an email when the next one opens. Until then, anything you add is saved for it, and you can set up your favorites.</p></div>';
     } elseif (!$open) {
-        echo '<p class="notice warn">The ' . e($cycle['label']) . ' order is locked and can no longer be changed.</p>';
+        echo '<p class="notice warn">The ' . e($cycle['label']) . ' order is locked and can no longer be changed. Anything you add now is saved for next month.</p>';
     }
     if (isset($_GET['sent'])) {
         echo '<p class="notice">Order submitted. A summary has been emailed to your household.</p>';
@@ -116,27 +155,7 @@ function page_order(array $member, bool $isPost): void
             <table>
               <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
               <tbody>
-              <?php foreach ($summary['lines'] as $l): ?>
-                <tr>
-                  <td><?= e($l['product_title']) ?><div class="note"><?= e($l['sku']) ?><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
-                  <td><?= e($l['size']) ?></td>
-                  <td>
-                    <?php if ($open): ?>
-                    <form method="post" action="/?a=order" class="qty">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="do" value="qty">
-                      <input type="hidden" name="line_id" value="<?= (int) $l['id'] ?>">
-                      <button name="qty" value="<?= $l['qty'] - 1 ?>" aria-label="One fewer">−</button>
-                      <span><?= (int) $l['qty'] ?></span>
-                      <button name="qty" value="<?= $l['qty'] + 1 ?>" aria-label="One more">+</button>
-                    </form>
-                    <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
-                  </td>
-                  <td><?= money((int) $l['unit_price_cents']) ?></td>
-                  <td><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
-                  <td><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
-                </tr>
-              <?php endforeach; ?>
+              <?php foreach ($summary['lines'] as $l) { $lineRow($l, $open ? 'qty' : ''); } ?>
               <?php foreach ($summary['shares'] as $s): ?>
                 <tr>
                   <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?></div></td>
@@ -167,6 +186,29 @@ function page_order(array $member, bool $isPost): void
         </div>
         <?php
     }
+
+    $saved = order_summary($nextOrder);
+    ?>
+    <div class="card stack">
+      <h2>Saved for next month</h2>
+      <?php if (!$saved['lines']): ?>
+        <p class="note">Nothing saved. If you think of something for a later order, choose "Save for next month" on the item and it will be waiting for you.</p>
+      <?php else: ?>
+        <p class="note"><?= $cycle ? 'These are not part of the ' . e($cycle['label']) . ' order. ' : '' ?>When the next month opens they will already be on your order. You will still need to look it over and submit it. Prices are today's and may change by then.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
+            <tbody>
+            <?php foreach ($saved['lines'] as $l) { $lineRow($l, 'qty_later'); } ?>
+            </tbody>
+          </table>
+        </div>
+        <dl class="totals">
+          <div class="due"><dt>Estimated total so far</dt><dd><?= money($saved['items_cents'] + $saved['deposits_cents']) ?></dd></div>
+        </dl>
+      <?php endif; ?>
+    </div>
+    <?php
     echo '<script src="/site.js" defer></script>';
     page_end();
 }
