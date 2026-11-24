@@ -21,10 +21,13 @@ a little, and wants to be able to follow and lightly edit the code. So:
 ## How the code is laid out
 
 - `public/index.php` is the only entry point. `?a=` picks the page: `login`, `verify`,
-  `logout`, `order`, `shares`, `organizer` (admins only), default home. `public/site.css`, `public/site.js`.
+  `logout`, `unsubscribe` (no sign-in), `order`, `shares`, `organizer` (admins only), default home. `public/site.css`, `public/site.js`.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
-- `src/mailer.php`: `send_email()`; every message is written to `email_log`.
+- `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.
+- `src/mailings.php`: the email queue (`queue_email()`, `queue_send()`), the group emails
+  (`time_to_order_queue()`, `last_call_queue()`, `share_expiry_warnings()`), `month_login_link()`,
+  unsubscribe links and the group footer. `bin/mail-jobs.php` runs every minute from cron.
 - `src/catalog.php`: sync from Hummingbird's product feed, size and deposit rules, member price.
 - `src/orders.php`: months ("cycles"), household orders, search, favorites, totals, submit email.
 - `src/shares.php`: share board logic, `shares_on_order()`, `share_split_cents()`.
@@ -43,7 +46,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
   settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
   a `do` value; messages come back as short codes looked up in `ORGANIZER_DONE` / `ORGANIZER_PROBLEMS`.
 - `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`,
-  `notify-admin`, `check-reboot`).
+  `notify-admin`, `check-reboot`, `mail-jobs`).
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
 - `deploy/`: server setup, nginx template, `update.sh`, and `setup-auto.sh` / `auto-update.sh`
@@ -106,6 +109,19 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Deadline is soft: members see Monday 7 pm, but nothing closes until the organizer locks
   the month, around 11 am Tuesday. Late orders on Tuesday morning are welcome.
 - Several logins can share one household order.
+- Email: anything sent to many people at once goes into `email_queue` (`queue_email()`, or
+  `email_household(..., true)`), and `bin/mail-jobs.php` sends a few a minute, stopping at
+  `settings.email_daily_cap` (90; Resend allows 100 a day) so the rest go out the next day.
+  Sign-in links, order confirmations and the organizer's report use `send_email()` and go at once.
+- Group emails are "time to order" (a button on an open month, with an optional note from the
+  organizer), last call (automatic, 24 hours before the deadline, only to members whose
+  household has not submitted) and the share-expiry warning (automatic, 7 days before, to the
+  people on an unfilled share). Each ends with `group_footer()` and the member's own
+  unsubscribe link. Unsubscribing (`members.email_opt_out`) stops only these; emails about a
+  member's own order still arrive. Organizers can flip it on the Members page.
+- Two kinds of sign-in link (`check_login_token`): the one requested on the sign-in page works
+  once for 30 minutes; the one in a group email (`login_tokens.cycle_id` set) works as often as
+  needed while that month is open, and again if the month is reopened.
 - Sign-in is by emailed link only. No passwords. Organizers add members on the Members page,
   one at a time or by pasting a list (name, email, household, phone). Adding sends no email.
   A member who is not active can't sign in and gets no emails, and is signed out at once; past
@@ -123,16 +139,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 ## What to build next: organizer pages (members with `is_admin = 1`)
 
-Items 1 to 8 are built (months, combined order with unfinished flags, the lock step,
+Items 1 to 9 are built (months, combined order with unfinished flags, the lock step,
 out of stock and price corrections with update emails, the report by household, split sheets,
-paid marking and pickup emails, members, households and settings).
+paid marking and pickup emails, members, households and settings, group emails).
 Numbering is kept so older notes still match.
 
-9. Group emails, replacing Mailchimp: "time to order" (listing open shares), last call,
-   pickup notice, share-expiry warning. Each needs a footer and an unsubscribe link.
-   Resend's free plan allows 100 emails a day, shared with any other site on the same
-   account, so put each member's personal sign-in link in the "time to order" email
-   instead of making them request one.
 10. "Fill my Hummingbird cart" link built from variant ids (Shopify cart permalink:
     `/cart/VARIANT_ID:QTY,VARIANT_ID:QTY`). Untested; needs a try from Brent's wholesale login.
 11. Group name and the dancing bean logo on every page (Brent will supply the file).

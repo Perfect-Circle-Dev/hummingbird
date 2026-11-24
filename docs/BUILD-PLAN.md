@@ -23,10 +23,10 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 
 ## Monthly flow
 
-1. Organizer opens the month. "Time to order" email goes out, listing open shares.
+1. Organizer opens the month and sends the "time to order" email, which lists open shares and carries each member's sign-in link.
 2. Members sign in, add items (search and favorites), claim or start shares, and submit.
    Each submit sends a confirmation email. Changes after submitting need a resubmit.
-3. Last-call email before the deadline.
+3. Last-call email goes out by itself a day before the deadline, to households that have not submitted.
 4. Tuesday: organizer reviews the combined order (unfinished orders are flagged), locks it,
    and places it with Hummingbird.
 5. Organizer ticks anything out of stock and corrects any price. Saving emails the members affected.
@@ -55,10 +55,11 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Organizer: split sheets for shared items, with amounts as read on a scale
 - [x] Organizer: mark each order paid (check, Venmo or cash); pickup emails with the amount due and a Venmo link
 - [x] Organizer: members and households (add, paste a list, edit, switch off), settings (discount, deposits, share expiry, Venmo name)
-- [ ] Emails: time to order, last call, pickup notice, share expiry warning
-- [ ] Put each member's personal sign-in link in the "time to order" email, to stay under Resend's daily cap
+- [x] Emails: time to order (button, with a note), last call (automatic), pickup notice, share expiry warning (automatic)
+- [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is locked
+- [x] Email queue with a daily limit, so a big mailing can't go over Resend's cap
 - [ ] Deposits on a case of several jugs (currently charged once)
-- [ ] Unsubscribe link and footer on group emails
+- [x] Unsubscribe link and footer on group emails
 - [ ] Fill-the-Hummingbird-cart link (needs a test from the organizer's login)
 - [ ] Group name and dancing bean logo on every page
 - [ ] Nightly jobs: catalog sync, share expiry, database backup

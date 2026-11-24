@@ -58,6 +58,7 @@ h3 { font-size: 16px; line-height: 1.25; margin: 0; }
 .step { border-top: 1px solid #E6EAE6; padding-top: 12px; }
 summary { padding: 10px 0; color: var(--green); font-weight: 600; cursor: pointer; }
 textarea { font: inherit; width: 100%; padding: 10px; border: 1px solid #AEB8B1; border-radius: 8px; background: #fff; color: var(--ink); }
+pre.email { margin: 0; padding: 12px; border-radius: 8px; background: var(--ground); font: 14px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .subnav { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-bottom: 8px; font-weight: 600; }
 .subnav a, .subnav strong, .tap { display: inline-flex; align-items: center; min-height: 44px; }
 .tap { font-weight: 600; }

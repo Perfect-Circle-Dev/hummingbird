@@ -17,5 +17,11 @@ function add_column_if_missing(string $table, string $column, string $definition
 }
 add_column_if_missing('share_claims', 'cost_cents', 'INTEGER');
 add_column_if_missing('cycles', 'pickup_emailed_at', 'TEXT');
+add_column_if_missing('cycles', 'order_emailed_at', 'TEXT');
+add_column_if_missing('cycles', 'last_call_at', 'TEXT');
+add_column_if_missing('members', 'email_opt_out', 'INTEGER NOT NULL DEFAULT 0');
+add_column_if_missing('members', 'unsubscribe_token', 'TEXT');
+add_column_if_missing('login_tokens', 'cycle_id', 'INTEGER');
+add_column_if_missing('shares', 'expiry_warned_at', 'TEXT');
 
 echo "Database is ready at " . config('db_path') . "\n";

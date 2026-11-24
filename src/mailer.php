@@ -3,11 +3,15 @@
 // With mail_driver 'log' nothing leaves the server, which is what we want while testing.
 declare(strict_types=1);
 
-function send_email(string $to, string $subject, string $body): bool
+/**
+ * Sends one email now. $headers are extra mail headers, used for the "unsubscribe"
+ * line on group emails. Returns false if it could not be sent.
+ */
+function send_email(string $to, string $subject, string $body, array $headers = []): bool
 {
     $status = 'logged';
     if (config('mail_driver') === 'smtp') {
-        $status = smtp_send($to, $subject, $body) ? 'sent' : 'failed';
+        $status = smtp_send($to, $subject, $body, $headers) ? 'sent' : 'failed';
     }
     q('INSERT INTO email_log (to_email, subject, body, status) VALUES (?, ?, ?, ?)',
         [$to, $subject, $body, $status]);
@@ -21,8 +25,15 @@ function admin_email(): string
     return (string) (config('admin_email') ?: config('mail_from'));
 }
 
+/** How many emails the site has sent in the last 24 hours. Resend's free plan allows 100 a day. */
+function emails_last_24h(): int
+{
+    return (int) q("SELECT COUNT(*) FROM email_log WHERE status IN ('sent', 'logged') AND created_at > ?",
+        [now_utc(-86400)])->fetchColumn();
+}
+
 /** Sends by SMTP (Resend) using PHPMailer (installed with "composer install"). */
-function smtp_send(string $to, string $subject, string $body): bool
+function smtp_send(string $to, string $subject, string $body, array $headers = []): bool
 {
     $autoload = dirname(__DIR__) . '/vendor/autoload.php';
     if (!is_file($autoload)) {
@@ -45,6 +56,9 @@ function smtp_send(string $to, string $subject, string $body): bool
         $mail->addAddress($to);
         $mail->Subject = $subject;
         $mail->Body = $body;
+        foreach ($headers as $name => $value) {
+            $mail->addCustomHeader($name, $value);
+        }
         return $mail->send();
     } catch (Throwable $err) {
         error_log('Email failed: ' . $err->getMessage());

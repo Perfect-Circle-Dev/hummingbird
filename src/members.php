@@ -56,6 +56,9 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
     $householdId = (int) ($data['household_id'] ?? 0);
     $isAdmin = empty($data['is_admin']) ? 0 : 1;
     $active = empty($data['active']) ? 0 : 1;
+    // The "gets group emails" box is only on the edit form (has_group_box says it was there).
+    // A new member gets group emails until they unsubscribe.
+    $optOut = !empty($data['has_group_box']) && empty($data['group_emails']) ? 1 : 0;
 
     if ($name === '') {
         return 'member_name';
@@ -80,8 +83,8 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
         q('INSERT INTO members (household_id, name, email, phone, is_admin, active) VALUES (?, ?, ?, ?, ?, ?)',
             [$householdId, $name, $email, $phone ?: null, $isAdmin, $active]);
     } else {
-        q('UPDATE members SET household_id = ?, name = ?, email = ?, phone = ?, is_admin = ?, active = ? WHERE id = ?',
-            [$householdId, $name, $email, $phone ?: null, $isAdmin, $active, $memberId]);
+        q('UPDATE members SET household_id = ?, name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
+           WHERE id = ?', [$householdId, $name, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
         if (!$active) {
             // Sign them out everywhere, and cancel any sign-in link still on its way.
             q('DELETE FROM sessions WHERE member_id = ?', [$memberId]);
@@ -203,6 +206,7 @@ function settings_save(array $form): ?string
     $gallon = money_to_cents(trim((string) ($form['deposit_gallon_plus'] ?? '')));
     $months = trim((string) ($form['share_expiry_months'] ?? ''));
     $venmo = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($form['venmo_handle'] ?? ''));
+    $cap = trim((string) ($form['email_daily_cap'] ?? ''));
 
     if (!is_numeric($discount) || $discount < 0 || $discount > 100) {
         return 'settings_discount';
@@ -213,6 +217,10 @@ function settings_save(array $form): ?string
     if (!ctype_digit($months) || (int) $months < 1 || (int) $months > 24) {
         return 'settings_months';
     }
+    if (!ctype_digit($cap) || (int) $cap < 1) {
+        return 'settings_cap';
+    }
+    set_setting('email_daily_cap', (string) (int) $cap);
     set_setting('discount_percent', (string) (float) $discount);
     set_setting('deposit_half_gallon_cents', (string) $half);
     set_setting('deposit_gallon_plus_cents', (string) $gallon);

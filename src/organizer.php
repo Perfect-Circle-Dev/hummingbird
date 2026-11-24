@@ -211,7 +211,8 @@ function carry_over_out_of_stock(int $cycleId): void
     $expires = gmdate('Y-m-d H:i:s', strtotime("+$months months"));
     q("UPDATE share_claims SET cost_cents = NULL WHERE share_id IN
            (SELECT id FROM shares WHERE status = 'ordered' AND cycle_id = ? AND out_of_stock = 1)", [$cycleId]);
-    q("UPDATE shares SET status = 'open', cycle_id = NULL, price_cents = NULL, out_of_stock = 0, expires_at = ?
+    q("UPDATE shares SET status = 'open', cycle_id = NULL, price_cents = NULL, out_of_stock = 0, expires_at = ?,
+                      expiry_warned_at = NULL
        WHERE status = 'ordered' AND cycle_id = ? AND out_of_stock = 1", [$expires, $cycleId]);
 }
 
@@ -335,7 +336,7 @@ function stock_and_prices_email(array $cycle, array $notes): int
             . "Your order now:\n\n"
             . order_text(order_summary($order), 'Total due at pickup') . "\n"
             . "You can see it any time at " . config('base_url') . "/?a=order\n";
-        email_household((int) $householdId, config('site_name') . " order update for {$cycle['label']}", $body);
+        email_household((int) $householdId, config('site_name') . " order update for {$cycle['label']}", $body, true);
     }
     return count($notes);
 }

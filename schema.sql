@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS members (
     phone TEXT,
     is_admin INTEGER NOT NULL DEFAULT 0,
     active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    email_opt_out INTEGER NOT NULL DEFAULT 0, -- 1 = has unsubscribed from group emails (still hears about their own orders)
+    unsubscribe_token TEXT                    -- the secret in their unsubscribe link
 );
 
 -- One-time sign-in links. Only a hash of the token is stored.
@@ -22,7 +24,9 @@ CREATE TABLE IF NOT EXISTS login_tokens (
     token_hash TEXT PRIMARY KEY,
     member_id INTEGER NOT NULL REFERENCES members(id),
     expires_at TEXT NOT NULL,
-    used_at TEXT
+    used_at TEXT,
+    cycle_id INTEGER                     -- set on links sent in a "time to order" email: they work
+                                         -- as often as needed while that month is open
 );
 
 -- Devices that are signed in.
@@ -43,6 +47,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_half_gallon_cents',
 INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_gallon_plus_cents', '300');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('share_expiry_months', '3');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('venmo_handle', '');  -- for the pay link in pickup emails
+INSERT OR IGNORE INTO settings (key, value) VALUES ('email_daily_cap', '90'); -- most emails to send in 24 hours (Resend allows 100)
 
 -- Catalog, copied nightly from Hummingbird. A "variant" is one size of a product
 -- and carries the item number (sku) members order by.
@@ -82,7 +87,9 @@ CREATE TABLE IF NOT EXISTS cycles (
     status TEXT NOT NULL DEFAULT 'open', -- next, open, locked, closed
     locked_at TEXT,
     closed_at TEXT,
-    pickup_emailed_at TEXT               -- when the pickup emails last went out
+    pickup_emailed_at TEXT,              -- when the pickup emails last went out
+    order_emailed_at TEXT,               -- when the "time to order" email last went out
+    last_call_at TEXT                    -- when the last-call reminder went out
 );
 
 -- One order per household per month.
@@ -120,7 +127,8 @@ CREATE TABLE IF NOT EXISTS shares (
     status TEXT NOT NULL DEFAULT 'open', -- open, ordered, expired
     cycle_id INTEGER REFERENCES cycles(id), -- the month it was ordered in
     price_cents INTEGER,                 -- member price for the whole item, fixed when ordered
-    out_of_stock INTEGER NOT NULL DEFAULT 0
+    out_of_stock INTEGER NOT NULL DEFAULT 0,
+    expiry_warned_at TEXT                -- when the people on it were warned it is about to expire
 );
 
 CREATE TABLE IF NOT EXISTS share_claims (
@@ -146,4 +154,17 @@ CREATE TABLE IF NOT EXISTS email_log (
     body TEXT NOT NULL,
     status TEXT NOT NULL,                -- logged, sent or failed
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Emails waiting to go out. Anything sent to many people at once is put here, and
+-- bin/mail-jobs.php (run every minute) sends a few at a time, staying under the daily limit.
+CREATE TABLE IF NOT EXISTS email_queue (
+    id INTEGER PRIMARY KEY,
+    to_email TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    unsubscribe_url TEXT,                -- set on group emails, so mail programs can show "unsubscribe"
+    attempts INTEGER NOT NULL DEFAULT 0, -- given up on after 3 failures
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT
 );
