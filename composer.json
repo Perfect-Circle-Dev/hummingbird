@@ -1,0 +1,8 @@
+{
+    "name": "perfect-circle-dev/hummingbird",
+    "description": "Holy Frijoles buying group: ordering and bulk-share site",
+    "require": {
+        "php": ">=8.2",
+        "phpmailer/phpmailer": "^6.9"
+    }
+}

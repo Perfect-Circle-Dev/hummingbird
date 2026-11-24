@@ -1,0 +1,21 @@
+:root { --green: #1E5B3C; --ink: #17211B; --muted: #55605A; --line: #D5DBD6; --ground: #F4F6F3; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--green); }
+.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+.brand { display: flex; flex-direction: column; text-decoration: none; color: var(--ink); }
+.brand-name { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.brand-tag { font-size: 13px; color: var(--muted); }
+.who { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 48px; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.narrow { max-width: 440px; margin-left: auto; margin-right: auto; }
+h1 { font-size: 24px; line-height: 1.2; margin: 0 0 12px; }
+label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+input[type=email], input[type=text], input[type=number], select { font: inherit; width: 100%; min-height: 44px; padding: 0 10px; border: 1px solid #AEB8B1; border-radius: 8px; background: #fff; color: var(--ink); }
+button { font: inherit; cursor: pointer; }
+.btn { min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--green); color: #fff; font-weight: 600; }
+.link { min-height: 44px; padding: 0; border: 0; background: none; color: var(--green); font-weight: 600; text-decoration: underline; }
+.stack > * + * { margin-top: 12px; }
+.note { font-size: 14px; color: var(--muted); }
+.notice { background: #E4EFE7; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
