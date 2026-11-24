@@ -33,14 +33,18 @@ sqlite3 data/hummingbird.sqlite "select body from email_log order by id desc lim
 
 ## Server setup (Debian)
 
-1. Install: `apt install nginx php-fpm php-sqlite3 php-curl php-mbstring composer sqlite3 git certbot python3-certbot-nginx`
-2. Clone this repo to `/var/www/hummingbird`, then `composer install --no-dev`.
-3. Copy `config.sample.php` to `config.php` and fill it in.
-4. Make `data/` writable by the web server: `chown -R www-data:www-data data`.
-5. Run `php bin/migrate.php` as `www-data`.
-6. Point nginx at `/var/www/hummingbird/public`, sending every request to `index.php`.
-7. Get a certificate: `certbot --nginx -d hummingbird.schefley.net`.
-8. Add the nightly catalog sync to `www-data`'s crontab:
-   `15 3 * * * php /var/www/hummingbird/bin/sync-catalog.php`
+One time, on a fresh server:
 
-To deploy a change: `git pull`, then `php bin/migrate.php`.
+1. Give the server read access to this private repo. On the server:
+   `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""`, then `cat ~/.ssh/id_ed25519.pub`.
+   Paste that line into GitHub under this repo's Settings → Deploy keys (read-only).
+2. `sudo apt-get update && sudo apt-get install -y git`
+3. `sudo mkdir -p /var/www/hummingbird && sudo chown $USER /var/www/hummingbird`
+4. `git clone git@github.com:Perfect-Circle-Dev/hummingbird.git /var/www/hummingbird`
+5. `cd /var/www/hummingbird && sudo bash deploy/setup-server.sh`
+6. Follow the three steps the script prints at the end (HTTPS, add yourself, visit the site).
+
+The script installs nginx and PHP, creates `config.php` and the database, sets up the
+web server, schedules the nightly catalog refresh and downloads the catalog once.
+
+To deploy a change after pushing to GitHub: `bash deploy/update.sh` on the server.
