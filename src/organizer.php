@@ -295,7 +295,7 @@ function stock_and_prices_save(array $cycle, array $form): array
                     q('UPDATE shares SET out_of_stock = ? WHERE id = ?', [$out ? 1 : 0, $s['id']]);
                     foreach ($s['claims'] as $c) {
                         $notes[$c['household_id']][] = $out
-                            ? "Out of stock: the share of $name. Nobody is charged for it, and it goes back on the share board for next month."
+                            ? "Out of stock: the share of $name. Nobody is charged for it, and it goes back to Share items for next month."
                             : "Not out of stock after all: the share of $name is back on the order.";
                     }
                     $changes++;

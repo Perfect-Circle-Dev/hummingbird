@@ -26,9 +26,9 @@ function page_shares(array $member, bool $isPost): void
         $startVariant = null;
     }
 
-    page_start('Share board');
+    page_start('Share items');
     ?>
-    <h1>Share board</h1>
+    <h1>Share items</h1>
     <p class="note">Split a bulk item with other members. When an item is fully claimed it goes on the next order, and each person pays for their part.</p>
 
     <?php if ($startVariant):
@@ -64,8 +64,9 @@ function page_shares(array $member, bool $isPost): void
         $unit = $s['size_unit'];
         $percent = min(100, round($s['claimed'] / $s['size_amount'] * 100)); ?>
       <div class="card stack">
+        <?php if ($editable && !$s['full']): ?><div class="eyebrow">Up for sharing?</div><?php endif; ?>
         <div>
-          <strong><?= e($s['product_title']) ?></strong>
+          <h2><?= e($s['product_title']) ?></h2>
           <div class="note"><?= e($s['sku']) ?> · <?= e($s['size']) ?> · <?= money($s['price_cents']) ?> (<?= money($s['per_unit_cents']) ?> per <?= e($unit) ?>)</div>
         </div>
         <div class="bar" role="img" aria-label="<?= $percent ?> percent claimed"><div style="width: <?= $percent ?>%"></div></div>
@@ -76,7 +77,11 @@ function page_shares(array $member, bool $isPost): void
           <?php endforeach; ?>
         </ul>
         <?php if ($s['status'] === 'ordered'): ?>
-          <p class="notice">On the <?= e($cycle['label'] ?? '') ?> order<?= $s['out_of_stock'] ? ', but Hummingbird was out of stock. Nobody is charged, and it comes back to the board for next month.' : '.' ?></p>
+          <?php if ($s['out_of_stock']): ?>
+            <p class="notice warn">On the <?= e($cycle['label'] ?? '') ?> order, but Hummingbird was out of stock. Nobody is charged, and it comes back to Share items for next month.</p>
+          <?php else: ?>
+            <p class="notice">On the <?= e($cycle['label'] ?? '') ?> order.</p>
+          <?php endif; ?>
         <?php elseif ($s['full']): ?>
           <p class="notice">Fully claimed. It goes on the next order.</p>
         <?php endif; ?>
@@ -89,7 +94,7 @@ function page_shares(array $member, bool $isPost): void
               <input id="amt-<?= (int) $s['id'] ?>" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01"
                      max="<?= e(fmt_amount($s['left'] + ($mine['amount'] ?? 0))) ?>" value="<?= $mine ? e(fmt_amount($mine['amount'])) : '' ?>" required>
             </div>
-            <button class="btn" name="do" value="claim"><?= $mine ? 'Update' : 'Claim' ?></button>
+            <button class="btn accent" name="do" value="claim"><?= $mine ? 'Update' : 'I\'ll take some' ?></button>
           </form>
           <?php if ($mine): ?>
           <form method="post" action="/?a=shares">
@@ -100,7 +105,7 @@ function page_shares(array $member, bool $isPost): void
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($editable): ?>
-          <div class="note">Started by <?= e($s['started_by_name']) ?> on <?= e(fmt_local($s['created_at'], 'M j')) ?> · comes off the board <?= e(fmt_local($s['expires_at'], 'M j')) ?> if not filled</div>
+          <div class="note">Started by <?= e($s['started_by_name']) ?> on <?= e(fmt_local($s['created_at'], 'M j')) ?> · comes off the list <?= e(fmt_local($s['expires_at'], 'M j')) ?> if not filled</div>
         <?php endif; ?>
       </div>
     <?php endforeach; ?>

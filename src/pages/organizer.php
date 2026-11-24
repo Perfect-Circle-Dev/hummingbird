@@ -228,7 +228,7 @@ function organizer_months(): void
         echo '<p class="notice" role="status">' . e($done) . '</p>';
     }
     if ($problem) {
-        echo '<p class="notice warn" role="alert">' . e($problem) . '</p>';
+        echo '<p class="notice error" role="alert">' . e($problem) . '</p>';
     }
     organizer_queue_notice();
 
@@ -284,7 +284,7 @@ function organizer_months(): void
           <?= csrf_field() ?>
           <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
           <h3>Close the month</h3>
-          <p class="note">Do this when pickup is over and everyone has paid. Members stop seeing this order, and you can open the next month. Anything marked out of stock is carried over: items go to each household's "Saved for next month" list and shares go back on the share board. It can't be undone.</p>
+          <p class="note">Do this when pickup is over and everyone has paid. Members stop seeing this order, and you can open the next month. Anything marked out of stock is carried over: items go to each household's "Saved for next month" list and shares go back to Share items. It can't be undone.</p>
           <label class="check"><input type="checkbox" name="sure" value="1" required> <?= e($cycle['label']) ?> is finished</label>
           <button class="btn" name="do" value="close">Close the month</button>
         </form>
@@ -293,7 +293,7 @@ function organizer_months(): void
           <form method="post" action="/?a=organizer" class="stack">
             <?= csrf_field() ?>
             <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
-            <p class="note">Members can change their orders again and prices go back to following the catalog. Shares on this order return to the share board, still fully claimed, and come back when you lock again. Any out-of-stock ticks and corrected prices are cleared. Best not done once the order has been placed with Hummingbird.</p>
+            <p class="note">Members can change their orders again and prices go back to following the catalog. Shares on this order return to Share items, still fully claimed, and come back when you lock again. Any out-of-stock ticks and corrected prices are cleared. Best not done once the order has been placed with Hummingbird.</p>
             <label class="check"><input type="checkbox" name="sure" value="1" required> Reopen <?= e($cycle['label']) ?> for changes</label>
             <button class="btn" name="do" value="reopen">Reopen the month</button>
           </form>
@@ -364,7 +364,7 @@ function organizer_combined_order(array $cycle): void
     <h1>Combined order for <?= e($cycle['label']) ?></h1>
     <p class="note"><?= e($status) ?></p>
     <?php if ($saved): ?><p class="notice" role="status"><?= e($saved) ?></p><?php endif; ?>
-    <?php if ($problem): ?><p class="notice warn" role="alert"><?= e($problem) ?></p><?php endif; ?>
+    <?php if ($problem): ?><p class="notice error" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
     <?php if ($combined['unfinished']): ?>
       <div class="card stack">
@@ -554,7 +554,7 @@ function organizer_report(array $cycle): void
     <?php if (isset($_GET['pickup'])): ?>
       <p class="notice" role="status">Pickup emails are on their way to <?= (int) $_GET['pickup'] ?> <?= (int) $_GET['pickup'] === 1 ? 'household' : 'households' ?>. They go out a few at a time over the next few minutes.</p>
     <?php endif; ?>
-    <?php if ($problem): ?><p class="notice warn" role="alert"><?= e($problem) ?></p><?php endif; ?>
+    <?php if ($problem): ?><p class="notice error" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
     <?php if (!$report['households']): ?>
       <div class="card"><p>Nobody has ordered anything yet.</p></div>
@@ -746,7 +746,7 @@ function organizer_queue_notice(): void
         echo '<p class="notice warn" role="alert">' . $waiting . ' They have been waiting more than ten minutes, so the'
             . ' background sender may not be running. On the server, run: sudo bash deploy/setup-auto.sh</p>';
     } else {
-        echo '<p class="notice" role="status">' . $waiting . ' They are sent a few at a time, over the next few minutes.</p>';
+        echo '<p class="notice info" role="status">' . $waiting . ' They are sent a few at a time, over the next few minutes.</p>';
     }
 }
 

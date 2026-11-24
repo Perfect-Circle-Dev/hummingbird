@@ -40,12 +40,24 @@ function page_start(string $title): void
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
 <title><?= e($title) ?> · <?= e(config('site_name')) ?></title>
+<link rel="preload" href="/fonts/atkinson-hyperlegible-latin-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="<?= e(asset('site.css')) ?>">
 <?php if ($logo): ?><link rel="icon" href="<?= e($logo['src']) ?>">
 <?php endif; ?></head>
 <body>
+<?php // The painted-tile strip. Its colours come from site.css, so it changes with light and dark. ?>
+<svg class="tiles" aria-hidden="true" focusable="false">
+  <defs>
+    <pattern id="tile" width="80" height="36" patternUnits="userSpaceOnUse">
+      <rect class="t-primary" x="0" y="0" width="40" height="36"/><polygon class="t-ground" points="20,4 34,18 20,32 6,18"/><circle class="t-accent" cx="20" cy="18" r="5"/>
+      <rect class="t-accent" x="40" y="0" width="40" height="36"/><polygon class="t-ground" points="60,4 74,18 60,32 46,18"/><circle class="t-primary" cx="60" cy="18" r="5"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="36" fill="url(#tile)"/>
+</svg>
 <header class="top">
   <a class="brand" href="/">
     <?php if ($logo): ?>
@@ -58,10 +70,15 @@ function page_start(string $title): void
   </a>
   <?php if ($member): ?>
   <nav class="nav" aria-label="Main">
-    <a href="/?a=order">My order</a>
-    <a href="/?a=shares">Share board</a>
-    <a href="/?a=household">My household</a>
-    <?php if ($member['is_admin']): ?><a href="/?a=organizer">Organizer</a><?php endif; ?>
+    <?php // The page you are on is marked, which fills its pill in (see site.css).
+    $here = (string) ($_GET['a'] ?? '');
+    $pages = ['order' => 'My order', 'shares' => 'Share items', 'household' => 'My household'];
+    if ($member['is_admin']) {
+        $pages['organizer'] = 'Organizer';
+    }
+    foreach ($pages as $page => $label): ?>
+    <a href="/?a=<?= $page ?>"<?= $here === $page ? ' aria-current="page"' : '' ?>><?= $label ?></a>
+    <?php endforeach; ?>
   </nav>
   <form method="post" action="/?a=logout" class="who">
     <span><?= e($member['name']) ?></span>

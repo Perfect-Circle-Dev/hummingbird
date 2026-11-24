@@ -55,7 +55,7 @@ function page_order(array $member, bool $isPost): void
             <?= csrf_field() ?>
             <input type="hidden" name="q" value="<?= e($query) ?>">
             <input type="hidden" name="variant_id" value="<?= (int) $v['id'] ?>">
-            <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>">★</button>
+            <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></button>
             <?php if ($open): ?><button class="btn" name="do" value="add">Add</button><?php endif; ?>
             <button class="btn<?= $open ? ' quiet' : '' ?>" name="do" value="later">Save for next month</button>
           </form>
@@ -119,7 +119,7 @@ function page_order(array $member, bool $isPost): void
         echo '<p class="notice warn">The ' . e($cycle['label']) . ' order is locked and can no longer be changed. Anything you add now is saved for next month.</p>';
     }
     if (isset($_GET['sent'])) {
-        echo '<p class="notice">Order submitted. A summary has been emailed to your household.</p>';
+        echo '<p class="notice">Order submitted. Cool beans! A summary is on its way to your inbox.</p>';
     }
     ?>
     <div class="columns">
@@ -128,7 +128,7 @@ function page_order(array $member, bool $isPost): void
         <form method="get" action="/" class="row" id="search-form">
           <input type="hidden" name="a" value="order">
           <div class="grow">
-            <label for="q">Search by name or item number</label>
+            <label for="q">Spill the beans: what are you after?</label>
             <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129" autocomplete="off">
           </div>
           <button class="btn" type="submit">Search</button>
@@ -157,7 +157,7 @@ function page_order(array $member, bool $isPost): void
             <p>Nothing on your order yet. Search above or add from your favorites.</p>
           <?php else: ?>
           <div class="scroll">
-            <table>
+            <table class="order">
               <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th class="money">Retail price</th><th class="money">Our price</th><th class="money">Deposit</th><th class="money total">Total</th></tr></thead>
               <tbody>
               <?php foreach ($summary['lines'] as $l) { $lineRow($l, $open ? 'qty' : ''); } ?>
@@ -204,7 +204,7 @@ function page_order(array $member, bool $isPost): void
       <?php else: ?>
         <p class="note"><?= $cycle ? 'These are not part of the ' . e($cycle['label']) . ' order. ' : '' ?>When the next month opens they will already be on your order. You will still need to look it over and submit it. Prices are today's and may change by then.</p>
         <div class="scroll">
-          <table>
+          <table class="order">
             <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th class="money">Retail price</th><th class="money">Our price</th><th class="money">Deposit</th><th class="money total">Total</th></tr></thead>
             <tbody>
             <?php foreach ($saved['lines'] as $l) { $lineRow($l, 'qty_later'); } ?>
