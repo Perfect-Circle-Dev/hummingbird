@@ -41,8 +41,10 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 table { border-collapse: collapse; width: 100%; min-width: 520px; }
 th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
 td { padding: 10px; border-bottom: 1px solid #E6EAE6; font-size: 14px; vertical-align: middle; }
-.qty { display: flex; align-items: center; gap: 6px; }
-.qty button { width: 44px; height: 44px; border: 1px solid #AEB8B1; border-radius: 8px; background: #fff; font-size: 18px; }
+th.center, td.center { text-align: center; }
+.qty { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.qty button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: none; color: var(--green); font-size: 22px; font-weight: 600; line-height: 1; }
+.qty button:hover { background: var(--ground); }
 .qty span { min-width: 20px; text-align: center; font-weight: 600; }
 .totals { max-width: 360px; margin: 0 0 0 auto; font-size: 14px; }
 .totals div { display: flex; justify-content: space-between; padding: 3px 0; }

@@ -22,6 +22,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 - `public/index.php` is the only entry point. `?a=` picks the page: `login`, `verify`,
   `logout`, `unsubscribe` (no sign-in), `order`, `shares`, `organizer` (admins only), default home. `public/site.css`, `public/site.js`.
+- `public/site.js` is three small add-ons, and every page works without it: search as you type;
+  on My order, buttons update the page in place (the server still answers with the whole page,
+  and the script swaps in the parts with ids `results`, `favorites` and `order-lists`); and the
+  organizer's "out of stock for everyone" box ticking the others.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.

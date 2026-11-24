@@ -171,7 +171,7 @@ function household_order(int $cycleId, int $householdId): array
 
 function order_lines(int $orderId): array
 {
-    return q('SELECT l.*, v.sku, v.title AS size, v.active AS still_listed, p.title AS product_title
+    return q('SELECT l.*, v.sku, v.title AS size, v.active AS still_listed, v.list_price_cents, p.title AS product_title
               FROM order_lines l JOIN variants v ON v.id = l.variant_id JOIN products p ON p.id = v.product_id
               WHERE l.order_id = ? ORDER BY p.title, v.title', [$orderId])->fetchAll();
 }
