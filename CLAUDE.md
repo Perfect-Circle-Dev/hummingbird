@@ -32,10 +32,12 @@ a little, and wants to be able to follow and lightly edit the code. So:
   `cycle_lock`, `cycle_reopen`, `cycle_close`), `combined_order()`, `unfinished_orders()`.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
   `/?a=organizer` is the months page; `/?a=organizer&month=ID` is that month's combined order.
-- `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`).
+- `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`,
+  `notify-admin`, `check-reboot`).
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
-- `deploy/`: server setup, nginx template, `update.sh`.
+- `deploy/`: server setup, nginx template, `update.sh`, and `setup-auto.sh` / `auto-update.sh`
+  (the server polls GitHub and deploys `main` by itself; see README).
 
 ## Conventions
 
@@ -115,8 +117,12 @@ Members said no to a "reorder last month" button; favorites cover it.
 
 ## Working agreement
 
-- Branch per piece of work, pull request into `main`, Brent merges.
-- He deploys with `bash deploy/update.sh` on the server (Debian, nginx, php-fpm, user `admin`,
-  site in `/var/www/hummingbird`, scripts run as `www-data`).
+- Branch per piece of work, pull request into `main` (open it with `gh pr create`), Brent merges.
+- Merging is deploying: the server (Debian, nginx, php-fpm, user `admin`, site in
+  `/var/www/hummingbird`, scripts run as `www-data`) checks `main` every 2 minutes and runs
+  `deploy/update.sh` by itself, once `deploy/setup-auto.sh` has been run there. So `main` must
+  always be safe to go live, and a change that needs a manual step on the server has to say so
+  in its pull request. `bash deploy/update.sh` still works by hand.
+- Nobody has SSH access to the server from the laptop; server changes are scripts Brent runs.
 - Local run and server setup steps are in `README.md`. Use `mail_driver` `log` locally so
   no real email is sent, and never run test sign-ups against real member addresses.

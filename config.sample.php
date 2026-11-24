@@ -13,6 +13,7 @@ return [
     'mail_driver' => 'log',
     'mail_from'   => 'brent@schefley.net',
     'mail_from_name' => 'Holy Frijoles',
+    'admin_email' => 'brent@schefley.net',   // gets notices about the server: failed updates, pending restarts
     'smtp' => ['host' => 'smtp.resend.com', 'port' => 587, 'user' => 'resend', 'pass' => ''], // pass = Resend API key
 
     // Where the catalog comes from.

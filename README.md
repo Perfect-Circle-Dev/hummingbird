@@ -48,4 +48,26 @@ One time, on a fresh server:
 The script installs nginx and PHP, creates `config.php` and the database, sets up the
 web server, schedules the nightly catalog refresh and downloads the catalog once.
 
-To deploy a change after pushing to GitHub: `bash deploy/update.sh` on the server.
+## What the server does by itself
+
+Run once on the server (and again any time; it is safe to repeat):
+
+```
+cd /var/www/hummingbird && sudo bash deploy/setup-auto.sh
+```
+
+After that:
+
+- **The site follows GitHub.** Every 2 minutes the server checks the `main` branch. When a
+  pull request is merged, it runs `deploy/update.sh` by itself, so the change is live within
+  about 2 minutes. Work branches never deploy. If an update fails you get one email, and the
+  server waits for a newer change before trying again. The log is `/var/lib/hummingbird/deploy.log`.
+- **Debian keeps itself up to date** with stable and security updates each day. It never
+  restarts by itself.
+- **You get an email when a restart is needed** (usually a new kernel), with a reminder each
+  week until it is done. To restart: `sudo reboot`. The site is offline for about a minute.
+
+These notices go to `admin_email` in `config.php` (or `mail_from` if that line is missing).
+
+To update by hand at any time: `bash deploy/update.sh` on the server.
+To pause the automatic updates: `sudo rm /etc/cron.d/hummingbird-auto`.
