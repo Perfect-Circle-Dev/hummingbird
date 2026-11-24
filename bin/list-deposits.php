@@ -7,7 +7,9 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 $rows = q("SELECT v.sku, p.title AS product, v.title AS size, v.deposit_cents, v.deposit_override_cents
            FROM variants v JOIN products p ON p.id = v.product_id
            WHERE v.active = 1 AND (v.deposit_cents > 0 OR v.deposit_override_cents IS NOT NULL
-                 OR v.title LIKE '%gal%' OR v.title LIKE '%jug%' OR v.title LIKE '%bucket%' OR v.title LIKE '%pail%')
+                 OR v.title LIKE '%gal%' OR v.title LIKE '%jug%' OR v.title LIKE '%bucket%' OR v.title LIKE '%pail%'
+                 OR v.title LIKE '%cube%' OR v.title LIKE '%jar%' OR v.title LIKE '%glass%' OR v.title LIKE '%barrel%'
+                 OR v.title LIKE '%box%' OR v.title LIKE '%tote%' OR v.title LIKE '%drum%')
            ORDER BY v.deposit_cents DESC, p.title")->fetchAll();
 foreach ($rows as $r) {
     $deposit = $r['deposit_override_cents'] ?? $r['deposit_cents'];

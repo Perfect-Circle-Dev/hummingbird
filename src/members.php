@@ -202,8 +202,8 @@ function members_import(string $text): array
 function settings_save(array $form): ?string
 {
     $discount = trim((string) ($form['discount_percent'] ?? ''));
-    $half = money_to_cents(trim((string) ($form['deposit_half_gallon'] ?? '')));
-    $gallon = money_to_cents(trim((string) ($form['deposit_gallon_plus'] ?? '')));
+    $glass = money_to_cents(trim((string) ($form['deposit_glass'] ?? '')));
+    $plastic = money_to_cents(trim((string) ($form['deposit_plastic'] ?? '')));
     $months = trim((string) ($form['share_expiry_months'] ?? ''));
     $venmo = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($form['venmo_handle'] ?? ''));
     $cap = trim((string) ($form['email_daily_cap'] ?? ''));
@@ -211,7 +211,7 @@ function settings_save(array $form): ?string
     if (!is_numeric($discount) || $discount < 0 || $discount > 100) {
         return 'settings_discount';
     }
-    if ($half === null || $gallon === null) {
+    if ($glass === null || $plastic === null) {
         return 'settings_deposit';
     }
     if (!ctype_digit($months) || (int) $months < 1 || (int) $months > 24) {
@@ -222,8 +222,8 @@ function settings_save(array $form): ?string
     }
     set_setting('email_daily_cap', (string) (int) $cap);
     set_setting('discount_percent', (string) (float) $discount);
-    set_setting('deposit_half_gallon_cents', (string) $half);
-    set_setting('deposit_gallon_plus_cents', (string) $gallon);
+    set_setting('deposit_glass_cents', (string) $glass);
+    set_setting('deposit_plastic_cents', (string) $plastic);
     set_setting('share_expiry_months', (string) (int) $months);
     set_setting('venmo_handle', $venmo);
 
