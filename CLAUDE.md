@@ -21,7 +21,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
 ## How the code is laid out
 
 - `public/index.php` is the only entry point. `?a=` picks the page: `login`, `verify`,
-  `logout`, `unsubscribe` (no sign-in), `order`, `shares`, `organizer` (admins only), default home. `public/site.css`, `public/site.js`.
+  `logout`, `unsubscribe` and `confirm-email` (no sign-in), `order`, `shares`, `household`,
+  `organizer` (admins only), default home. `public/site.css`, `public/site.js`.
 - `public/site.js` is three small add-ons, and every page works without it: search as you type;
   on My order, buttons update the page in place (the server still answers with the whole page,
   and the script swaps in the parts with ids `results`, `favorites` and `order-lists`); and the
@@ -43,7 +44,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - `src/payments.php`: pickup day. Split sheets (`split_sheets()`, `scale_text()`), marking orders
   paid (`order_set_paid()`), the pickup email (`pickup_emails_send()`, `venmo_link()`).
 - `src/members.php`: members and households (`member_save()`, `member_delete()`,
-  `members_import()`, `household_rename()`) and `settings_save()`.
+  `members_import()`, `household_rename()`), `settings_save()`, and what members do for their own
+  household (`household_person_save()`, `household_person_add()`, `email_change_request()`,
+  `email_change_confirm()`).
 - `src/layout.php`: the page frame. Link the stylesheet and script through `asset()`, which adds
   a version number so browsers fetch a changed file at once. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
   the header and as the tab icon when such a file exists.
@@ -156,6 +159,14 @@ a little, and wants to be able to follow and lightly edit the code. So:
   Archive (or Restore) buttons. Only a member who has never used the site can be deleted. An
   organizer can't archive or delete their own account. Renaming a household is on the member's
   Edit page.
+- Members look after their own household on the My household page (`page_household`). Anyone in
+  a household can correct the name and phone of anyone in it, and add a partner or friend (up to
+  `HOUSEHOLD_MAX_MEMBERS` active people); the new person is sent a 7-day sign-in link and the
+  organizers are emailed. Each person can change only their own email address, and only by
+  confirming a link sent to the new address (`members.pending_email`, good for 48 hours); the
+  old address is told. Archiving, removing, moving between households and making organizers
+  stay with the organizer. Every one of these checks the target is in the acting member's
+  household.
 - End-of-year tidy-up (`bin/yearly-archive.php`, `yearly_archive_candidates()`): on December 31
   the site archives members whose household had nothing on any order that year (no order line
   in a month with a deadline that year, and no claim on a share ordered that year; an unsubmitted

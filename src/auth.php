@@ -16,9 +16,10 @@ const ORGANIZER_LINK_DAYS = 7;
  * Emails a sign-in link if the address belongs to an active member. Returns whether one went out.
  * A link the member asks for themselves works once, for a short time. One the organizer
  * sends from the Members page ($fromOrganizer) lasts a week, because the member isn't
- * waiting for it and may not read it straight away.
+ * waiting for it and may not read it straight away. The same goes for the link sent to
+ * someone a member has just added to their household; $intro then says who added them.
  */
-function send_login_link(string $email, bool $fromOrganizer = false): bool
+function send_login_link(string $email, bool $fromOrganizer = false, string $intro = ''): bool
 {
     $member = q('SELECT * FROM members WHERE email = ? AND active = 1', [trim($email)])->fetch();
     if (!$member) {
@@ -31,6 +32,7 @@ function send_login_link(string $email, bool $fromOrganizer = false): bool
 
     $link = config('base_url') . '/?a=verify&t=' . $token;
     $body = "Hi {$member['name']},\n\n"
+        . ($intro !== '' ? $intro . "\n\n" : '')
         . "Here is your sign-in link for " . config('site_name') . ":\n\n$link\n\n"
         . ($fromOrganizer
             ? "It works once, any time in the next " . ORGANIZER_LINK_DAYS . " days. There is no password to remember.\n"

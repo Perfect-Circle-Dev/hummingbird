@@ -11,7 +11,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 | Workflow | VS Code → GitHub (this repo) → server. A pull request merged into `main` goes live by itself |
 | Stack | PHP 8.2+, SQLite database (one file, easy to back up), no framework |
 | Sign-in | Emailed link, no passwords. Devices stay signed in for 180 days |
-| Households | Several logins can share one household order |
+| Households | Several logins can share one household order. Members can add a partner or friend to their own household, fix names and phones, and change their own email (confirmed by a link to the new address). The organizer is told of each addition |
 | Email | Sent by the site from brent@schefley.net through Resend (SMTP), replacing Mailchimp. Free plan: 100 emails a day |
 | Catalog | Copied nightly from Hummingbird's public product feed; prices fixed when the order is locked |
 | Member price | List price less the group discount, 30.2163% |
@@ -50,6 +50,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists
 - [x] Organizer: months (open, change, lock, close), combined order, unfinished flags
 - [x] At lock: fix prices, move filled shares onto the order, and settle the odd cent when a share's parts don't add up exactly (it goes to whoever started the share)
+- [x] My household page: members add people to their household, fix names and phones, change their own email
 - [x] Reopen a locked month
 - [x] "Save for next month" list, always available to members
 - [x] Organizer: out-of-stock and price edits, with update emails; out-of-stock items and shares carry over to next month at close
