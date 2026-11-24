@@ -69,5 +69,16 @@ After that:
 
 These notices go to `admin_email` in `config.php` (or `mail_from` if that line is missing).
 
-To update by hand at any time: `bash deploy/update.sh` on the server.
-To pause the automatic updates: `sudo rm /etc/cron.d/hummingbird-auto`.
+To check GitHub and update right away, without waiting for the next automatic check, type
+this anywhere on the server:
+
+```
+Gitupdate
+```
+
+It says what is new, runs the update and shows the result, or tells you the site is
+already up to date.
+
+To change how often the server checks by itself, edit `CHECK_EVERY_MINUTES` at the top of
+`deploy/setup-auto.sh` (0 means never: the site then updates only when someone types
+`Gitupdate`) and run `sudo bash deploy/setup-auto.sh` on the server again.

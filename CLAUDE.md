@@ -37,7 +37,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
 - `deploy/`: server setup, nginx template, `update.sh`, and `setup-auto.sh` / `auto-update.sh`
-  (the server polls GitHub and deploys `main` by itself; see README).
+  (the server polls GitHub and deploys `main` by itself; see README). `gitupdate.sh` is the
+  by-hand version, installed on the server as the `Gitupdate` command. The polling interval is
+  `CHECK_EVERY_MINUTES` in `setup-auto.sh`; Brent plans to lower or switch it off once things
+  are stable and rely on `Gitupdate`.
 
 ## Conventions
 

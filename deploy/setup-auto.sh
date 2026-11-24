@@ -6,8 +6,15 @@
 #   1. Debian installs its own stable and security updates every day.
 #      It never restarts the server by itself.
 #   2. The organizer gets an email when an update needs a restart (usually a new kernel).
-#   3. The site follows GitHub: a change merged into main is live within about 2 minutes.
+#   3. The site follows GitHub: a change merged into main goes live by itself a few
+#      minutes later (see CHECK_EVERY_MINUTES below).
+#   4. The "Gitupdate" command, to check GitHub and update at once, by hand.
 set -euo pipefail
+
+# How often the server looks at GitHub by itself, in minutes (1 to 30).
+# 0 switches the automatic checks off; the site then updates only when someone
+# types "Gitupdate" on the server. After changing this, run this script again.
+CHECK_EVERY_MINUTES=2
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -57,13 +64,32 @@ fi
 
 echo "==> Scheduled jobs"
 # The server's clock is UTC: 15:00 is 7 am in winter and 8 am in summer, Pacific time.
-cat > /etc/cron.d/hummingbird-auto <<CRON
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-# Follow GitHub: look every 2 minutes, update when the main branch has moved.
-*/2 * * * * $OWNER bash $APP_DIR/deploy/auto-update.sh
-# Each morning, email the organizer if Debian is waiting for a restart.
-0 15 * * * www-data php $APP_DIR/bin/check-reboot.php >> /var/log/hummingbird-sync.log 2>&1
-CRON
+{
+    echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    if [ "$CHECK_EVERY_MINUTES" -gt 0 ]; then
+        echo "# Follow GitHub: look every $CHECK_EVERY_MINUTES minutes, update when the main branch has moved."
+        echo "*/$CHECK_EVERY_MINUTES * * * * $OWNER bash $APP_DIR/deploy/auto-update.sh"
+    fi
+    echo "# Each morning, email the organizer if Debian is waiting for a restart."
+    echo "0 15 * * * www-data php $APP_DIR/bin/check-reboot.php >> /var/log/hummingbird-sync.log 2>&1"
+} > /etc/cron.d/hummingbird-auto
+if [ "$CHECK_EVERY_MINUTES" -gt 0 ]; then
+    echo "    The server looks at GitHub every $CHECK_EVERY_MINUTES minutes."
+else
+    echo "    Automatic checks are off. Update with the Gitupdate command."
+fi
+
+echo "==> The Gitupdate command"
+# A tiny launcher, so typing "Gitupdate" anywhere on the server runs deploy/gitupdate.sh.
+# "gitupdate" in small letters works too.
+cat > /usr/local/bin/Gitupdate <<CMD
+#!/bin/sh
+# Check GitHub now and update the site if needed. Installed by deploy/setup-auto.sh.
+exec bash $APP_DIR/deploy/gitupdate.sh "\$@"
+CMD
+chmod 755 /usr/local/bin/Gitupdate
+ln -sf Gitupdate /usr/local/bin/gitupdate
+
 touch /var/log/hummingbird-sync.log
 chown www-data /var/log/hummingbird-sync.log
 if systemctl is-active --quiet cron; then
@@ -84,8 +110,11 @@ fi
 
 echo
 if [ "$READY" -eq 1 ]; then
-    echo "All set. From now on, merging into main on GitHub updates the site within about 2 minutes."
-    echo "The first check happens within 2 minutes. If GitHub is ahead, the update log will show it."
+    if [ "$CHECK_EVERY_MINUTES" -gt 0 ]; then
+        echo "All set. Merging into main on GitHub updates the site within about $CHECK_EVERY_MINUTES minutes."
+    else
+        echo "All set. Automatic checks are off: after merging into main, type Gitupdate here to update the site."
+    fi
 else
     echo "Set up, but fix the PROBLEM lines above and run this script again."
 fi
@@ -93,7 +122,7 @@ cat <<DONE
 
 Useful to know:
   Update log:            /var/lib/hummingbird/deploy.log
-  Update by hand:        cd $APP_DIR && bash deploy/update.sh
-  Pause auto-updates:    sudo rm /etc/cron.d/hummingbird-auto   (run this script again to resume)
+  Check GitHub now:      Gitupdate
+  How often it checks:   CHECK_EVERY_MINUTES at the top of deploy/setup-auto.sh (0 = only by hand)
   Is a restart pending?  sudo -u www-data php $APP_DIR/bin/check-reboot.php
 DONE
