@@ -6,7 +6,11 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 require dirname(__DIR__) . '/src/mailer.php';
 require dirname(__DIR__) . '/src/auth.php';
 require dirname(__DIR__) . '/src/catalog.php';
+require dirname(__DIR__) . '/src/orders.php';
+require dirname(__DIR__) . '/src/shares.php';
 require dirname(__DIR__) . '/src/layout.php';
+require dirname(__DIR__) . '/src/pages/order.php';
+require dirname(__DIR__) . '/src/pages/shares.php';
 
 $action = (string) ($_GET['a'] ?? 'home');
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
@@ -85,14 +89,32 @@ if ($action === 'logout' && $isPost) {
     redirect('/?a=login');
 }
 
-// Home. The share board, order page and organizer pages will be added here next.
-$catalogCount = (int) q('SELECT COUNT(*) FROM variants WHERE active = 1')->fetchColumn();
+if ($action === 'order') {
+    page_order($member, $isPost);
+    exit;
+}
+if ($action === 'shares') {
+    page_shares($member, $isPost);
+    exit;
+}
+
+// Home
+$cycle = current_cycle();
 page_start('Home');
 ?>
 <div class="card stack">
   <h1>Hello, <?= e($member['name']) ?></h1>
-  <p>You're signed in for the <?= e($member['household_name']) ?> household.</p>
-  <p class="note">The catalog currently holds <?= $catalogCount ?> items and sizes. Ordering and the share board are being built.</p>
+  <?php if (!$cycle): ?>
+    <p>No order is open right now. You'll get an email when the next one opens.</p>
+  <?php elseif ($cycle['status'] === 'open'): ?>
+    <p>The <strong><?= e($cycle['label']) ?></strong> order is open. Orders are due <?= e(fmt_local($cycle['due_at'])) ?>.</p>
+  <?php else: ?>
+    <p>The <strong><?= e($cycle['label']) ?></strong> order is locked and being placed.</p>
+  <?php endif; ?>
+  <p class="row">
+    <a class="btn" href="/?a=order">My order</a>
+    <a class="btn" href="/?a=shares">Share board</a>
+  </p>
 </div>
 <?php
 page_end();
