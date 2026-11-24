@@ -123,6 +123,11 @@ Members said no to a "reorder last month" button; favorites cover it.
   `deploy/update.sh` by itself, once `deploy/setup-auto.sh` has been run there. So `main` must
   always be safe to go live, and a change that needs a manual step on the server has to say so
   in its pull request. `bash deploy/update.sh` still works by hand.
-- Nobody has SSH access to the server from the laptop; server changes are scripts Brent runs.
+- Brent's laptop signs in to the server with `ssh hummingbird` (user `admin`; the key is
+  passphrase-protected and held by the Windows ssh-agent). Claude may use that connection, but
+  `.claude/settings.json` makes every `ssh`, `scp` and `sftp` command wait for Brent's approval.
+  Use it to look (logs, status, checking a deploy). Changes to the server still go in as scripts
+  under `deploy/` that are reviewed in a pull request, so the repo stays the record of how the
+  server is set up.
 - Local run and server setup steps are in `README.md`. Use `mail_driver` `log` locally so
   no real email is sent, and never run test sign-ups against real member addresses.
