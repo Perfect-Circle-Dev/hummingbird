@@ -18,8 +18,10 @@ OWNER="${SUDO_USER:-root}"
 echo "==> Installing packages"
 apt-get update
 apt-get install -y nginx php-fpm php-cli php-sqlite3 php-curl php-mbstring \
-    composer sqlite3 git unzip certbot python3-certbot-nginx cron
+    composer sqlite3 git unzip certbot python3-certbot-nginx
 # cron runs the nightly jobs. Debian's cloud images no longer include it.
+# --no-install-recommends keeps it from bringing in a mail server (exim4) as an extra.
+apt-get install -y --no-install-recommends cron
 systemctl enable --now cron
 
 PHP_VER="$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')"

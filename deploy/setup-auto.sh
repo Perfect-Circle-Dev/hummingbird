@@ -22,7 +22,10 @@ echo "==> Packages"
 # cron runs the scheduled jobs below. Debian's cloud images no longer include it,
 # and without it the schedule files are written but nothing ever runs them.
 apt-get update
-apt-get install -y unattended-upgrades cron
+apt-get install -y unattended-upgrades
+# --no-install-recommends: on its own, cron also brings in a mail server (exim4) to
+# post job output to local mailboxes. Nothing here needs one; the site sends its own email.
+apt-get install -y --no-install-recommends cron
 systemctl enable --now cron
 
 echo "==> Automatic Debian updates"
