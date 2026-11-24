@@ -50,7 +50,7 @@
 // jumps back to the top. Without JavaScript the same buttons reload the page, as before.
 (function () {
   // The parts of the page that are refreshed. Each is an element with this id.
-  var regions = ['results', 'favorites', 'order-lists'];
+  var regions = ['results', 'favorites', 'favorites-count', 'order-lists'];
   if (!document.getElementById('order-lists') || !window.fetch || !window.DOMParser || !window.FormData) return;
   var busy = false;
   var waiting = []; // taps made while an earlier change was still under way
@@ -138,4 +138,17 @@
         if (form.requestSubmit) form.requestSubmit(button); else form.submit();
       });
   });
+})();
+
+// My order page: "My favorites" folds away when its heading is pressed (the browser does
+// that by itself). This only remembers the choice, so it is still folded on the next visit.
+(function () {
+  var box = document.getElementById('favorites-box');
+  if (!box) return;
+  try {
+    if (window.localStorage.getItem('favorites-folded') === '1') box.open = false;
+    box.addEventListener('toggle', function () {
+      window.localStorage.setItem('favorites-folded', box.open ? '0' : '1');
+    });
+  } catch (err) { /* private browsing can refuse storage: folding still works, it is just not remembered */ }
 })();

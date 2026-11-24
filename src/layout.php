@@ -21,6 +21,16 @@ function site_logo(): ?array
     return null;
 }
 
+/**
+ * The address of a file in public/, with a number on the end that changes whenever the
+ * file does. Browsers keep stylesheets and scripts for a while; the new number makes them
+ * fetch the new one straight after an update instead of going on using the old.
+ */
+function asset(string $file): string
+{
+    return '/' . $file . '?v=' . filemtime(dirname(__DIR__) . '/public/' . $file);
+}
+
 function page_start(string $title): void
 {
     $member = current_member();
@@ -32,7 +42,7 @@ function page_start(string $title): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title><?= e($title) ?> · <?= e(config('site_name')) ?></title>
-<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="<?= e(asset('site.css')) ?>">
 <?php if ($logo): ?><link rel="icon" href="<?= e($logo['src']) ?>">
 <?php endif; ?></head>
 <body>

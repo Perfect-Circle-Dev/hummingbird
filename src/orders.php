@@ -28,6 +28,25 @@ function next_cycle(): array
     return $row;
 }
 
+// Pickup is always from this time of day, so it is added to whatever pickup note the
+// organizer types for a month. To change the time, change it here.
+const PICKUP_TIME = 'after 4pm';
+
+/**
+ * A month's pickup note as members see it: "Pickup from Wednesday, Dec 16 after 4pm".
+ * Empty if the month has no pickup note. The time is not added twice if the organizer
+ * typed it as well ("after 4 pm" counts).
+ */
+function pickup_text(array $cycle): string
+{
+    $note = trim((string) ($cycle['pickup_note'] ?? ''));
+    if ($note === '') {
+        return '';
+    }
+    $squash = fn(string $text): string => preg_replace('/[\s.]/', '', strtolower($text));
+    return str_contains($squash($note), $squash(PICKUP_TIME)) ? $note : rtrim($note, '. ') . ' ' . PICKUP_TIME;
+}
+
 /** "2026-12-15 03:00:00" (UTC, as stored) -> "Monday, December 14 at 7:00 pm" in the site's timezone. */
 function fmt_local(string $utc, string $format = 'l, F j \a\t g:i a'): string
 {

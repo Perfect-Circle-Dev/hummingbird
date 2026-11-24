@@ -9,24 +9,33 @@ function token_hash(string $token): string
     return hash('sha256', $token);
 }
 
-/** Emails a sign-in link if the address belongs to an active member. */
-function send_login_link(string $email): void
+// How long a sign-in link sent by the organizer (the Members page) lasts.
+const ORGANIZER_LINK_DAYS = 7;
+
+/**
+ * Emails a sign-in link if the address belongs to an active member. Returns whether one went out.
+ * A link the member asks for themselves works once, for a short time. One the organizer
+ * sends from the Members page ($fromOrganizer) lasts a week, because the member isn't
+ * waiting for it and may not read it straight away.
+ */
+function send_login_link(string $email, bool $fromOrganizer = false): bool
 {
     $member = q('SELECT * FROM members WHERE email = ? AND active = 1', [trim($email)])->fetch();
     if (!$member) {
-        return; // Say nothing either way, so the form can't be used to test who is a member.
+        return false; // The sign-in page says nothing either way, so it can't be used to test who is a member.
     }
     $token = bin2hex(random_bytes(32));
-    $minutes = (int) config('login_link_minutes');
+    $minutes = $fromOrganizer ? ORGANIZER_LINK_DAYS * 1440 : (int) config('login_link_minutes');
     q('INSERT INTO login_tokens (token_hash, member_id, expires_at) VALUES (?, ?, ?)',
         [token_hash($token), $member['id'], now_utc($minutes * 60)]);
 
     $link = config('base_url') . '/?a=verify&t=' . $token;
     $body = "Hi {$member['name']},\n\n"
         . "Here is your sign-in link for " . config('site_name') . ":\n\n$link\n\n"
-        . "It works once and expires in $minutes minutes. "
-        . "If you didn't ask for it, you can ignore this email.\n";
-    send_email($member['email'], 'Your ' . config('site_name') . ' sign-in link', $body);
+        . ($fromOrganizer
+            ? "It works once, any time in the next " . ORGANIZER_LINK_DAYS . " days. There is no password to remember.\n"
+            : "It works once and expires in $minutes minutes. If you didn't ask for it, you can ignore this email.\n");
+    return send_email($member['email'], 'Your ' . config('site_name') . ' sign-in link', $body);
 }
 
 /**

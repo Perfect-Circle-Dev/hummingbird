@@ -35,6 +35,18 @@ function organizer_people_post(string $do, array $member): void
         $problem = find_member($memberId) ? member_save($memberId, $_POST, $actingId) : 'member_gone';
         redirect($members . ($problem ? '&edit=' . $memberId . '&problem=' . $problem : '&done=member_saved'));
     }
+    if ($do === 'member_archive' || $do === 'member_restore') {
+        $restore = $do === 'member_restore';
+        $problem = member_set_active($memberId, $restore, $actingId);
+        redirect($members . ($problem ? '&problem=' . $problem : '&done=' . ($restore ? 'member_restored' : 'member_archived')));
+    }
+    if ($do === 'member_send_login') {
+        // A sign-in link sent by the organizer. It lasts a week, not half an hour, because
+        // the member isn't waiting for it.
+        $to = find_member($memberId);
+        $sent = $to && send_login_link($to['email'], true);
+        redirect($members . ($sent ? '&done=login_sent' : '&problem=login_not_sent'));
+    }
     if ($do === 'member_delete') {
         $problem = member_delete($memberId, $actingId);
         redirect($members . ($problem ? '&edit=' . $memberId . '&problem=' . $problem : '&done=member_deleted'));
@@ -104,7 +116,7 @@ function organizer_member_fields(?array $m, array $households): void
     </div>
     <label class="check"><input type="checkbox" name="is_admin" value="1" <?= !empty($m['is_admin']) ? 'checked' : '' ?>> Organizer (can see these pages and gets the reports)</label>
     <?php if ($m): ?>
-      <label class="check"><input type="checkbox" name="active" value="1" <?= $m['active'] ? 'checked' : '' ?>> Active (can sign in and gets emails)</label>
+      <label class="check"><input type="checkbox" name="active" value="1" <?= $m['active'] ? 'checked' : '' ?>> Active (untick to archive: they can't sign in and get no emails)</label>
       <input type="hidden" name="has_group_box" value="1">
       <label class="check"><input type="checkbox" name="group_emails" value="1" <?= $m['email_opt_out'] ? '' : 'checked' ?>> Gets group emails (time to order, last call, share reminders)</label>
     <?php endif; ?>
@@ -142,6 +154,7 @@ function organizer_members(array $member): void
     }
     ?>
     <p class="note"><?= $activeMembers ?> active <?= $activeMembers === 1 ? 'member' : 'members' ?> in <?= $activeHouseholds ?> <?= $activeHouseholds === 1 ? 'household' : 'households' ?>. People in the same household share one order.</p>
+    <p class="note">On December 31 each year, members whose household had nothing on any order that year are archived by the site, and each is sent a note saying they can come back any time by emailing you. Organizers and anyone added since July are left alone. You are emailed the list.<?= setting('archive_done_year') ? ' Last done for ' . e((string) setting('archive_done_year')) . '.' : '' ?></p>
 
     <?php if ($editing): ?>
       <div class="card stack">
@@ -150,7 +163,7 @@ function organizer_members(array $member): void
           <?= csrf_field() ?>
           <input type="hidden" name="member_id" value="<?= (int) $editing['id'] ?>">
           <?php organizer_member_fields($editing, $households); ?>
-          <p class="note">Someone who is not active can't sign in and gets no emails. Their past orders stay on record.</p>
+          <p class="note">An archived member can't sign in and gets no emails. Their past orders stay on record, and Restore brings them back.</p>
           <div class="row">
             <button class="btn" name="do" value="member_save">Save</button>
             <a class="btn quiet" href="/?a=organizer&amp;view=members">Cancel</a>
@@ -164,6 +177,16 @@ function organizer_members(array $member): void
             <button class="link" name="do" value="member_delete">Delete <?= e($editing['name']) ?></button>
           </form>
         <?php endif; ?>
+        <?php $editingHousehold = (string) q('SELECT name FROM households WHERE id = ?', [$editing['household_id']])->fetchColumn(); ?>
+        <form method="post" action="/?a=organizer" class="row step">
+          <?= csrf_field() ?>
+          <input type="hidden" name="household_id" value="<?= (int) $editing['household_id'] ?>">
+          <div class="grow">
+            <label for="h-name">Rename the household "<?= e($editingHousehold) ?>" (for everyone in it)</label>
+            <input id="h-name" name="name" type="text" value="<?= e($editingHousehold) ?>" required>
+          </div>
+          <button class="btn quiet" name="do" value="household_rename">Rename</button>
+        </form>
       </div>
     <?php else: ?>
       <div class="card stack">
@@ -190,31 +213,34 @@ function organizer_members(array $member): void
     <div class="columns">
     <?php foreach ($households as $h): ?>
       <div class="card stack">
-        <h2><?= e($h['name']) ?><?= $h['active_count'] === 0 ? ' <span class="flag">nobody active</span>' : '' ?></h2>
-        <ul class="plain">
-          <?php foreach ($h['members'] as $m): ?>
+        <h2><?= e($h['name']) ?><?= $h['active_count'] === 0 ? ' <span class="flag">archived</span>' : '' ?></h2>
+        <ul class="plain people">
+          <?php foreach ($h['members'] as $m):
+              $isMe = (int) $m['id'] === (int) $member['id']; ?>
             <li>
-              <strong><?= e($m['name']) ?></strong>
-              <?= $m['is_admin'] ? ' <span class="flag">organizer</span>' : '' ?>
-              <?= $m['active'] ? '' : ' <span class="flag">not active</span>' ?>
-              <?= $m['active'] && $m['email_opt_out'] ? ' <span class="flag">no group emails</span>' : '' ?>
-              <div class="note"><?= e($m['email']) ?><?= $m['phone'] ? ' · ' . e($m['phone']) : '' ?></div>
-              <a class="tap" href="/?a=organizer&amp;view=members&amp;edit=<?= (int) $m['id'] ?>" aria-label="Edit <?= e($m['name']) ?>">Edit</a>
+              <div class="grow">
+                <strong><?= e($m['name']) ?></strong>
+                <?= $m['is_admin'] ? ' <span class="flag">organizer</span>' : '' ?>
+                <?= $m['active'] ? '' : ' <span class="flag">archived</span>' ?>
+                <?= $m['active'] && $m['email_opt_out'] ? ' <span class="flag">no group emails</span>' : '' ?>
+                <div class="note"><?= e($m['email']) ?><?= $m['phone'] ? ' · ' . e($m['phone']) : '' ?></div>
+              </div>
+              <form method="post" action="/?a=organizer" class="row">
+                <?= csrf_field() ?>
+                <input type="hidden" name="member_id" value="<?= (int) $m['id'] ?>">
+                <a class="btn quiet small" href="/?a=organizer&amp;view=members&amp;edit=<?= (int) $m['id'] ?>" aria-label="Edit <?= e($m['name']) ?>">Edit</a>
+                <?php if ($m['active']): ?>
+                  <button class="btn quiet small" name="do" value="member_send_login" aria-label="Send a sign-in link to <?= e($m['name']) ?>">Send login</button>
+                  <?php if (!$isMe): ?>
+                    <button class="btn quiet small" name="do" value="member_archive" aria-label="Archive <?= e($m['name']) ?>">Archive</button>
+                  <?php endif; ?>
+                <?php else: ?>
+                  <button class="btn quiet small" name="do" value="member_restore" aria-label="Restore <?= e($m['name']) ?>">Restore</button>
+                <?php endif; ?>
+              </form>
             </li>
           <?php endforeach; ?>
         </ul>
-        <details>
-          <summary>Rename this household</summary>
-          <form method="post" action="/?a=organizer" class="row">
-            <?= csrf_field() ?>
-            <input type="hidden" name="household_id" value="<?= (int) $h['id'] ?>">
-            <div class="grow">
-              <label for="h-name-<?= (int) $h['id'] ?>">Household name</label>
-              <input id="h-name-<?= (int) $h['id'] ?>" name="name" type="text" value="<?= e($h['name']) ?>" required>
-            </div>
-            <button class="btn" name="do" value="household_rename">Save</button>
-          </form>
-        </details>
       </div>
     <?php endforeach; ?>
     </div>

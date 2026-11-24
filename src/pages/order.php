@@ -104,10 +104,10 @@ function page_order(array $member, bool $isPost): void
             </form>
             <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
           </td>
-          <td><?= money((int) $l['list_price_cents']) ?></td>
-          <td><?= money((int) $l['unit_price_cents']) ?></td>
-          <td><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
-          <td><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
+          <td class="money"><?= money((int) $l['list_price_cents']) ?></td>
+          <td class="money"><?= money((int) $l['unit_price_cents']) ?></td>
+          <td class="money"><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
+          <td class="money total"><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
         </tr>
         <?php
     };
@@ -135,13 +135,15 @@ function page_order(array $member, bool $isPost): void
         </form>
         <div id="results" class="stack" aria-live="polite"><?php $showResults(); ?></div>
       </div>
-      <div class="card stack" id="favorites">
-        <h2>My favorites</h2>
-        <?php if (!$favorites): ?>
-          <p class="note">No favorites yet. Tap the star beside any item to keep it here.</p>
-        <?php endif; ?>
-        <?php foreach ($favorites as $v) { $itemRow($v); } ?>
-      </div>
+      <details class="card fold" id="favorites-box" open>
+        <summary><h2>My favorites <span class="note" id="favorites-count"><?= $favorites ? '(' . count($favorites) . ')' : '' ?></span></h2></summary>
+        <div class="stack" id="favorites">
+          <?php if (!$favorites): ?>
+            <p class="note">No favorites yet. Tap the star beside any item to keep it here.</p>
+          <?php endif; ?>
+          <?php foreach ($favorites as $v) { $itemRow($v); } ?>
+        </div>
+      </details>
     </div>
     <div id="order-lists">
     <?php
@@ -150,21 +152,21 @@ function page_order(array $member, bool $isPost): void
         ?>
         <div class="card stack">
           <h2><?= e($member['household_name']) ?> order for <?= e($cycle['label']) ?></h2>
-          <p class="note">Due <?= e(fmt_local($cycle['due_at'])) ?><?= $cycle['pickup_note'] ? ' · ' . e($cycle['pickup_note']) : '' ?></p>
+          <p class="note">Due <?= e(fmt_local($cycle['due_at'])) ?><?= pickup_text($cycle) !== '' ? ' · ' . e(pickup_text($cycle)) : '' ?></p>
           <?php if (!$summary['lines'] && !$summary['shares']): ?>
             <p>Nothing on your order yet. Search above or add from your favorites.</p>
           <?php else: ?>
           <div class="scroll">
             <table>
-              <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th>Retail price</th><th>Our price</th><th>Deposit</th><th>Total</th></tr></thead>
+              <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th class="money">Retail price</th><th class="money">Our price</th><th class="money">Deposit</th><th class="money total">Total</th></tr></thead>
               <tbody>
               <?php foreach ($summary['lines'] as $l) { $lineRow($l, $open ? 'qty' : ''); } ?>
               <?php foreach ($summary['shares'] as $s): ?>
                 <tr>
                   <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
                   <td><?= e(fmt_amount($s['amount']) . ' ' . $s['size_unit']) ?> of <?= e($s['size']) ?></td>
-                  <td></td><td></td><td></td><td>None</td>
-                  <td><?= money($s['cost_cents']) ?></td>
+                  <td></td><td></td><td></td><td class="money">None</td>
+                  <td class="money total"><?= money($s['cost_cents']) ?></td>
                 </tr>
               <?php endforeach; ?>
               </tbody>
@@ -203,7 +205,7 @@ function page_order(array $member, bool $isPost): void
         <p class="note"><?= $cycle ? 'These are not part of the ' . e($cycle['label']) . ' order. ' : '' ?>When the next month opens they will already be on your order. You will still need to look it over and submit it. Prices are today's and may change by then.</p>
         <div class="scroll">
           <table>
-            <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th>Retail price</th><th>Our price</th><th>Deposit</th><th>Total</th></tr></thead>
+            <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th class="money">Retail price</th><th class="money">Our price</th><th class="money">Deposit</th><th class="money total">Total</th></tr></thead>
             <tbody>
             <?php foreach ($saved['lines'] as $l) { $lineRow($l, 'qty_later'); } ?>
             </tbody>
@@ -216,6 +218,6 @@ function page_order(array $member, bool $isPost): void
     </div>
     </div>
     <?php
-    echo '<script src="/site.js" defer></script>';
+    echo '<script src="' . e(asset('site.js')) . '" defer></script>';
     page_end();
 }
