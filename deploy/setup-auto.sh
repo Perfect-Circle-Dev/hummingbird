@@ -18,9 +18,14 @@ fi
 # Whoever owns the code is the one who can "git pull", so updates run as that user.
 OWNER="$(stat -c %U "$APP_DIR")"
 
-echo "==> Automatic Debian updates"
+echo "==> Packages"
+# cron runs the scheduled jobs below. Debian's cloud images no longer include it,
+# and without it the schedule files are written but nothing ever runs them.
 apt-get update
-apt-get install -y unattended-upgrades
+apt-get install -y unattended-upgrades cron
+systemctl enable --now cron
+
+echo "==> Automatic Debian updates"
 # Debian's own settings (in 50unattended-upgrades) already cover the stable release and
 # its security updates. These two lines switch the daily check and install on.
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'APT'
@@ -58,6 +63,12 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CRON
 touch /var/log/hummingbird-sync.log
 chown www-data /var/log/hummingbird-sync.log
+if systemctl is-active --quiet cron; then
+    echo "    cron is running."
+else
+    echo "    PROBLEM: cron is not running, so none of the scheduled jobs will happen."
+    READY=0
+fi
 
 echo "==> Test email"
 if echo "This is a test from deploy/setup-auto.sh. Notices about failed updates and pending restarts will come to this address." \
@@ -71,6 +82,7 @@ fi
 echo
 if [ "$READY" -eq 1 ]; then
     echo "All set. From now on, merging into main on GitHub updates the site within about 2 minutes."
+    echo "The first check happens within 2 minutes. If GitHub is ahead, the update log will show it."
 else
     echo "Set up, but fix the PROBLEM lines above and run this script again."
 fi
