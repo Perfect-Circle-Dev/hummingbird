@@ -16,7 +16,10 @@ CREATE TABLE IF NOT EXISTS members (
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     email_opt_out INTEGER NOT NULL DEFAULT 0, -- 1 = has unsubscribed from group emails (still hears about their own orders)
-    unsubscribe_token TEXT                    -- the secret in their unsubscribe link
+    unsubscribe_token TEXT,                   -- the secret in their unsubscribe link
+    pending_email TEXT,                       -- a new address they have asked for but not yet confirmed
+    pending_email_token TEXT,                 -- hash of the secret in the confirmation link
+    pending_email_expires_at TEXT
 );
 
 -- One-time sign-in links. Only a hash of the token is stored.

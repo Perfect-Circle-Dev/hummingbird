@@ -18,6 +18,7 @@ require dirname(__DIR__) . '/src/pages/shares.php';
 require dirname(__DIR__) . '/src/pages/organizer.php';
 require dirname(__DIR__) . '/src/pages/organizer_people.php';
 require dirname(__DIR__) . '/src/pages/unsubscribe.php';
+require dirname(__DIR__) . '/src/pages/household.php';
 
 $action = (string) ($_GET['a'] ?? 'home');
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
@@ -88,6 +89,12 @@ if ($action === 'unsubscribe') {
     exit;
 }
 
+if ($action === 'confirm-email') {
+    // Reached from the link sent to a member's new email address; no sign-in needed.
+    page_confirm_email($isPost);
+    exit;
+}
+
 // ---- Everything below needs a signed-in member ----
 
 if (!$member) {
@@ -108,6 +115,10 @@ if ($action === 'order') {
 }
 if ($action === 'shares') {
     page_shares($member, $isPost);
+    exit;
+}
+if ($action === 'household') {
+    page_household($member, $isPost);
     exit;
 }
 if ($action === 'organizer') {
@@ -141,6 +152,7 @@ page_start('Home');
   <p class="row">
     <a class="btn" href="/?a=order">My order</a>
     <a class="btn" href="/?a=shares">Share board</a>
+    <a class="btn quiet" href="/?a=household">My household</a>
   </p>
 </div>
 <?php

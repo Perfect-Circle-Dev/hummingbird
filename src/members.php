@@ -83,8 +83,14 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
         q('INSERT INTO members (household_id, name, email, phone, is_admin, active) VALUES (?, ?, ?, ?, ?, ?)',
             [$householdId, $name, $email, $phone ?: null, $isAdmin, $active]);
     } else {
+        $emailBefore = (string) q('SELECT email FROM members WHERE id = ?', [$memberId])->fetchColumn();
         q('UPDATE members SET household_id = ?, name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
            WHERE id = ?', [$householdId, $name, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
+        // If the organizer has set a new email address, that is the last word: a change
+        // the member had started themselves, and not yet confirmed, is dropped.
+        if (strcasecmp($emailBefore, $email) !== 0) {
+            email_change_cancel($memberId);
+        }
         if (!$active) {
             member_sign_out_everywhere($memberId);
         }
@@ -344,4 +350,158 @@ function yearly_archive_run(int $year): array
         send_email($email, config('site_name') . " member list tidy-up for $year", $body);
     }
     return $members;
+}
+
+// ---- What members can do for their own household ----
+
+// A household can add people by itself up to this many. Beyond that, the organizer adds them.
+const HOUSEHOLD_MAX_MEMBERS = 8;
+// How long the link that confirms a new email address works.
+const EMAIL_CHANGE_HOURS = 48;
+
+/** Everyone in a household, active people first, then by name. */
+function household_members(int $householdId): array
+{
+    return q('SELECT * FROM members WHERE household_id = ? ORDER BY active DESC, name COLLATE NOCASE',
+        [$householdId])->fetchAll();
+}
+
+/**
+ * Changes the name and phone of someone in the acting member's own household.
+ * Email addresses are not changed here: each person changes only their own, with a
+ * confirmation (see email_change_request). Returns a problem code, or null if saved.
+ */
+function household_person_save(array $acting, int $memberId, string $name, string $phone): ?string
+{
+    $person = find_member($memberId);
+    // The household check is what stops one household editing another's people.
+    if (!$person || (int) $person['household_id'] !== (int) $acting['household_id'] || !$person['active']) {
+        return 'not_yours';
+    }
+    $name = trim($name);
+    if ($name === '') {
+        return 'name';
+    }
+    q('UPDATE members SET name = ?, phone = ? WHERE id = ?', [$name, trim($phone) ?: null, $memberId]);
+    return null;
+}
+
+/**
+ * Adds a partner or friend to the acting member's own household. They share the
+ * household's order and sign in with their own email. They are sent a sign-in link, and
+ * the organizers are told. Returns a problem code, or null if added.
+ */
+function household_person_add(array $acting, string $name, string $email, string $phone): ?string
+{
+    $name = trim($name);
+    $email = trim($email);
+    $householdId = (int) $acting['household_id'];
+    if ($name === '') {
+        return 'name';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 'email';
+    }
+    if (q('SELECT 1 FROM members WHERE email = ?', [$email])->fetchColumn()) {
+        return 'taken'; // already a member, here or in another household, active or archived
+    }
+    if ((int) q('SELECT COUNT(*) FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchColumn() >= HOUSEHOLD_MAX_MEMBERS) {
+        return 'full';
+    }
+    q('INSERT INTO members (household_id, name, email, phone) VALUES (?, ?, ?, ?)',
+        [$householdId, $name, $email, trim($phone) ?: null]);
+
+    $household = (string) q('SELECT name FROM households WHERE id = ?', [$householdId])->fetchColumn();
+    send_login_link($email, true, "{$acting['name']} has added you to the $household household at " . config('site_name')
+        . ", the " . config('site_tagline') . ".\nYou share that household's order: either of you can add to it and submit it.");
+
+    $body = "{$acting['name']} ({$acting['email']}) has added someone to the $household household:\n\n"
+        . "  $name <$email>" . (trim($phone) !== '' ? ', ' . trim($phone) : '') . "\n\n"
+        . "They share that household's order and have been sent a sign-in link.\n"
+        . "If this should not have happened, you can archive them on the Members page:\n"
+        . config('base_url') . "/?a=organizer&view=members\n";
+    foreach (q('SELECT email FROM members WHERE is_admin = 1 AND active = 1')->fetchAll(PDO::FETCH_COLUMN) as $organizer) {
+        send_email($organizer, config('site_name') . ": $name was added to $household", $body);
+    }
+    return null;
+}
+
+/**
+ * Starts a change of the acting member's own email address. Nothing changes yet: a link
+ * goes to the NEW address, and the change happens only when that link is confirmed, so a
+ * mistyped address can't lock anyone out. The old address is told too, in case it was not
+ * them. Returns a problem code, or null if the link was sent.
+ */
+function email_change_request(array $acting, string $newEmail): ?string
+{
+    $newEmail = trim($newEmail);
+    if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+        return 'email';
+    }
+    if (strcasecmp($newEmail, $acting['email']) === 0) {
+        return 'same';
+    }
+    if (q('SELECT 1 FROM members WHERE email = ? AND id <> ?', [$newEmail, $acting['id']])->fetchColumn()) {
+        return 'taken';
+    }
+    $token = bin2hex(random_bytes(32));
+    q('UPDATE members SET pending_email = ?, pending_email_token = ?, pending_email_expires_at = ? WHERE id = ?',
+        [$newEmail, token_hash($token), now_utc(EMAIL_CHANGE_HOURS * 3600), $acting['id']]);
+
+    $link = config('base_url') . '/?a=confirm-email&t=' . $token;
+    $sent = send_email($newEmail, 'Confirm your new email address for ' . config('site_name'),
+        "Hi {$acting['name']},\n\n"
+        . "You asked to use this address for " . config('site_name') . " in place of {$acting['email']}.\n"
+        . "To confirm, open this link and press the button:\n\n$link\n\n"
+        . "It works for " . EMAIL_CHANGE_HOURS . " hours. Until you confirm, nothing changes and you sign in with\n"
+        . "{$acting['email']} as before. If you didn't ask for this, you can ignore this email.\n");
+    if (!$sent) {
+        email_change_cancel((int) $acting['id']);
+        return 'not_sent';
+    }
+    send_email($acting['email'], config('site_name') . ': a change of email address was asked for',
+        "Hi {$acting['name']},\n\n"
+        . "Someone signed in as you asked to change your " . config('site_name') . " email address to:\n\n  $newEmail\n\n"
+        . "If that was you, there is nothing to do here: confirm it from the email sent to the new address.\n"
+        . "If it was not you, sign in and press \"Cancel this change\" on the My household page, or reply to\n"
+        . "this email. Nothing changes unless the link sent to the new address is confirmed.\n");
+    return null;
+}
+
+/** Drops a member's unconfirmed change of email address. */
+function email_change_cancel(int $memberId): void
+{
+    q('UPDATE members SET pending_email = NULL, pending_email_token = NULL, pending_email_expires_at = NULL WHERE id = ?',
+        [$memberId]);
+}
+
+/** The member a confirmation link belongs to, if the link is still good; otherwise null. */
+function email_change_find(string $token): ?array
+{
+    if ($token === '') {
+        return null;
+    }
+    $row = q('SELECT * FROM members WHERE pending_email_token = ? AND pending_email_expires_at > ? AND active = 1',
+        [token_hash($token), now_utc()])->fetch();
+    return $row ?: null;
+}
+
+/**
+ * Carries out a confirmed change of email address. Returns the new address, or null if
+ * the link is no longer good or the address has meanwhile been taken by someone else.
+ */
+function email_change_confirm(string $token): ?string
+{
+    $member = email_change_find($token);
+    if (!$member) {
+        return null;
+    }
+    $newEmail = (string) $member['pending_email'];
+    if (q('SELECT 1 FROM members WHERE email = ? AND id <> ?', [$newEmail, $member['id']])->fetchColumn()) {
+        email_change_cancel((int) $member['id']);
+        return null;
+    }
+    q('UPDATE members SET email = ?, pending_email = NULL, pending_email_token = NULL, pending_email_expires_at = NULL
+       WHERE id = ?', [$newEmail, $member['id']]);
+    return $newEmail;
 }
