@@ -21,6 +21,10 @@ function page_start(string $title): void
     <span class="brand-tag"><?= e(config('site_tagline')) ?></span>
   </a>
   <?php if ($member): ?>
+  <nav class="nav" aria-label="Main">
+    <a href="/?a=order">My order</a>
+    <a href="/?a=shares">Share board</a>
+  </nav>
   <form method="post" action="/?a=logout" class="who">
     <span><?= e($member['name']) ?></span>
     <?= csrf_field() ?>

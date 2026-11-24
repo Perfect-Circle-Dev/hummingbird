@@ -1,0 +1,156 @@
+<?php
+// "My order" page: search, favorites, the household's order, submit.
+declare(strict_types=1);
+
+function page_order(array $member, bool $isPost): void
+{
+    $cycle = current_cycle();
+    $open = $cycle && $cycle['status'] === 'open';
+    $order = $cycle ? household_order((int) $cycle['id'], (int) $member['household_id']) : null;
+    $query = trim((string) ($_REQUEST['q'] ?? ''));
+    $back = '/?a=order' . ($query !== '' ? '&q=' . urlencode($query) : '');
+
+    if ($isPost) {
+        $do = (string) ($_POST['do'] ?? '');
+        if ($do === 'fav') {
+            toggle_favorite((int) $member['id'], (int) ($_POST['variant_id'] ?? 0));
+        } elseif ($open && $do === 'add') {
+            order_add($order, (int) ($_POST['variant_id'] ?? 0), (int) $member['id']);
+        } elseif ($open && $do === 'qty') {
+            order_set_qty($order, (int) ($_POST['line_id'] ?? 0), (int) ($_POST['qty'] ?? 0));
+        } elseif ($open && $do === 'submit') {
+            order_submit($order, $cycle);
+            redirect('/?a=order&sent=1');
+        }
+        redirect($back);
+    }
+
+    $favorites = favorites_for((int) $member['id']);
+    $favoriteIds = array_column($favorites, 'id');
+    $results = search_catalog($query);
+
+    // One row of the catalog, used for both search results and favorites.
+    $itemRow = function (array $v) use ($favoriteIds, $open, $query): void {
+        $isFav = in_array($v['id'], $favoriteIds);
+        $deposit = variant_deposit_cents($v);
+        ?>
+        <div class="item">
+          <div class="item-text">
+            <div class="item-name"><?= e($v['product_title']) ?></div>
+            <div class="note"><?= e($v['sku']) ?> · <?= e($v['title']) ?> · <?= money(member_price_cents((int) $v['list_price_cents'])) ?><?= $deposit ? ' + ' . money($deposit) . ' deposit' : '' ?><?= $v['available'] ? '' : ' · out of stock at Hummingbird right now' ?></div>
+          </div>
+          <form method="post" action="/?a=order">
+            <?= csrf_field() ?>
+            <input type="hidden" name="q" value="<?= e($query) ?>">
+            <input type="hidden" name="variant_id" value="<?= (int) $v['id'] ?>">
+            <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>">★</button>
+            <?php if ($open): ?><button class="btn" name="do" value="add">Add</button><?php endif; ?>
+          </form>
+          <?php if ($v['size_amount']): ?>
+            <a class="note" href="/?a=shares&amp;start=<?= (int) $v['id'] ?>">Share it</a>
+          <?php endif; ?>
+        </div>
+        <?php
+    };
+
+    page_start('My order');
+    if (!$cycle) {
+        echo '<div class="card"><h1>My order</h1><p>No order is open right now. You\'ll get an email when the next one opens. You can still set up your favorites below.</p></div>';
+    } elseif (!$open) {
+        echo '<p class="notice warn">The ' . e($cycle['label']) . ' order is locked and can no longer be changed.</p>';
+    }
+    if (isset($_GET['sent'])) {
+        echo '<p class="notice">Order submitted. A summary has been emailed to your household.</p>';
+    }
+    ?>
+    <div class="columns">
+      <div class="card stack">
+        <h2>Find an item</h2>
+        <form method="get" action="/" class="row">
+          <input type="hidden" name="a" value="order">
+          <div class="grow">
+            <label for="q">Search by name or item number</label>
+            <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129">
+          </div>
+          <button class="btn" type="submit">Search</button>
+        </form>
+        <?php if ($query !== ''): ?>
+          <p class="note"><?= count($results) ? count($results) . ' matching ' . (count($results) === 1 ? 'item' : 'items') . (count($results) === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.' ?></p>
+          <?php foreach ($results as $v) { $itemRow($v); } ?>
+        <?php endif; ?>
+      </div>
+      <div class="card stack">
+        <h2>My favorites</h2>
+        <?php if (!$favorites): ?>
+          <p class="note">No favorites yet. Tap the star beside any item to keep it here.</p>
+        <?php endif; ?>
+        <?php foreach ($favorites as $v) { $itemRow($v); } ?>
+      </div>
+    </div>
+    <?php
+    if ($cycle) {
+        $summary = order_summary($order);
+        ?>
+        <div class="card stack">
+          <h2><?= e($member['household_name']) ?> order for <?= e($cycle['label']) ?></h2>
+          <p class="note">Due <?= e(fmt_local($cycle['due_at'])) ?><?= $cycle['pickup_note'] ? ' · ' . e($cycle['pickup_note']) : '' ?></p>
+          <?php if (!$summary['lines'] && !$summary['shares']): ?>
+            <p>Nothing on your order yet. Search above or add from your favorites.</p>
+          <?php else: ?>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
+              <tbody>
+              <?php foreach ($summary['lines'] as $l): ?>
+                <tr>
+                  <td><?= e($l['product_title']) ?><div class="note"><?= e($l['sku']) ?><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
+                  <td><?= e($l['size']) ?></td>
+                  <td>
+                    <?php if ($open): ?>
+                    <form method="post" action="/?a=order" class="qty">
+                      <?= csrf_field() ?>
+                      <input type="hidden" name="do" value="qty">
+                      <input type="hidden" name="line_id" value="<?= (int) $l['id'] ?>">
+                      <button name="qty" value="<?= $l['qty'] - 1 ?>" aria-label="One fewer">−</button>
+                      <span><?= (int) $l['qty'] ?></span>
+                      <button name="qty" value="<?= $l['qty'] + 1 ?>" aria-label="One more">+</button>
+                    </form>
+                    <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
+                  </td>
+                  <td><?= money((int) $l['unit_price_cents']) ?></td>
+                  <td><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
+                  <td><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
+                </tr>
+              <?php endforeach; ?>
+              <?php foreach ($summary['shares'] as $s): ?>
+                <tr>
+                  <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?></div></td>
+                  <td><?= e(fmt_amount($s['amount']) . ' ' . $s['size_unit']) ?> of <?= e($s['size']) ?></td>
+                  <td></td><td></td><td>None</td>
+                  <td><?= money($s['cost_cents']) ?></td>
+                </tr>
+              <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+          <dl class="totals">
+            <div><dt>Regular items</dt><dd><?= money($summary['items_cents']) ?></dd></div>
+            <div><dt>Container deposits</dt><dd><?= money($summary['deposits_cents']) ?></dd></div>
+            <div><dt>Our part of filled shares</dt><dd><?= money($summary['shares_cents']) ?></dd></div>
+            <div class="due"><dt>Estimated due at pickup</dt><dd><?= money($summary['due_cents']) ?></dd></div>
+          </dl>
+          <?php endif; ?>
+          <?php if ($open): ?>
+          <form method="post" action="/?a=order" class="row end">
+            <?= csrf_field() ?>
+            <p class="note grow"><?= $order['status'] === 'submitted'
+                ? 'Submitted ' . e(fmt_local($order['submitted_at'])) . '. If you change anything, submit again.'
+                : 'Not submitted yet. Submit to send your order in and get a summary by email.' ?></p>
+            <button class="btn" name="do" value="submit">Submit my order</button>
+          </form>
+          <?php endif; ?>
+        </div>
+        <?php
+    }
+    page_end();
+}

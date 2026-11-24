@@ -21,6 +21,7 @@ cp config.sample.php config.php      # then set base_url to http://localhost:800
 php bin/migrate.php
 php bin/add-member.php "Brent" brent@schefley.net "Schefley" --admin
 php bin/sync-catalog.php
+php bin/open-cycle.php "December 2026" "2026-12-14 19:00" "Pickup from Wednesday, Dec 16"
 php -S localhost:8000 -t public
 ```
 

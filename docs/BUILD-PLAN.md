@@ -39,9 +39,11 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Sign-in by emailed link, sign out
 - [x] Catalog sync from Hummingbird, with size and deposit rules
 - [x] Add members from the command line
-- [ ] Order page: search, favorites, quantities, submit, confirmation email
-- [ ] Share board: start, claim, change, cancel; filled shares join the order
+- [x] Order page: search, favorites, quantities, submit, confirmation email
+- [x] Share board: start, claim, change, cancel; filled shares show on household totals
+- [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists
 - [ ] Organizer: months (open, lock, close), combined order, unfinished flags
+- [ ] At lock: fix prices, move filled shares onto the order, and settle the odd cent when a share's parts don't add up exactly
 - [ ] Organizer: out-of-stock and price edits, with update emails
 - [ ] Organizer: split sheets, final report (saved and emailed), paid tracking
 - [ ] Organizer: members and households, settings (discount, deposits)

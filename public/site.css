@@ -19,3 +19,34 @@ button { font: inherit; cursor: pointer; }
 .stack > * + * { margin-top: 12px; }
 .note { font-size: 14px; color: var(--muted); }
 .notice { background: #E4EFE7; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+h2 { font-size: 18px; line-height: 1.25; margin: 0; }
+.nav { display: flex; gap: 16px; font-weight: 600; }
+.nav a { display: inline-flex; align-items: center; min-height: 44px; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.columns { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+.columns > .card { flex: 1 1 320px; min-width: 0; margin-bottom: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.row.end { justify-content: flex-end; align-items: center; }
+.grow { flex: 1 1 200px; min-width: 0; }
+.item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-top: 1px solid #E6EAE6; padding-top: 10px; }
+.item-text { flex: 1 1 200px; min-width: 0; }
+.item-name { font-weight: 600; }
+.item form { display: flex; gap: 8px; align-items: center; }
+.star { width: 44px; height: 44px; border: 0; background: none; font-size: 24px; line-height: 1; color: #8A948D; }
+.star.on { color: #B26A00; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 10px; border-bottom: 1px solid #E6EAE6; font-size: 14px; vertical-align: middle; }
+.qty { display: flex; align-items: center; gap: 6px; }
+.qty button { width: 44px; height: 44px; border: 1px solid #AEB8B1; border-radius: 8px; background: #fff; font-size: 18px; }
+.qty span { min-width: 20px; text-align: center; font-weight: 600; }
+.totals { max-width: 360px; margin: 0 0 0 auto; font-size: 14px; }
+.totals div { display: flex; justify-content: space-between; padding: 3px 0; }
+.totals dd { margin: 0; }
+.totals .due { font-weight: 600; font-size: 16px; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; }
+.bar { height: 10px; border-radius: 5px; background: #E3E8E3; overflow: hidden; }
+.bar div { height: 10px; background: var(--green); }
+.claims { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.claims li { display: flex; justify-content: space-between; padding: 2px 0; }
+.notice.warn { background: #FBEBD2; color: #6B3A00; font-weight: 600; }

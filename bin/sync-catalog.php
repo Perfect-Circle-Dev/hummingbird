@@ -4,6 +4,8 @@
 //   php bin/sync-catalog.php --file=tests/catalog-sample.json   (for testing without the network)
 require dirname(__DIR__) . '/src/bootstrap.php';
 require dirname(__DIR__) . '/src/catalog.php';
+require dirname(__DIR__) . '/src/orders.php';
+require dirname(__DIR__) . '/src/shares.php';
 
 $file = null;
 foreach (array_slice($argv, 1) as $arg) {
@@ -14,6 +16,9 @@ foreach (array_slice($argv, 1) as $arg) {
 try {
     $r = sync_catalog($file);
     echo "Catalog synced: {$r['variants']} sizes from {$r['pages']} page(s); {$r['retired']} no longer listed.\n";
+    $repriced = refresh_open_order_prices();
+    $expired = expire_shares();
+    echo "Open orders repriced: $repriced line(s). Shares expired: $expired.\n";
 } catch (Throwable $err) {
     fwrite(STDERR, "Catalog sync failed: " . $err->getMessage() . "\n");
     exit(1);
