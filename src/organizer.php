@@ -467,15 +467,23 @@ function month_report(array $cycle): array
             // Has items of its own that were never submitted (or were changed after submitting).
             'unfinished' => $summary['lines'] && $order['status'] !== 'submitted',
             'summary' => $summary,
+            // Null until the organizer marks the order paid; then when, and how (check, venmo or cash).
+            'paid_at' => $order['paid_at'],
+            'paid_method' => $order['paid_method'],
         ];
     }
     usort($households, fn(array $a, array $b): int => strcasecmp($a['name'], $b['name']));
 
     $total = fn(string $key): int => array_sum(array_map(fn(array $h): int => $h['summary'][$key], $households));
+    $paid = array_filter($households, fn(array $h): bool => $h['paid_at'] !== null);
+    // A household that owes nothing (everything was out of stock) has nothing left to pay.
+    $owing = array_filter($households, fn(array $h): bool => $h['paid_at'] === null && $h['summary']['due_cents'] > 0);
     return [
         'households' => $households,
         'items_cents' => $total('items_cents'), 'deposits_cents' => $total('deposits_cents'),
         'shares_cents' => $total('shares_cents'), 'due_cents' => $total('due_cents'),
+        'collected_cents' => array_sum(array_map(fn(array $h): int => $h['summary']['due_cents'], $paid)),
+        'owing_count' => count($owing),
     ];
 }
 
@@ -494,7 +502,8 @@ function month_report_text(array $cycle, string $occasion): string
     $pad = fn(string $name): string => $name . str_repeat(' ', max(1, $width - mb_strlen($name)));
     foreach ($report['households'] as $h) {
         $text .= $pad($h['name']) . str_pad(money($h['summary']['due_cents']), 10, ' ', STR_PAD_LEFT)
-            . ($h['unfinished'] ? '  (unfinished)' : '') . "\n";
+            . ($h['unfinished'] ? '  (unfinished)' : '')
+            . ($h['paid_at'] ? '  paid by ' . paid_how($h['paid_method']) : '') . "\n";
     }
     $text .= $pad('Total') . str_pad(money($report['due_cents']), 10, ' ', STR_PAD_LEFT) . "\n\n"
         . "$count " . ($count === 1 ? 'household' : 'households') . ". Regular items " . money($report['items_cents'])

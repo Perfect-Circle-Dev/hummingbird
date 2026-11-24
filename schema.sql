@@ -42,6 +42,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('discount_percent', '30');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_half_gallon_cents', '150');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('deposit_gallon_plus_cents', '300');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('share_expiry_months', '3');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('venmo_handle', '');  -- for the pay link in pickup emails
 
 -- Catalog, copied nightly from Hummingbird. A "variant" is one size of a product
 -- and carries the item number (sku) members order by.
@@ -80,7 +81,8 @@ CREATE TABLE IF NOT EXISTS cycles (
     pickup_note TEXT,
     status TEXT NOT NULL DEFAULT 'open', -- next, open, locked, closed
     locked_at TEXT,
-    closed_at TEXT
+    closed_at TEXT,
+    pickup_emailed_at TEXT               -- when the pickup emails last went out
 );
 
 -- One order per household per month.

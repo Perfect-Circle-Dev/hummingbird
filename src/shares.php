@@ -42,7 +42,8 @@ function share_with_claims(array $s): array
     // Once ordered, the price is fixed on the share; until then it follows the catalog.
     $s['price_cents'] = (int) ($s['price_cents'] ?? member_price_cents((int) $s['list_price_cents']));
     $total = (float) $s['size_amount'];
-    $claims = q('SELECT c.*, m.name, m.household_id FROM share_claims c JOIN members m ON m.id = c.member_id
+    $claims = q('SELECT c.*, m.name, m.household_id, h.name AS household_name
+                 FROM share_claims c JOIN members m ON m.id = c.member_id JOIN households h ON h.id = m.household_id
                  WHERE c.share_id = ? ORDER BY c.id', [$s['id']])->fetchAll();
     $claimed = 0.0;
     foreach ($claims as &$c) {

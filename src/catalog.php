@@ -45,6 +45,16 @@ function deposit_for(string $title): int
     return 0;
 }
 
+/** Works out every size's deposit again from its title. Run after the deposit amounts change. */
+function recompute_deposits(): void
+{
+    db()->beginTransaction(); // one write to disk instead of one per size
+    foreach (q('SELECT id, title FROM variants')->fetchAll() as $v) {
+        q('UPDATE variants SET deposit_cents = ? WHERE id = ?', [deposit_for((string) $v['title']), $v['id']]);
+    }
+    db()->commit();
+}
+
 /** Saves one page of products. Returns how many variants it saw. */
 function save_products(array $products, string $syncedAt): int
 {

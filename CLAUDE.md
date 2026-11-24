@@ -32,8 +32,16 @@ a little, and wants to be able to follow and lightly edit the code. So:
   `cycle_lock`, `cycle_reopen`, `cycle_close`), `combined_order()`, `unfinished_orders()`,
   `stock_and_prices_save()`, and the report by household (`month_report()`, `month_report_text()`,
   `month_report_email()`; page at `/?a=organizer&month=ID&view=report`).
+- `src/payments.php`: pickup day. Split sheets (`split_sheets()`, `scale_text()`), marking orders
+  paid (`order_set_paid()`), the pickup email (`pickup_emails_send()`, `venmo_link()`).
+- `src/members.php`: members and households (`member_save()`, `member_delete()`,
+  `members_import()`, `household_rename()`) and `settings_save()`.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
-  `/?a=organizer` is the months page; `/?a=organizer&month=ID` is that month's combined order.
+  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=settings`;
+  `&month=ID` that month's combined order; `&month=ID&view=report` report and payments;
+  `&month=ID&view=shares` split sheets. Month pages are in `pages/organizer.php`, members and
+  settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
+  a `do` value; messages come back as short codes looked up in `ORGANIZER_DONE` / `ORGANIZER_PROBLEMS`.
 - `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`,
   `notify-admin`, `check-reboot`).
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
@@ -98,19 +106,28 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Deadline is soft: members see Monday 7 pm, but nothing closes until the organizer locks
   the month, around 11 am Tuesday. Late orders on Tuesday morning are welcome.
 - Several logins can share one household order.
-- Sign-in is by emailed link only. No passwords. Brent adds members by hand.
-- Payment happens at pickup by check, Venmo or cash.
+- Sign-in is by emailed link only. No passwords. Organizers add members on the Members page,
+  one at a time or by pasting a list (name, email, household, phone). Adding sends no email.
+  A member who is not active can't sign in and gets no emails, and is signed out at once; past
+  orders keep their name. Only a member who has never used the site can be deleted. An organizer
+  can't switch off or delete their own account.
+- Payment happens at pickup by check, Venmo or cash. The organizer marks each household's order
+  paid with the method (`orders.paid_at`, `paid_method`) on the report page, for a locked or a
+  closed month. Paid or not, nothing is recorded about amounts.
+- Pickup emails go out when the organizer presses the button on a locked month: to every
+  household that owes something and is not marked paid. A second send needs a ticked box.
+  The Venmo pay link is built from `settings.venmo_handle`; with no handle there is no link.
+- Settings (discount, the two deposit amounts, share expiry months, Venmo name) take effect at
+  once: deposits are recomputed for the whole catalog, then open orders and saved lists are
+  repriced. Locked and closed months keep their prices.
 
 ## What to build next: organizer pages (members with `is_admin = 1`)
 
-Items 1 to 5 are built (months, combined order with unfinished flags, the lock step,
-out of stock and price corrections with update emails, the report by household).
+Items 1 to 8 are built (months, combined order with unfinished flags, the lock step,
+out of stock and price corrections with update emails, the report by household, split sheets,
+paid marking and pickup emails, members, households and settings).
 Numbering is kept so older notes still match.
 
-6. Split sheet per shared item (who gets how much) for divide-up day.
-7. Mark each order paid, with the method. Pickup email per household with the amount due
-   and a Venmo link (handle still needed from Brent).
-8. Members and households: add, edit, deactivate. Settings: discount and deposit amounts.
 9. Group emails, replacing Mailchimp: "time to order" (listing open shares), last call,
    pickup notice, share-expiry warning. Each needs a footer and an unsubscribe link.
    Resend's free plan allows 100 emails a day, shared with any other site on the same
@@ -127,6 +144,9 @@ Members said no to a "reorder last month" button; favorites cover it.
 
 - A case of several jugs is charged one deposit.
 - The wholesale discount is assumed, not confirmed.
+- The Venmo pay link (`https://venmo.com/HANDLE?txn=pay&amount=..&note=..`) has not been tried
+  with a real Venmo account.
+- No per-item deposit override on the Settings page yet (`variants.deposit_override_cents` exists).
 - Search-as-you-type and the server scripts were verified by Brent on the live site, not by automated tests. There is no test suite yet; `tests/catalog-sample.json` is a small catalog for local runs.
 
 ## Working agreement

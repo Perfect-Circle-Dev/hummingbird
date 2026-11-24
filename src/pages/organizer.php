@@ -11,6 +11,11 @@ const ORGANIZER_DONE = [
     'locked' => 'The month is locked. Prices are fixed and every fully claimed share is on the order. The report has been emailed to the organizers.',
     'reopened' => 'The month is open again. Members can change their orders, and prices follow the catalog until you lock it.',
     'closed' => 'The month is closed. The final report has been emailed to the organizers.',
+    'member_added'   => 'Member added. Nothing has been emailed to them.',
+    'member_saved'   => 'Member saved.',
+    'member_deleted' => 'Member deleted.',
+    'household_saved' => 'Household renamed.',
+    'settings_saved' => 'Settings saved. Open orders and saved lists now use the new amounts.',
 ];
 const ORGANIZER_PROBLEMS = [
     'label'      => 'Give the month a name, like "December 2026".',
@@ -22,6 +27,19 @@ const ORGANIZER_PROBLEMS = [
     'not_locked' => 'That month is not locked, so nothing was changed.',
     'closed'     => 'A closed month can\'t be changed.',
     'price'      => 'A price could not be read and was left as it was. Type it like 25.08.',
+    'not_payable' => 'Payments can be recorded once the month is locked.',
+    'member_name'      => 'Give the member a name.',
+    'member_email'     => 'That email address doesn\'t look right.',
+    'member_duplicate' => 'Someone with that email address is already a member.',
+    'member_household' => 'Choose a household, or type a name for a new one.',
+    'member_self'      => 'You can\'t switch off or delete your own organizer account. Another organizer can do it.',
+    'member_used'      => 'That member has used the site, so they can\'t be deleted. Untick "Active" instead.',
+    'member_gone'      => 'That member could not be found.',
+    'household_name'      => 'Give the household a name.',
+    'household_duplicate' => 'Another household already has that name.',
+    'settings_discount' => 'Nothing was saved. The discount should be a number from 0 to 100.',
+    'settings_deposit'  => 'Nothing was saved. Type each deposit as an amount, like 1.50.',
+    'settings_months'   => 'Nothing was saved. The number of months should be from 1 to 24.',
 ];
 
 function page_organizer(array $member, bool $isPost): void
@@ -35,6 +53,29 @@ function page_organizer(array $member, bool $isPost): void
         $sure = !empty($_POST['sure']);
         $problem = null;
         $done = '';
+
+        // Members and Settings have their own forms (src/pages/organizer_people.php).
+        organizer_people_post($do, $member);
+
+        if ($do === 'paid' || $do === 'unpaid') {
+            // The Check / Venmo / Cash buttons (and "undo") on the report page.
+            $cycle = find_cycle($cycleId);
+            $householdId = (int) ($_POST['household_id'] ?? 0);
+            $method = $do === 'paid' ? (string) ($_POST['method'] ?? '') : null;
+            $ok = $cycle && order_set_paid($cycle, $householdId, $method);
+            redirect('/?a=organizer&month=' . $cycleId . '&view=report' . ($ok ? '' : '&problem=not_payable'));
+        }
+        if ($do === 'pickup') {
+            $cycle = find_cycle($cycleId);
+            if (!$cycle || $cycle['status'] !== 'locked') {
+                redirect('/?a=organizer&problem=not_locked');
+            }
+            // Sending a second time needs the box ticked, so a double tap can't email everyone twice.
+            if ($cycle['pickup_emailed_at'] && !$sure) {
+                redirect('/?a=organizer&month=' . $cycleId . '&view=report&problem=unsure');
+            }
+            redirect('/?a=organizer&month=' . $cycleId . '&view=report&pickup=' . pickup_emails_send($cycle));
+        }
 
         if ($do === 'stock') {
             // Out-of-stock ticks and corrected prices from the combined order page.
@@ -94,15 +135,36 @@ function page_organizer(array $member, bool $isPost): void
 
     // The "next month" list has no combined order yet; it gets one when it is opened.
     $month = isset($_GET['month']) ? find_cycle((int) $_GET['month']) : null;
+    $view = (string) ($_GET['view'] ?? '');
     if ($month && $month['status'] !== 'next') {
-        if (($_GET['view'] ?? '') === 'report') {
+        if ($view === 'report') {
             organizer_report($month);
+        } elseif ($view === 'shares') {
+            organizer_split_sheets($month);
         } else {
             organizer_combined_order($month);
         }
+    } elseif ($view === 'members') {
+        organizer_members($member);
+    } elseif ($view === 'settings') {
+        organizer_settings();
     } else {
         organizer_months();
     }
+}
+
+/** The links at the top of each page about one month. */
+function organizer_month_links(array $cycle, string $current): void
+{
+    $id = (int) $cycle['id'];
+    $pages = ['' => 'Combined order', 'report' => 'Report and payments', 'shares' => 'Split sheets'];
+    echo '<nav class="subnav" aria-label="This month"><a href="/?a=organizer">Back to Organizer</a>';
+    foreach ($pages as $view => $label) {
+        echo $view === $current
+            ? '<strong aria-current="page">' . $label . '</strong>'
+            : '<a href="/?a=organizer&amp;month=' . $id . ($view ? '&amp;view=' . $view : '') . '">' . $label . '</a>';
+    }
+    echo '</nav>';
 }
 
 /** The name, deadline and pickup note boxes, used both to open a month and to change one. */
@@ -139,6 +201,7 @@ function organizer_months(): void
     $problem = ORGANIZER_PROBLEMS[(string) ($_GET['problem'] ?? '')] ?? null;
 
     page_start('Organizer');
+    organizer_nav('');
     echo '<h1>Organizer</h1>';
     if ($done) {
         echo '<p class="notice" role="status">' . e($done) . '</p>';
@@ -180,7 +243,8 @@ function organizer_months(): void
         </p>
         <p class="row">
           <a class="btn" href="/?a=organizer&amp;month=<?= (int) $cycle['id'] ?>">See the combined order</a>
-          <a class="btn quiet" href="/?a=organizer&amp;month=<?= (int) $cycle['id'] ?>&amp;view=report">Report by household</a>
+          <a class="btn quiet" href="/?a=organizer&amp;month=<?= (int) $cycle['id'] ?>&amp;view=report">Report and payments</a>
+          <a class="btn quiet" href="/?a=organizer&amp;month=<?= (int) $cycle['id'] ?>&amp;view=shares">Split sheets</a>
         </p>
 
         <?php if ($isOpen): ?>
@@ -233,7 +297,7 @@ function organizer_months(): void
         <ul class="plain">
           <?php foreach ($past as $p): ?>
             <li><strong><?= e($p['label']) ?></strong>:
-              <a href="/?a=organizer&amp;month=<?= (int) $p['id'] ?>&amp;view=report">report by household</a> ·
+              <a href="/?a=organizer&amp;month=<?= (int) $p['id'] ?>&amp;view=report">report and payments</a> ·
               <a href="/?a=organizer&amp;month=<?= (int) $p['id'] ?>">combined order</a>
               <span class="note">closed <?= e(fmt_local($p['closed_at'], 'M j, Y')) ?></span></li>
           <?php endforeach; ?>
@@ -273,7 +337,7 @@ function organizer_combined_order(array $cycle): void
 
     page_start('Combined order');
     ?>
-    <p><a href="/?a=organizer">Back to Organizer</a> · <a href="/?a=organizer&amp;month=<?= (int) $cycle['id'] ?>&amp;view=report">Report by household</a></p>
+    <?php organizer_month_links($cycle, ''); ?>
     <h1>Combined order for <?= e($cycle['label']) ?></h1>
     <p class="note"><?= e($status) ?></p>
     <?php if ($saved): ?><p class="notice" role="status"><?= e($saved) ?></p><?php endif; ?>
@@ -437,14 +501,25 @@ function organizer_report(array $cycle): void
     ][$cycle['status']];
     $organizers = q('SELECT name FROM members WHERE is_admin = 1 AND active = 1 ORDER BY id')->fetchAll(PDO::FETCH_COLUMN);
 
+    // Payments can be recorded from the lock onwards, including after the month is closed.
+    $canPay = in_array($cycle['status'], ['locked', 'closed'], true);
+    $toEmail = pickup_email_households($cycle);
+    $emailCount = household_email_count($toEmail);
+    $sentLately = emails_last_24h();
+    $problem = ORGANIZER_PROBLEMS[(string) ($_GET['problem'] ?? '')] ?? null;
+
     page_start('Report');
+    organizer_month_links($cycle, 'report');
     ?>
-    <p><a href="/?a=organizer">Back to Organizer</a> · <a href="/?a=organizer&amp;month=<?= $id ?>">Combined order</a></p>
     <h1><?= $cycle['status'] === 'open' ? 'Report so far' : 'Report' ?> for <?= e($cycle['label']) ?></h1>
     <p class="note"><?= e($status) ?></p>
     <?php if (isset($_GET['sent'])): ?>
       <p class="notice" role="status">The report has been emailed to <?= (int) $_GET['sent'] ?> <?= (int) $_GET['sent'] === 1 ? 'organizer' : 'organizers' ?>.</p>
     <?php endif; ?>
+    <?php if (isset($_GET['pickup'])): ?>
+      <p class="notice" role="status">Pickup emails went to <?= (int) $_GET['pickup'] ?> <?= (int) $_GET['pickup'] === 1 ? 'household' : 'households' ?>.</p>
+    <?php endif; ?>
+    <?php if ($problem): ?><p class="notice warn" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
     <?php if (!$report['households']): ?>
       <div class="card"><p>Nobody has ordered anything yet.</p></div>
@@ -453,32 +528,78 @@ function organizer_report(array $cycle): void
       <h2>What each household owes</h2>
       <div class="scroll">
         <table>
-          <thead><tr><th>Household</th><th>Regular items</th><th>Deposits</th><th>Shares</th><th>Total due</th></tr></thead>
+          <thead><tr><th>Household</th><th>Total due</th><?= $canPay ? '<th>Paid</th>' : '' ?></tr></thead>
           <tbody>
           <?php foreach ($report['households'] as $h): ?>
             <tr>
               <td><a href="#household-<?= (int) $h['id'] ?>"><?= e($h['name']) ?></a><?= $h['unfinished'] ? ' <span class="flag">unfinished</span>' : '' ?></td>
-              <td><?= money($h['summary']['items_cents']) ?></td>
-              <td><?= money($h['summary']['deposits_cents']) ?></td>
-              <td><?= money($h['summary']['shares_cents']) ?></td>
               <td><strong><?= money($h['summary']['due_cents']) ?></strong></td>
+              <?php if ($canPay): ?>
+              <td>
+                <form method="post" action="/?a=organizer" class="pay">
+                  <?= csrf_field() ?>
+                  <input type="hidden" name="cycle_id" value="<?= $id ?>">
+                  <input type="hidden" name="household_id" value="<?= (int) $h['id'] ?>">
+                  <?php if ($h['paid_at']): ?>
+                    <span><?= e(paid_text($h['paid_at'], $h['paid_method'])) ?></span>
+                    <button class="link" name="do" value="unpaid" aria-label="Undo: mark <?= e($h['name']) ?> as not paid">Undo</button>
+                  <?php elseif ($h['summary']['due_cents'] === 0): ?>
+                    <span class="note">Nothing due</span>
+                  <?php else: ?>
+                    <input type="hidden" name="do" value="paid">
+                    <?php foreach (PAID_METHODS as $method => $label): ?>
+                      <button class="btn quiet" name="method" value="<?= $method ?>" aria-label="<?= e($h['name']) ?> paid by <?= strtolower($label) ?>"><?= $label ?></button>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </form>
+              </td>
+              <?php endif; ?>
             </tr>
           <?php endforeach; ?>
             <tr>
               <td><strong>Total, <?= count($report['households']) ?> <?= count($report['households']) === 1 ? 'household' : 'households' ?></strong></td>
-              <td><?= money($report['items_cents']) ?></td>
-              <td><?= money($report['deposits_cents']) ?></td>
-              <td><?= money($report['shares_cents']) ?></td>
               <td><strong><?= money($report['due_cents']) ?></strong></td>
+              <?= $canPay ? '<td></td>' : '' ?>
             </tr>
           </tbody>
         </table>
       </div>
+      <p class="note">Regular items <?= money($report['items_cents']) ?>, container deposits <?= money($report['deposits_cents']) ?>, shares <?= money($report['shares_cents']) ?>.</p>
+      <?php if ($canPay): ?>
+        <p><strong>Collected <?= money($report['collected_cents']) ?> of <?= money($report['due_cents']) ?>.</strong>
+          <?= $report['owing_count'] === 0 ? 'Everyone has paid.' : $report['owing_count'] . ' ' . ($report['owing_count'] === 1 ? 'household still has' : 'households still have') . ' to pay.' ?>
+          Tap Check, Venmo or Cash when a household pays.</p>
+      <?php endif; ?>
+
+      <?php if ($cycle['status'] === 'locked'): ?>
+      <form method="post" action="/?a=organizer" class="stack step">
+        <?= csrf_field() ?>
+        <input type="hidden" name="cycle_id" value="<?= $id ?>">
+        <h3>Pickup emails</h3>
+        <p class="note">Tells each household that still owes money that the order is ready: your pickup note, the amount due, how to pay, and their order in full. Send it once the order has arrived and any out-of-stock or price changes are saved.
+          <?= venmo_handle() !== '' ? 'It includes a Venmo link for @' . e(venmo_handle()) . '.' : 'There is no Venmo link yet: add your Venmo name under <a href="/?a=organizer&amp;view=settings">Settings</a>.' ?></p>
+        <?php if (!$toEmail): ?>
+          <p class="note">Nobody owes anything, so there is nobody to email.</p>
+        <?php else: ?>
+          <p>This sends <?= $emailCount ?> <?= $emailCount === 1 ? 'email' : 'emails' ?> to <?= count($toEmail) ?> <?= count($toEmail) === 1 ? 'household' : 'households' ?>.
+            <span class="note">The site has sent <?= $sentLately ?> in the last 24 hours, and Resend allows 100 a day.</span></p>
+          <?php if ($sentLately + $emailCount > 100): ?>
+            <p class="notice warn">That would go over 100 for the day, so some of these would not arrive. Better to wait until tomorrow.</p>
+          <?php endif; ?>
+          <?php if ($cycle['pickup_emailed_at']): ?>
+            <p class="note">Last sent <?= e(fmt_local($cycle['pickup_emailed_at'])) ?>.</p>
+            <label class="check"><input type="checkbox" name="sure" value="1" required> Send them again</label>
+          <?php endif; ?>
+          <div><button class="btn" name="do" value="pickup">Send pickup emails</button></div>
+        <?php endif; ?>
+      </form>
+      <?php endif; ?>
+
       <form method="post" action="/?a=organizer" class="row end step">
         <?= csrf_field() ?>
         <input type="hidden" name="cycle_id" value="<?= $id ?>">
         <p class="note grow">Emails this report, as it stands now, to every organizer (<?= e(implode(', ', $organizers)) ?>). It is also sent by itself when the month is locked and when it is closed.</p>
-        <button class="btn" name="do" value="report">Email this report</button>
+        <button class="btn quiet" name="do" value="report">Email this report</button>
       </form>
     </div>
 
@@ -518,10 +639,58 @@ function organizer_report(array $cycle): void
           <div><dt>Part of filled shares</dt><dd><?= money($summary['shares_cents']) ?></dd></div>
           <div class="due"><dt><?= $cycle['status'] === 'open' ? 'Estimated due at pickup' : 'Due at pickup' ?></dt><dd><?= money($summary['due_cents']) ?></dd></div>
         </dl>
-        <p class="note"><a href="#top">Back to top</a></p>
+        <p class="note"><?= $h['paid_at'] ? e(paid_text($h['paid_at'], $h['paid_method'])) . ' · ' : '' ?><a href="#top">Back to top</a></p>
       </div>
     <?php endforeach; ?>
     <?php endif; ?>
+    <?php
+    page_end();
+}
+
+/** Split sheets: for each shared item on the month's order, who gets how much. For divide-up day. */
+function organizer_split_sheets(array $cycle): void
+{
+    $shares = split_sheets($cycle);
+    page_start('Split sheets');
+    organizer_month_links($cycle, 'shares');
+    ?>
+    <h1>Split sheets for <?= e($cycle['label']) ?></h1>
+    <p class="note"><?= $cycle['status'] === 'open'
+        ? 'The month is still open. These are the shares that are fully claimed so far; they go onto the order when you lock it.'
+        : 'One sheet for each shared item on this order. The last column is the same amount as you would read it on a scale or a measuring jug.' ?></p>
+
+    <?php if (!$shares): ?>
+      <div class="card"><p>There are no shared items on this order.</p></div>
+    <?php endif; ?>
+
+    <?php foreach ($shares as $s):
+        $unit = (string) $s['size_unit']; ?>
+      <div class="card stack">
+        <h2><?= e($s['product_title']) ?><?= $s['out_of_stock'] ? ' <span class="flag">out of stock</span>' : '' ?></h2>
+        <p class="note"><?= e($s['sku']) ?> · <?= e($s['size']) ?> · <?= money($s['price_cents']) ?> (<?= money($s['per_unit_cents']) ?> per <?= e($unit) ?>)<?= $s['out_of_stock'] ? ' · did not arrive, so there is nothing to divide' : '' ?></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Who</th><th>Amount</th><th>On the scale</th><th>Cost</th></tr></thead>
+            <tbody>
+            <?php foreach ($s['claims'] as $c): ?>
+              <tr>
+                <td><strong><?= e($c['name']) ?></strong><div class="note"><?= e($c['household_name']) ?></div></td>
+                <td><strong><?= e(fmt_amount($c['amount'])) ?> <?= e($unit) ?></strong></td>
+                <td><?= e(scale_text($c['amount'], $unit)) ?></td>
+                <td><?= $s['out_of_stock'] ? 'Not charged' : money($c['cost_cents']) ?></td>
+              </tr>
+            <?php endforeach; ?>
+              <tr>
+                <td><strong>Whole item</strong></td>
+                <td><strong><?= e(fmt_amount((float) $s['size_amount'])) ?> <?= e($unit) ?></strong></td>
+                <td><?= e(scale_text((float) $s['size_amount'], $unit)) ?></td>
+                <td><?= money($s['price_cents']) ?></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <?php endforeach; ?>
     <?php
     page_end();
 }

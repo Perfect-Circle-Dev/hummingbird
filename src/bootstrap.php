@@ -42,6 +42,12 @@ function setting(string $key, ?string $default = null): ?string
     return $value === false ? $default : (string) $value;
 }
 
+function set_setting(string $key, string $value): void
+{
+    q('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+        [$key, $value]);
+}
+
 /** Escape text for HTML output. */
 function e(?string $text): string
 {
