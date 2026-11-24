@@ -14,6 +14,13 @@ function send_email(string $to, string $subject, string $body): bool
     return $status !== 'failed';
 }
 
+/** Where notices about the server go (failed updates, pending restarts). */
+function admin_email(): string
+{
+    // Older config.php files have no admin_email; the "from" address is the organizer's.
+    return (string) (config('admin_email') ?: config('mail_from'));
+}
+
 /** Sends by SMTP (Resend) using PHPMailer (installed with "composer install"). */
 function smtp_send(string $to, string $subject, string $body): bool
 {

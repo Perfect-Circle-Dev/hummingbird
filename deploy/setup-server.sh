@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # One-time setup for a fresh Debian server. Run from the cloned repo:
 #   sudo bash deploy/setup-server.sh
-# Safe to run again; it will not overwrite config.php or the database.
+# Safe to run again; it will not overwrite config.php, the database or the
+# web server settings (which hold the HTTPS setup once certbot has run).
 set -euo pipefail
 
 DOMAIN="hummingbird.schefley.net"
@@ -39,8 +40,14 @@ chmod 750 "$APP_DIR/data"
 sudo -u www-data php "$APP_DIR/bin/migrate.php"
 
 echo "==> Web server"
-sed -e "s#__DOMAIN__#$DOMAIN#g" -e "s#__APP_DIR__#$APP_DIR#g" -e "s#__PHP_VER__#$PHP_VER#g" \
-    "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-available/hummingbird
+if [ -f /etc/nginx/sites-available/hummingbird ]; then
+    # Certbot writes the HTTPS settings into this file, so writing it again
+    # would switch HTTPS off. To start over, delete the file and run this script again.
+    echo "    Already set up; left as it is."
+else
+    sed -e "s#__DOMAIN__#$DOMAIN#g" -e "s#__APP_DIR__#$APP_DIR#g" -e "s#__PHP_VER__#$PHP_VER#g" \
+        "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-available/hummingbird
+fi
 ln -sf /etc/nginx/sites-available/hummingbird /etc/nginx/sites-enabled/hummingbird
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
@@ -67,4 +74,7 @@ Setup finished. Still to do by hand:
      sudo -u www-data php $APP_DIR/bin/add-member.php "Brent" brent@schefley.net "Schefley" --admin
 
 3. Visit https://$DOMAIN
+
+4. Switch on automatic updates (Debian's own, and the site following GitHub):
+     sudo bash $APP_DIR/deploy/setup-auto.sh
 DONE

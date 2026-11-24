@@ -8,7 +8,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 | Topic | Decision |
 |---|---|
 | Address | hummingbird.schefley.net, on its own AWS Debian server |
-| Workflow | VS Code → GitHub (this repo) → server |
+| Workflow | VS Code → GitHub (this repo) → server. A pull request merged into `main` goes live by itself |
 | Stack | PHP 8.2+, SQLite database (one file, easy to back up), no framework |
 | Sign-in | Emailed link, no passwords. Devices stay signed in for 180 days |
 | Households | Several logins can share one household order |
@@ -59,6 +59,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [ ] Fill-the-Hummingbird-cart link (needs a test from the organizer's login)
 - [ ] Group name and dancing bean logo on every page
 - [ ] Nightly jobs: catalog sync, share expiry, database backup
+- [x] Server follows GitHub: merging into `main` deploys within about 2 minutes (`deploy/setup-auto.sh`)
+- [x] Debian updates itself daily; email to the organizer when a restart is needed
 
 ## Waiting on
 
