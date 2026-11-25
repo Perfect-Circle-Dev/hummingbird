@@ -562,7 +562,10 @@ function organizer_order_placed(array $cycle): void
     $emailCount = household_email_count($households);
     $sentLately = emails_last_24h();
     // A sample of the email, written for the first household on the order.
-    $sample = $households ? order_placed_text($cycle, $households[0], '(your note goes here)') : '';
+    // Each person's own first name goes where the sample says (their first name).
+    $sample = $households
+        ? str_replace('{first_name}', '(their first name)', order_placed_text($cycle, $households[0], '(your note goes here)'))
+        : '';
     ?>
     <div class="card stack">
       <h2>Order placed</h2>

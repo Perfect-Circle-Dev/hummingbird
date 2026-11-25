@@ -138,7 +138,9 @@ function order_placed_text(array $cycle, array $h, string $note): string
             . "You can pay at pickup by check, Venmo or cash.\n"
             . ($link ? "\nMy Venmo link: $link\n" : '');
     }
-    return "Your $month Hummingbird order has been placed. These are your confirmed figures.\n\n"
+    // {first_name} is filled in for each person in the household by email_household().
+    return "Hi {first_name},\n\n"
+        . "Hummingbird has confirmed our $month order, your total and order summary are below.\n\n"
         . (trim($note) !== '' ? trim($note) . "\n\n" : '')
         . (pickup_when($cycle) !== '' ? "Pickup starts " . pickup_when($cycle) . "\n\n" : '')
         . $money
