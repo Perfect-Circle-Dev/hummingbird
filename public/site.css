@@ -205,9 +205,11 @@ main > .notice { margin-bottom: 16px; }
 table { border-collapse: collapse; width: 100%; min-width: 560px; }
 table.wide { min-width: 800px; }
 /* The order tables have seven columns. This width leaves the item name room to read on one or
-   two lines; on a phone the table scrolls sideways inside its box. */
+   two lines. A screen too narrow for it gets the three-column layout further down. */
 table.order { min-width: 860px; }
 table.order td:first-child { min-width: 180px; }
+/* The size, repeated beside the item number: shown only in that three-column layout. */
+.narrow-only { display: none; }
 th { text-align: left; font-size: 15px; line-height: 1.4; font-weight: 400; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
 td { padding: 10px; border-bottom: 1px solid var(--line); font-size: 16px; vertical-align: middle; }
 th.center, td.center { text-align: center; }
@@ -223,6 +225,32 @@ td.center { min-width: 160px; }
 .totals div { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
 .totals dd { margin: 0; }
 .totals .due { font-weight: 700; font-size: 17px; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; }
+
+/* ---- Order tables on a narrow screen (phones, and tablets held upright) ----
+   Seven columns do not fit, so the table folds down to three: the item, the quantity and the
+   line total. The name runs across the top of each row; under it sit the item number and
+   size at the left, then plus and minus, then the total. Size and the three price columns
+   ("wide-only") are left out; the totals under the table still show deposits. Nothing
+   scrolls sideways. */
+@media (max-width: 940px) {
+  table.order, table.order thead, table.order tbody { display: block; min-width: 0; }
+  table.order tr { display: grid; grid-template-columns: minmax(0, 1fr) 120px 72px; column-gap: 6px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  table.order th, table.order td { min-width: 0; padding: 0; border: 0; }
+  table.order .wide-only { display: none; }
+  .narrow-only { display: inline; }
+  /* The first cell steps aside, so the name and the line under it can be placed separately. */
+  table.order td.what { display: contents; }
+  table.order .what-name { grid-column: 1 / -1; grid-row: 1; }
+  table.order td.what .note { grid-column: 1; grid-row: 2; }
+  /* The deposit, when a line has one: a third line, the full width of the row. */
+  table.order td.what .note.own-line { display: block; grid-column: 1 / -1; grid-row: 3; }
+  /* A share has no plus and minus, so its second line may use that space as well. */
+  table.order tr.share td.what .note { grid-column: 1 / 3; }
+  table.order td.center { grid-column: 2; grid-row: 2; }
+  table.order td.total { grid-column: 3; grid-row: 2; }
+  table.order .money.total { min-width: 0; text-align: right; }
+  table.order .qty { gap: 0; }
+}
 
 /* ---- Share items ---- */
 .eyebrow { font-size: 15px; line-height: 1.4; font-weight: 700; color: var(--muted); }

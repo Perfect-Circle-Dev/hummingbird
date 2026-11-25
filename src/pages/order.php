@@ -87,12 +87,18 @@ function page_order(array $member, bool $isPost): void
     // One row of an order table, used for this month's order and for the saved list.
     // "Retail price" is Hummingbird's list price; "Our price" is that less the group discount.
     // $qtyAction is the "do" value its plus and minus buttons send, or '' for no buttons.
+    // On a phone the table folds down to item, quantity and total (see "order tables on a
+    // narrow screen" in site.css): cells marked "wide-only" are left out there, and the
+    // size, marked "narrow-only", is shown beside the item number in their place, with the
+    // deposit when there is one. The role="..." labels repeat what the table tags already
+    // say: some screen readers stop treating a table as one when its layout is changed,
+    // and the labels keep them reading it row by row.
     $lineRow = function (array $l, string $qtyAction): void {
         ?>
-        <tr>
-          <td><?= e($l['product_title']) ?><div class="note"><?= e($l['sku']) ?><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?><?= $l['still_listed'] ? '' : ' · no longer in Hummingbird\'s catalog' ?></div></td>
-          <td><?= e($l['size']) ?></td>
-          <td class="center">
+        <tr role="row">
+          <td class="what" role="cell"><div class="what-name"><?= e($l['product_title']) ?></div><div class="note"><?= e($l['sku']) ?><span class="narrow-only"> · <?= e($l['size']) ?></span><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?><?= $l['still_listed'] ? '' : ' · no longer in Hummingbird\'s catalog' ?></div><?= $l['line_deposit_cents'] ? '<div class="note narrow-only own-line">' . money($l['line_deposit_cents']) . ' deposit</div>' : '' ?></td>
+          <td class="wide-only" role="cell"><?= e($l['size']) ?></td>
+          <td class="center" role="cell">
             <?php if ($qtyAction !== ''): ?>
             <form method="post" action="/?a=order" class="qty">
               <?= csrf_field() ?>
@@ -104,10 +110,10 @@ function page_order(array $member, bool $isPost): void
             </form>
             <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
           </td>
-          <td class="money"><?= money((int) $l['list_price_cents']) ?></td>
-          <td class="money"><?= money((int) $l['unit_price_cents']) ?></td>
-          <td class="money"><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
-          <td class="money total"><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
+          <td class="money wide-only" role="cell"><?= money((int) $l['list_price_cents']) ?></td>
+          <td class="money wide-only" role="cell"><?= money((int) $l['unit_price_cents']) ?></td>
+          <td class="money wide-only" role="cell"><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
+          <td class="money total" role="cell"><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
         </tr>
         <?php
     };
@@ -160,16 +166,17 @@ function page_order(array $member, bool $isPost): void
             <p>Nothing on your order yet. Search above or add from your favorites.</p>
           <?php else: ?>
           <div class="scroll">
-            <table class="order">
-              <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th class="money">Retail price</th><th class="money">Our price</th><th class="money">Deposit</th><th class="money total">Total</th></tr></thead>
-              <tbody>
+            <table class="order" role="table">
+              <thead role="rowgroup"><tr role="row"><th role="columnheader">Item</th><th class="wide-only" role="columnheader">Size</th><th class="center" role="columnheader">Qty</th><th class="money wide-only" role="columnheader">Retail price</th><th class="money wide-only" role="columnheader">Our price</th><th class="money wide-only" role="columnheader">Deposit</th><th class="money total" role="columnheader">Total</th></tr></thead>
+              <tbody role="rowgroup">
               <?php foreach ($summary['lines'] as $l) { $lineRow($l, $open ? 'qty' : ''); } ?>
               <?php foreach ($summary['shares'] as $s): ?>
-                <tr>
-                  <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
-                  <td><?= e(fmt_amount($s['amount']) . ' ' . $s['size_unit']) ?> of <?= e($s['size']) ?></td>
-                  <td></td><td></td><td></td><td class="money">None</td>
-                  <td class="money total"><?= money($s['cost_cents']) ?></td>
+                <tr class="share" role="row">
+                  <?php $part = fmt_amount($s['amount']) . ' ' . $s['size_unit'] . ' of ' . $s['size']; ?>
+                  <td class="what" role="cell"><div class="what-name"><?= e($s['product_title']) ?> (share)</div><div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><span class="narrow-only"> · <?= e($part) ?></span><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
+                  <td class="wide-only" role="cell"><?= e($part) ?></td>
+                  <td class="center" role="cell"></td><td class="wide-only" role="cell"></td><td class="wide-only" role="cell"></td><td class="money wide-only" role="cell">None</td>
+                  <td class="money total" role="cell"><?= money($s['cost_cents']) ?></td>
                 </tr>
               <?php endforeach; ?>
               </tbody>
@@ -207,9 +214,9 @@ function page_order(array $member, bool $isPost): void
       <?php else: ?>
         <p class="note"><?= $cycle ? 'These are not part of the ' . e($cycle['label']) . ' order. ' : '' ?>When the next month opens they will already be on your order. You will still need to look it over and submit it. Prices are today's and may change by then.</p>
         <div class="scroll">
-          <table class="order">
-            <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th class="money">Retail price</th><th class="money">Our price</th><th class="money">Deposit</th><th class="money total">Total</th></tr></thead>
-            <tbody>
+          <table class="order" role="table">
+            <thead role="rowgroup"><tr role="row"><th role="columnheader">Item</th><th class="wide-only" role="columnheader">Size</th><th class="center" role="columnheader">Qty</th><th class="money wide-only" role="columnheader">Retail price</th><th class="money wide-only" role="columnheader">Our price</th><th class="money wide-only" role="columnheader">Deposit</th><th class="money total" role="columnheader">Total</th></tr></thead>
+            <tbody role="rowgroup">
             <?php foreach ($saved['lines'] as $l) { $lineRow($l, 'qty_later'); } ?>
             </tbody>
           </table>

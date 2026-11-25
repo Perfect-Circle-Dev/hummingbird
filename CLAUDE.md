@@ -90,6 +90,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   have no star or check mark.
 - Messages: `notice` is good news (with a check mark), `notice warn` a caution, `notice error`
   a problem (add `role="alert"`), `notice info` something neutral.
+- The two tables on My order (`table.order`) have seven columns on a wide screen and three on a
+  narrow one (under 940px): item, quantity, total, with the name across the top of each row.
+  Cells marked `wide-only` are left out on a narrow screen and `narrow-only` text is shown only
+  there (see "Order tables on a narrow screen" in `site.css`). A new column needs one of those
+  marks or it will break the narrow layout.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 

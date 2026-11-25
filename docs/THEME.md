@@ -193,5 +193,7 @@ for a reason:
 
 - The header keeps "Hummingbird Wholesale buying group" under the name (Brent's choice).
 - The label over a share reads "Up for sharing?" and shows only while the share still has room.
-- On a phone the order table is wider than the screen and slides sideways inside its box, so
-  that the item name and size keep enough room to be read.
+- On a phone the order tables on My order fold down to three columns (item, quantity, total),
+  with the name across the top of each row and the item number and size under it. The size and
+  price columns are left out there; a line with a deposit says so in small print. The
+  organizer's tables are still wider than a phone and slide sideways inside their box.
