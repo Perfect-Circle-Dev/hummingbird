@@ -53,11 +53,19 @@ function cycle_month_name(array $cycle): string
     return trim((string) preg_replace('/\s*\d{4}\s*$/', '', (string) $cycle['label']));
 }
 
-/** "2026-12-15 03:00:00" (UTC, as stored) -> "Monday, December 14 at 7:00 pm" in the site's timezone. */
-function fmt_local(string $utc, string $format = 'l, F j \a\t g:i a'): string
+/**
+ * "2026-12-15 03:00:00" (UTC, as stored) -> "Monday, December 14 at 7pm" in the site's timezone.
+ * With no format given, that is the shape: the day, then the time written short, the way the
+ * pickup note says "after 4pm". It is "7pm" on the hour and "7:30pm" otherwise.
+ * Give a format to get only a date, or some other shape.
+ */
+function fmt_local(string $utc, ?string $format = null): string
 {
     $dt = new DateTime($utc, new DateTimeZone('UTC'));
     $dt->setTimezone(new DateTimeZone(config('timezone')));
+    if ($format === null) {
+        return $dt->format('l, F j \a\t ') . $dt->format($dt->format('i') === '00' ? 'ga' : 'g:ia');
+    }
     return $dt->format($format);
 }
 

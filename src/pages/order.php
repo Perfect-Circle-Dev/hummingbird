@@ -81,11 +81,16 @@ function page_order(array $member, bool $isPost): void
         $n = count($results);
         if ($cat !== '') {
             // A whole category: every size of everything in it.
-            echo '<p class="note">' . e(CATEGORIES[$cat][0]) . ': ' . ($n ? $n . ' ' . ($n === 1 ? 'item' : 'items') : 'nothing listed right now') . '</p>';
+            $heading = e(CATEGORIES[$cat][0]) . ': ' . ($n ? $n . ' ' . ($n === 1 ? 'item' : 'items') : 'nothing listed right now');
         } else {
-            echo '<p class="note">' . ($n ? $n . ' matching ' . ($n === 1 ? 'item' : 'items')
-                . ($n === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.') . '</p>';
+            $heading = $n ? $n . ' matching ' . ($n === 1 ? 'item' : 'items')
+                . ($n === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.';
         }
+        // The count, with a Close button at the right, under the Clear button in the box above.
+        // Close puts the list away, the same as Clear. It is a plain link to this page with
+        // nothing showing, so it works without the script.
+        echo '<div class="results-head"><p class="note">' . $heading . '</p>'
+            . '<a class="close" href="/?a=order" data-close aria-label="Close this list"><span>Close</span></a></div>';
         foreach ($results as $v) {
             $itemRow($v);
         }
@@ -157,8 +162,8 @@ function page_order(array $member, bool $isPost): void
         echo '<p class="notice">Order submitted. Cool beans! A summary is on its way to your inbox.</p>';
     }
     ?>
-    <div class="columns">
-      <div class="card stack">
+    <div class="columns even">
+      <div class="card stack find">
         <h2>Find an item</h2>
         <form method="get" action="/" class="search" id="search-form">
           <input type="hidden" name="a" value="order">
