@@ -59,10 +59,10 @@ cd /var/www/hummingbird && sudo bash deploy/setup-auto.sh
 
 After that:
 
-- **The site follows GitHub.** Every 2 minutes the server checks the `main` branch. When a
-  pull request is merged, it runs `deploy/update.sh` by itself, so the change is live within
-  about 2 minutes. Work branches never deploy. If an update fails you get one email, and the
-  server waits for a newer change before trying again. The log is `/var/lib/hummingbird/deploy.log`.
+- **Changes go live with `Gitupdate`.** After a pull request is merged into `main`, type
+  `Gitupdate` on the server: it says what is new, runs `deploy/update.sh` and shows the result.
+  Work branches never deploy. The log is `/var/lib/hummingbird/deploy.log`. (The server can
+  also check GitHub by itself every few minutes; that is switched off. See below.)
 - **Debian keeps itself up to date** with stable and security updates each day. It never
   restarts by itself.
 - **Queued emails go out every minute.** Group emails and pickup emails wait in a queue and
@@ -129,8 +129,8 @@ Put a file named `logo.svg`, `logo.webp` or `logo.png` in `public/` and it appea
 group name on every page, and as the browser tab icon. It is shown 48 pixels tall, so an image
 about 100 to 200 pixels tall stays sharp on phones. Nothing else needs editing.
 
-To check GitHub and update right away, without waiting for the next automatic check, type
-this anywhere on the server:
+To bring the site up to date with what has been merged on GitHub, type this anywhere on the
+server:
 
 ```
 Gitupdate
@@ -139,6 +139,6 @@ Gitupdate
 It says what is new, runs the update and shows the result, or tells you the site is
 already up to date.
 
-To change how often the server checks by itself, edit `CHECK_EVERY_MINUTES` at the top of
-`deploy/setup-auto.sh` (0 means never: the site then updates only when someone types
-`Gitupdate`) and run `sudo bash deploy/setup-auto.sh` on the server again.
+The server can also check GitHub by itself and update when `main` has moved. That is switched
+off (`CHECK_EVERY_MINUTES=0` at the top of `deploy/setup-auto.sh`). To switch it back on, set a
+number of minutes there and run `sudo bash deploy/setup-auto.sh` on the server again.

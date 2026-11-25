@@ -70,11 +70,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   added there, so the set stays complete.
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
-- `deploy/`: server setup, nginx template, `update.sh`, and `setup-auto.sh` / `auto-update.sh`
-  (the server polls GitHub and deploys `main` by itself; see README). `gitupdate.sh` is the
-  by-hand version, installed on the server as the `Gitupdate` command. The polling interval is
-  `CHECK_EVERY_MINUTES` in `setup-auto.sh`; Brent plans to lower or switch it off once things
-  are stable and rely on `Gitupdate`.
+- `deploy/`: server setup, nginx template, `update.sh`, `setup-auto.sh` (the server's scheduled
+  jobs) and `gitupdate.sh`, installed on the server as the `Gitupdate` command: it brings the
+  site up to date with `main` and is how changes go live. The server used to check GitHub by
+  itself every 2 minutes (`auto-update.sh`); that was switched off on 2026-11-25
+  (`CHECK_EVERY_MINUTES=0` in `setup-auto.sh`) and can be switched back on there.
 
 ## Conventions
 
@@ -220,7 +220,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Scheduled jobs all live in `/etc/cron.d/hummingbird-auto`, written by `deploy/setup-auto.sh`.
   The server's clock is UTC, so times there are UTC: catalog refresh 11:15 (3:15 am Pacific in
   winter), backup 11:45, end-of-year tidy-up 12:30 (acts only on December 31), restart check 15:00,
-  GitHub check every 2 minutes, mail jobs every minute.
+  mail jobs every minute. (No automatic GitHub check any more.)
   A change to that schedule needs `sudo bash deploy/setup-auto.sh` run on the server again.
 - Backups (`bin/backup.php`): nightly, gzipped, 30 kept in `data/backups/`, with the newest
   emailed to `admin_email` once a week. Sessions, sign-in links, queued emails and the text of
@@ -305,11 +305,11 @@ Members said no to a "reorder last month" button; favorites cover it.
 ## Working agreement
 
 - Branch per piece of work, pull request into `main` (open it with `gh pr create`), Brent merges.
-- Merging is deploying: the server (Debian, nginx, php-fpm, user `admin`, site in
-  `/var/www/hummingbird`, scripts run as `www-data`) checks `main` every 2 minutes and runs
-  `deploy/update.sh` by itself, once `deploy/setup-auto.sh` has been run there. So `main` must
-  always be safe to go live, and a change that needs a manual step on the server has to say so
-  in its pull request. `bash deploy/update.sh` still works by hand.
+- Merging no longer deploys by itself. After a merge, the change goes live when `Gitupdate` is
+  run on the server (Debian, nginx, php-fpm, user `admin`, site in `/var/www/hummingbird`,
+  scripts run as `www-data`): by Brent, or by Claude over `ssh hummingbird` when Brent has said
+  to merge. Say afterwards what the server is running. `main` must still always be safe to go
+  live, and a change that needs any other step on the server has to say so in its pull request.
 - Brent's laptop signs in to the server with `ssh hummingbird` (user `admin`; the key is
   passphrase-protected and held by the Windows ssh-agent). Claude may use that connection, but
   `.claude/settings.json` makes every `ssh`, `scp` and `sftp` command wait for Brent's approval.
