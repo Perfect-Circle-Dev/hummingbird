@@ -13,7 +13,14 @@ function page_order(array $member, bool $isPost): void
     // is in. When the organizer opens the next month, that list becomes its order.
     $nextOrder = household_order((int) next_cycle()['id'], $householdId);
     $query = trim((string) ($_REQUEST['q'] ?? ''));
-    $back = '/?a=order' . ($query !== '' ? '&q=' . urlencode($query) : '');
+    // A category picked from the "browse" links (see CATEGORIES in src/orders.php). A search wins
+    // over it, so the two are never shown at once.
+    $cat = (string) ($_REQUEST['cat'] ?? '');
+    if ($query !== '' || !isset(CATEGORIES[$cat])) {
+        $cat = '';
+    }
+    // Where to go back to after a button is pressed: the same search or category.
+    $back = '/?a=order' . ($query !== '' ? '&q=' . urlencode($query) : ($cat !== '' ? '&cat=' . $cat : ''));
 
     if ($isPost) {
         $do = (string) ($_POST['do'] ?? '');
@@ -39,10 +46,10 @@ function page_order(array $member, bool $isPost): void
 
     $favorites = favorites_for((int) $member['id']);
     $favoriteIds = array_column($favorites, 'id');
-    $results = search_catalog($query);
+    $results = $cat !== '' ? category_items($cat) : search_catalog($query);
 
     // One row of the catalog, used for both search results and favorites.
-    $itemRow = function (array $v) use ($favoriteIds, $open, $query): void {
+    $itemRow = function (array $v) use ($favoriteIds, $open, $query, $cat): void {
         $isFav = in_array($v['id'], $favoriteIds);
         $deposit = variant_deposit_cents($v);
         ?>
@@ -54,6 +61,7 @@ function page_order(array $member, bool $isPost): void
           <form method="post" action="/?a=order">
             <?= csrf_field() ?>
             <input type="hidden" name="q" value="<?= e($query) ?>">
+            <input type="hidden" name="cat" value="<?= e($cat) ?>">
             <input type="hidden" name="variant_id" value="<?= (int) $v['id'] ?>">
             <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></button>
             <?php if ($open): ?><button class="btn" name="do" value="add">Add</button><?php endif; ?>
@@ -66,13 +74,18 @@ function page_order(array $member, bool $isPost): void
         <?php
     };
 
-    $showResults = function () use ($query, $results, $itemRow): void {
-        if ($query === '') {
+    $showResults = function () use ($query, $cat, $results, $itemRow): void {
+        if ($query === '' && $cat === '') {
             return;
         }
         $n = count($results);
-        echo '<p class="note">' . ($n ? $n . ' matching ' . ($n === 1 ? 'item' : 'items')
-            . ($n === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.') . '</p>';
+        if ($cat !== '') {
+            // A whole category: every size of everything in it.
+            echo '<p class="note">' . e(CATEGORIES[$cat][0]) . ': ' . ($n ? $n . ' ' . ($n === 1 ? 'item' : 'items') : 'nothing listed right now') . '</p>';
+        } else {
+            echo '<p class="note">' . ($n ? $n . ' matching ' . ($n === 1 ? 'item' : 'items')
+                . ($n === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.') . '</p>';
+        }
         foreach ($results as $v) {
             $itemRow($v);
         }
@@ -156,11 +169,24 @@ function page_order(array $member, bool $isPost): void
                 // script. With the script it empties the box on the spot and puts the cursor in it. ?>
           <a class="tap clear" id="clear-search" href="/?a=order" aria-label="Clear the search">Clear</a>
         </form>
+        <?php // Browse by category: each link shows everything in that category in the results
+              // below. It folds away like "My favorites", and site.js remembers the choice. ?>
+        <?php $categories = categories_in_use(); ?>
+        <?php if ($categories): ?>
+        <details class="fold cats-box" id="cats-box" data-remember="categories-folded" data-fold-on-phone open>
+          <summary><h3>Browse by category</h3></summary>
+          <nav class="cats" id="cats" aria-label="Categories">
+            <?php foreach ($categories as $key => $name): ?>
+              <a href="/?a=order&amp;cat=<?= e($key) ?>"<?= $cat === $key ? ' aria-current="true"' : '' ?>><?= e($name) ?></a>
+            <?php endforeach; ?>
+          </nav>
+        </details>
+        <?php endif; ?>
         <?php // Read out by screen readers when an item is added or saved; nothing to see. ?>
         <p class="visually-hidden" id="order-said" role="status"></p>
         <div id="results" class="stack" aria-live="polite"><?php $showResults(); ?></div>
       </div>
-      <details class="card fold" id="favorites-box" open>
+      <details class="card fold" id="favorites-box" data-remember="favorites-folded" open>
         <summary><h2>My favorites <span class="note" id="favorites-count"><?= $favorites ? '(' . count($favorites) . ')' : '' ?></span></h2></summary>
         <div class="stack" id="favorites">
           <?php if (!$favorites): ?>

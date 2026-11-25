@@ -23,10 +23,21 @@
 
   var timer = null;
   var latest = 0;
+  var cats = document.getElementById('cats');
+
+  // Fills in the chip of the category being shown, and clears the others. With no link
+  // given (a search, or Clear), none is filled in.
+  function markCategory(link) {
+    if (!cats) return;
+    Array.prototype.forEach.call(cats.querySelectorAll('a'), function (a) {
+      if (a === link) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+    });
+  }
 
   function search() {
     var query = input.value.trim();
     var mine = ++latest;
+    markCategory(null); // a search takes the place of a category
     // Keep the address in step, so adding an item returns to the same search.
     history.replaceState(null, '', '/?a=order' + (query ? '&q=' + encodeURIComponent(query) : ''));
     if (query.length < 2) {
@@ -46,6 +57,27 @@
     clearTimeout(timer);
     timer = setTimeout(search, 200);
   });
+
+  // The category chips: show that category in the results on the spot. The search box is
+  // emptied, since a category and a search are never shown together. (Without JavaScript a
+  // chip is a link that reloads the page with the category showing.)
+  if (cats) {
+    cats.addEventListener('click', function (event) {
+      var link = event.target.closest ? event.target.closest('a') : null;
+      if (!link) return;
+      event.preventDefault();
+      clearTimeout(timer);
+      input.value = '';
+      var mine = ++latest;
+      var address = link.getAttribute('href');
+      history.replaceState(null, '', address); // so adding an item returns to the same category
+      markCategory(link);
+      fetch(address + '&partial=1', { credentials: 'same-origin' })
+        .then(function (response) { return response.ok ? response.text() : ''; })
+        .then(function (html) { if (mine === latest) results.innerHTML = html; })
+        .catch(function () { window.location.href = address; }); // fall back to an ordinary page load
+    });
+  }
 
   // The Clear button: empty the box and the results on the spot, and put the cursor in the
   // box ready for the next search. (Without JavaScript it is a link that reloads the page.)
@@ -159,6 +191,9 @@
     // out of date after more typing or after Clear.)
     var box = document.getElementById('q');
     if (box) data.set('q', box.value.trim().length < 2 ? '' : box.value.trim());
+    // The same for a category being browsed: the address says which one is showing now.
+    var showing = /[?&]cat=([a-z]+)/.exec(window.location.search);
+    data.set('cat', showing ? showing[1] : '');
 
     fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin' })
       .then(function (response) {
@@ -200,15 +235,22 @@
   });
 })();
 
-// My order page: "My favorites" folds away when its heading is pressed (the browser does
-// that by itself). This only remembers the choice, so it is still folded on the next visit.
+// My order page: "My favorites" and "Browse by category" fold away when their heading is
+// pressed (the browser does that by itself). This only remembers the choice, so a box is
+// still folded on the next visit. Each box says what to remember it as (data-remember).
+// A box marked data-fold-on-phone starts folded on a narrow screen until the person opens
+// it, because there it would push the results a long way down.
 (function () {
-  var box = document.getElementById('favorites-box');
-  if (!box) return;
-  try {
-    if (window.localStorage.getItem('favorites-folded') === '1') box.open = false;
-    box.addEventListener('toggle', function () {
-      window.localStorage.setItem('favorites-folded', box.open ? '0' : '1');
-    });
-  } catch (err) { /* private browsing can refuse storage: folding still works, it is just not remembered */ }
+  var boxes = document.querySelectorAll('details[data-remember]');
+  Array.prototype.forEach.call(boxes, function (box) {
+    var name = box.getAttribute('data-remember');
+    try {
+      var stored = window.localStorage.getItem(name);
+      if (stored === '1') box.open = false;
+      if (stored === null && box.hasAttribute('data-fold-on-phone') && window.innerWidth < 700) box.open = false;
+      box.addEventListener('toggle', function () {
+        window.localStorage.setItem(name, box.open ? '0' : '1');
+      });
+    } catch (err) { /* private browsing can refuse storage: folding still works, it is just not remembered */ }
+  });
 })();

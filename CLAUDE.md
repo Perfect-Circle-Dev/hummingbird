@@ -138,6 +138,12 @@ a little, and wants to be able to follow and lightly edit the code. So:
   "started by" line (`.card-foot`) at the bottom of the card.
   My household uses the same grid held to two across (`.cards.pair`), one on a phone, with
   "Add someone to your household" as its last card.
+- "Browse by category" under the search box on My order: each chip lists everything in that
+  category. A category is a name and the letters its item numbers begin with (L is beans, N is
+  nuts); the whole list is `CATEGORIES` in `src/orders.php`, and adding or renaming one means
+  changing only that list. A category with nothing in the catalog is not shown. A search and a
+  category are never shown together: typing empties the category, and a chip empties the box.
+  The address carries `&cat=beans`, as it carries `&q=` for a search.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 
