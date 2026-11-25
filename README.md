@@ -112,7 +112,7 @@ To see every email the site sends to members and organizers, as it arrives in a 
 sudo -u www-data php bin/sample-emails.php you@example.com
 ```
 
-It sends about 19 emails, one of each kind, to that address, which must be an organizer's. They
+It sends about 20 emails, one of each kind, to that address, which must be an organizer's. They
 are written by the site's own code, so the wording is exactly what goes out, but from a throwaway
 database of made-up people and orders: nobody else is emailed and nothing real is changed. The
 links in them lead nowhere. They count toward Resend's 100 emails a day.

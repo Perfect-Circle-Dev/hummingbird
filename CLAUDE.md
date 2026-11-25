@@ -218,8 +218,15 @@ a little, and wants to be able to follow and lightly edit the code. So:
   organizer), last call (automatic, 24 hours before the deadline, only to members whose
   household has not submitted) and the share-expiry warning (automatic, 7 days before, to the
   people on an unfilled share). Each ends with `group_footer()` and the member's own
-  unsubscribe link. Unsubscribing (`members.email_opt_out`) stops only these; emails about a
-  member's own order still arrive. Organizers can flip it on the Members page.
+  unsubscribe link.
+- One switch per person, `members.email_opt_out`, shown as "Receives notification emails": on
+  My household (anyone in a household can set it for anyone in it), on the organizer's member
+  form, and flipped by the unsubscribe link. Off, the person gets no group emails and no emails
+  about the household's order (received, update, placed, pickup). They still get sign-in links
+  and notices about their own account. Emails about an order go through `email_household()`,
+  which uses `household_email_recipients()`: the people with the switch on, or everyone in the
+  household if nobody has, so an order email always reaches someone. My household refuses to
+  switch off the last person; the unsubscribe link never refuses.
 - Three kinds of sign-in link (`check_login_token`): the one requested on the sign-in page works
   once for 30 minutes; the one an organizer sends from the Members page works once within 7 days;
   the one in a group email (`login_tokens.cycle_id` set) works as often as needed until that
@@ -268,6 +275,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Payment happens at pickup by check, Venmo or cash. The organizer marks each household's order
   paid with the method (`orders.paid_at`, `paid_method`) on the report page, for a locked or a
   closed month. Paid or not, nothing is recorded about amounts.
+- On the report page the organizer can change the quantity on any line of a household's order
+  with plus and minus, while the month is open or locked (`order_line_adjust()`); nought takes
+  the line off. It does not set the order back to "not submitted" and emails nobody. "Email
+  their order" beside each household sends that household its order as it stands
+  (`order_email_household()`).
 - "Order placed" is the step between locking and pickup. The organizer places the order with
   Hummingbird, enters what they confirmed on the combined order (out of stock, changed prices),
   then presses "Order placed" there, with an optional note of their own (`order_placed_send()`,

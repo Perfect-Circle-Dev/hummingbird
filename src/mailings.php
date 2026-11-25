@@ -83,8 +83,8 @@ function group_footer(string $unsubscribeUrl): string
 {
     return "\n-- \n" . config('site_name') . ", " . config('site_tagline') . ".\n"
         . "You get this because you are a member.\n"
-        . "To stop these group emails: $unsubscribeUrl\n"
-        . "You would still get emails about your own orders.\n";
+        . "To stop emails from the site: $unsubscribeUrl\n"
+        . "Someone in your household will still get the emails about its order.\n";
 }
 
 /** Queues one group email to one member, with the footer and unsubscribe link added. */

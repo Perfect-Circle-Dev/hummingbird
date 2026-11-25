@@ -411,13 +411,26 @@ function order_text(array $summary, string $totalLabel, string $sharesLabel = 'S
 }
 
 /**
- * Emails every active member of a household. Returns how many people that is.
+ * The people in a household who get emails about its order: its active members, less anyone
+ * with "Receives notification emails" unticked (members.email_opt_out). If that leaves nobody,
+ * everyone gets them after all, because an order confirmation has to reach someone.
+ */
+function household_email_recipients(int $householdId): array
+{
+    $members = q('SELECT * FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchAll();
+    $wanting = array_values(array_filter($members, fn(array $m): bool => !$m['email_opt_out']));
+    return $wanting ?: $members;
+}
+
+/**
+ * Emails a household about its order (see household_email_recipients for who that reaches).
+ * Returns how many people were emailed.
  * With $queued the emails wait in the queue and go out within a few minutes; use that
  * whenever many households are being emailed at once (see queue_email).
  */
 function email_household(int $householdId, string $subject, string $body, bool $queued = false): int
 {
-    $members = q('SELECT * FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchAll();
+    $members = household_email_recipients($householdId);
     foreach ($members as $m) {
         // Each person gets the same email, with their own first name wherever it says {first_name}.
         $own = str_replace('{first_name}', first_name($m), $body);

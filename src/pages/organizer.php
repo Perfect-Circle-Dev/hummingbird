@@ -30,6 +30,7 @@ const ORGANIZER_PROBLEMS = [
     'unsure'     => 'Nothing was changed. Tick the box to confirm, then press the button again.',
     'not_open'   => 'That month is not open, so it can\'t be locked.',
     'not_locked' => 'That month is not locked, so nothing was changed.',
+    'not_adjustable' => 'That could not be done. An order can be adjusted, or emailed, only while its month is open or locked.',
     'closed'     => 'A closed month can\'t be changed.',
     'price'      => 'A price could not be read and was left as it was. Type it like 25.08.',
     'not_payable' => 'Payments can be recorded once the month is locked.',
@@ -72,6 +73,26 @@ function page_organizer(array $member, bool $isPost): void
             $method = $do === 'paid' ? (string) ($_POST['method'] ?? '') : null;
             $ok = $cycle && order_set_paid($cycle, $householdId, $method);
             redirect('/?a=organizer&month=' . $cycleId . '&view=report' . ($ok ? '' : '&problem=not_payable'));
+        }
+        if ($do === 'adjust') {
+            // Plus and minus on a line of a household's order, on the report page.
+            $cycle = find_cycle($cycleId);
+            $householdId = $cycle ? order_line_adjust($cycle, (int) ($_POST['line_id'] ?? 0), (int) ($_POST['qty'] ?? 0)) : null;
+            // Back to the same household on the page, not to the top of it.
+            redirect('/?a=organizer&month=' . $cycleId . '&view=report'
+                . ($householdId === null ? '&problem=not_adjustable' : '#household-' . $householdId));
+        }
+        if ($do === 'email_order') {
+            // "Email their order": one household is sent its order as it stands now.
+            $cycle = find_cycle($cycleId);
+            $householdId = (int) ($_POST['household_id'] ?? 0);
+            $onReport = $cycle && in_array($cycle['status'], ['open', 'locked'], true)
+                && in_array($householdId, array_column(month_report($cycle)['households'], 'id'), true);
+            if (!$onReport) {
+                redirect('/?a=organizer&month=' . $cycleId . '&view=report&problem=not_adjustable');
+            }
+            redirect('/?a=organizer&month=' . $cycleId . '&view=report&told=' . order_email_household($cycle, $householdId)
+                . '#household-' . $householdId);
         }
         if ($do === 'pickup') {
             $cycle = find_cycle($cycleId);
@@ -620,6 +641,8 @@ function organizer_report(array $cycle): void
 
     // Payments can be recorded from the lock onwards, including after the month is closed.
     $canPay = in_array($cycle['status'], ['locked', 'closed'], true);
+    // Quantities can be adjusted here, and a household emailed its order, until the month is closed.
+    $canAdjust = in_array($cycle['status'], ['open', 'locked'], true);
     $toEmail = pickup_email_households($cycle);
     $emailCount = household_email_count($toEmail);
     $sentLately = emails_last_24h();
@@ -635,6 +658,9 @@ function organizer_report(array $cycle): void
     <?php endif; ?>
     <?php if (isset($_GET['pickup'])): ?>
       <p class="notice" role="status">Pickup emails are on their way to <?= (int) $_GET['pickup'] ?> <?= (int) $_GET['pickup'] === 1 ? 'household' : 'households' ?>. They go out a few at a time over the next few minutes.</p>
+    <?php endif; ?>
+    <?php if (isset($_GET['told'])): ?>
+      <p class="notice" role="status">Their order as it stands has been emailed to <?= (int) $_GET['told'] ?> <?= (int) $_GET['told'] === 1 ? 'person' : 'people' ?>.</p>
     <?php endif; ?>
     <?php if ($problem): ?><p class="notice error" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
@@ -727,13 +753,25 @@ function organizer_report(array $cycle): void
         <p class="note"><?= e(implode(', ', $h['people'])) ?><?= $h['unfinished'] ? ($h['never_submitted'] ? ' · never submitted: these items move to next month unless it is submitted before the lock' : ' · changed after it was submitted, and not submitted again; it goes in as it stands') : '' ?></p>
         <div class="scroll">
           <table>
-            <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
+            <thead><tr><th>Item</th><th>Size</th><th class="center">Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
             <tbody>
             <?php foreach ($summary['lines'] as $l): ?>
               <tr>
                 <td><?= e($l['product_title']) ?><div class="note"><?= e($l['sku']) ?><?= $l['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
                 <td><?= e($l['size']) ?></td>
-                <td><?= (int) $l['qty'] ?></td>
+                <td class="center">
+                  <?php if ($canAdjust): // plus and minus, as on a member's own order page ?>
+                  <form method="post" action="/?a=organizer" class="qty">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="do" value="adjust">
+                    <input type="hidden" name="cycle_id" value="<?= $id ?>">
+                    <input type="hidden" name="line_id" value="<?= (int) $l['id'] ?>">
+                    <button name="qty" value="<?= $l['qty'] - 1 ?>" aria-label="One fewer: <?= e($l['product_title']) ?>, <?= e($h['name']) ?>">−</button>
+                    <span><?= (int) $l['qty'] ?></span>
+                    <button name="qty" value="<?= $l['qty'] + 1 ?>" aria-label="One more: <?= e($l['product_title']) ?>, <?= e($h['name']) ?>">+</button>
+                  </form>
+                  <?php else: ?><?= (int) $l['qty'] ?><?php endif; ?>
+                </td>
                 <td><?= money((int) $l['unit_price_cents']) ?></td>
                 <td><?= $l['line_deposit_cents'] ? money($l['line_deposit_cents']) : 'None' ?></td>
                 <td><?= money($l['line_cents'] + $l['line_deposit_cents']) ?></td>
@@ -743,7 +781,7 @@ function organizer_report(array $cycle): void
               <tr>
                 <td><?= e($s['product_title']) ?> (share)<div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
                 <td><?= e(fmt_amount($s['amount']) . ' ' . $s['size_unit']) ?> of <?= e($s['size']) ?></td>
-                <td></td><td></td><td>None</td>
+                <td class="center"></td><td></td><td>None</td>
                 <td><?= money($s['cost_cents']) ?></td>
               </tr>
             <?php endforeach; ?>
@@ -756,6 +794,16 @@ function organizer_report(array $cycle): void
           <div><dt>Part of filled shares</dt><dd><?= money($summary['shares_cents']) ?></dd></div>
           <div class="due"><dt><?= $cycle['status'] === 'open' ? 'Estimated due at pickup' : 'Due at pickup' ?></dt><dd><?= money($summary['due_cents']) ?></dd></div>
         </dl>
+        <?php if ($canAdjust):
+            $names = array_map('first_name', household_email_recipients((int) $h['id'])); ?>
+        <form method="post" action="/?a=organizer" class="row end step">
+          <?= csrf_field() ?>
+          <input type="hidden" name="cycle_id" value="<?= $id ?>">
+          <input type="hidden" name="household_id" value="<?= (int) $h['id'] ?>">
+          <p class="note grow"><?= $summary['lines'] ? 'Plus and minus change this order at once, and nobody is emailed. When you have finished, this' : 'This' ?> sends <?= e(implode(' and ', $names)) ?> the order as it now stands, with the total.</p>
+          <button class="btn quiet" name="do" value="email_order" aria-label="Email <?= e($h['name']) ?> their order">Email their order</button>
+        </form>
+        <?php endif; ?>
         <p class="note"><?= $h['paid_at'] ? e(paid_text($h['paid_at'], $h['paid_method'])) . ' · ' : '' ?><a href="#top">Back to top</a></p>
       </div>
     <?php endforeach; ?>

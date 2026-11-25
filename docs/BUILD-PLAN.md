@@ -64,6 +64,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Organizer: split sheets for shared items, with amounts as read on a scale
 - [x] Organizer: "Order placed" step: every household is emailed its confirmed total, how to pay, the pickup note and a note from the organizer
 - [x] Organizer: mark each order paid (check, Venmo or cash); pickup reminder with the amount due and a Venmo link
+- [x] Organizer: adjust quantities on any household's order from the report page, and email that household its order
+- [x] "Receives notification emails" box for each person on My household
 - [x] Organizer: members and households (add, paste a list, edit, switch off), settings (discount, deposits, share expiry, Venmo name)
 - [x] Emails: time to order (button, with a note), last call (automatic), pickup notice, share expiry warning (automatic)
 - [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is closed
