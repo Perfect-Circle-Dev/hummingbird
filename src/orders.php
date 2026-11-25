@@ -84,6 +84,66 @@ const SEARCH_INSIDE_WORDS_FROM = 4;
  * Best matches come first: an exact item number, then item numbers and names that
  * start with what was typed, then names with a word that starts with it, then the rest.
  */
+// The "browse" links under the search box on My order. Hummingbird's item numbers begin with
+// letters that say what kind of thing an item is (L for legumes, N for nuts), so a category
+// here is a name and the letters that belong to it. To add, rename or regroup a category,
+// change this list: nothing else needs touching. A category with nothing in the catalog is
+// not shown. Letters left out (Y posters, M shirts) can still be found by searching.
+const CATEGORIES = [
+    'beans'      => ['Beans', ['L']],
+    'chocolate'  => ['Chocolate', ['C', 'CN']],
+    'fruit'      => ['Dried fruit', ['F']],
+    'flour'      => ['Flour', ['FL']],
+    'grains'     => ['Grains', ['G']],
+    'granola'    => ['Granola', ['GR']],
+    'honey'      => ['Honey', ['B']],
+    'nuts'       => ['Nuts', ['N']],
+    'oils'       => ['Oils', ['O']],
+    'pasta'      => ['Pasta', ['PA']],
+    'seeds'      => ['Seeds', ['SD']],
+    'snacks'     => ['Snacks', ['SN', 'TM']],
+    'spices'     => ['Spices & salt', ['SP']],
+    'sweeteners' => ['Sweeteners', ['S', 'SW']],
+    'tea'        => ['Tea', ['T']],
+    'vinegar'    => ['Vinegar & seasonings', ['CO']],
+    'jars'       => ['Jars & lids', ['X', 'Z']],
+];
+
+/** The letters an item number begins with: "GR" for GR10, "L" for L102-5#, "X" for X-M43. */
+function sku_letters(string $sku): string
+{
+    return preg_match('/^[A-Za-z]+/', $sku, $m) ? strtoupper($m[0]) : '';
+}
+
+/** The categories that have something in the catalog right now: short name => name shown. */
+function categories_in_use(): array
+{
+    $present = [];
+    foreach (q('SELECT DISTINCT sku FROM variants WHERE active = 1')->fetchAll(PDO::FETCH_COLUMN) as $sku) {
+        $present[sku_letters((string) $sku)] = true;
+    }
+    $inUse = [];
+    foreach (CATEGORIES as $key => [$name, $letters]) {
+        if (array_intersect($letters, array_keys($present))) {
+            $inUse[$key] = $name;
+        }
+    }
+    return $inUse;
+}
+
+/** Everything in one category, every size, in name order. Empty for a name that is not a category. */
+function category_items(string $key): array
+{
+    $letters = CATEGORIES[$key][1] ?? null;
+    if ($letters === null) {
+        return [];
+    }
+    $all = q('SELECT v.*, p.title AS product_title FROM variants v JOIN products p ON p.id = v.product_id
+              WHERE v.active = 1 ORDER BY p.title COLLATE NOCASE, v.list_price_cents')->fetchAll();
+    return array_values(array_filter($all,
+        fn(array $v): bool => in_array(sku_letters((string) $v['sku']), $letters, true)));
+}
+
 function search_catalog(string $query, int $limit = 30): array
 {
     $query = trim($query);

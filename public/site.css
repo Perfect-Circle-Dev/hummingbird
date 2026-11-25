@@ -181,7 +181,10 @@ html { scroll-padding-top: 88px; }
 .narrow-form { max-width: 640px; }
 .stack > * + * { margin-top: 12px; }
 .columns { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
-.columns > .card { flex: 1 1 320px; min-width: 0; margin-bottom: 0; }
+.columns > .card, .columns > .side { flex: 1 1 320px; min-width: 0; margin-bottom: 0; }
+/* A column of cards beside another card: My favorites with Browse by category under it. */
+.columns > .side { display: flex; flex-direction: column; gap: 16px; }
+.columns > .side > .card { margin-bottom: 0; }
 /* Cards of one size (Share items): as many equal columns as fit, each at least 300px wide,
    which is three across on a full-width screen. A row is as tall as its tallest card, and
    a last row with fewer cards keeps them the same width as the rest. */
@@ -241,11 +244,24 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 /* Text for screen readers only: there to be read out, not seen. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-/* ---- The search box on My order: the label on top, the box with Search beside it, and
-   Clear underneath, lined up with the right-hand end of the box. ---- */
+/* ---- Browse by category (the card under My favorites): a row of chips that wraps. The one
+   being shown is filled in. ---- */
+.cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.cats a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 24px; background: var(--ground); color: var(--link); font-size: 16px; font-weight: 700; text-decoration: none; }
+.cats a:hover { border-color: var(--primary); }
+.cats a[aria-current] { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+
+/* ---- The search box on My order: the label on top, then the box with Search beside it. ---- */
 .search { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; }
 .search label { grid-column: 1 / -1; }
-.search .clear { grid-column: 1; justify-self: end; margin-bottom: -8px; }
+/* Clear is a small button inside the box, at its right-hand end. The link itself is the full
+   height of the box, so it is easy to tap; the button drawn inside it is smaller. */
+.search .box { position: relative; min-width: 0; }
+.search .box.has-clear input { padding-right: 78px; }
+.search .clear { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 0 8px; text-decoration: none; }
+.search .clear[hidden] { display: none; }
+.search .clear span { padding: 3px 10px; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.4; }
+.search .clear:hover span { border-color: var(--primary); }
 
 /* ---- Messages ---- */
 /* A plain .notice says something went well: solid colour, with a check mark at the left. */

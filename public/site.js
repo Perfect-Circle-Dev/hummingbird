@@ -23,10 +23,32 @@
 
   var timer = null;
   var latest = 0;
+  var cats = document.getElementById('cats');
+  var clear = document.getElementById('clear-search');
+
+  // The Clear button inside the box shows only when there is something to clear: text in
+  // the box, or a category being browsed.
+  function showClear() {
+    if (!clear) return;
+    var something = input.value !== '' || (cats && cats.querySelector('a[aria-current]') !== null);
+    clear.hidden = !something;
+    clear.parentNode.classList.toggle('has-clear', something);
+  }
+
+  // Fills in the chip of the category being shown, and clears the others. With no link
+  // given (a search, or Clear), none is filled in.
+  function markCategory(link) {
+    if (!cats) return;
+    Array.prototype.forEach.call(cats.querySelectorAll('a'), function (a) {
+      if (a === link) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+    });
+    showClear();
+  }
 
   function search() {
     var query = input.value.trim();
     var mine = ++latest;
+    markCategory(null); // a search takes the place of a category
     // Keep the address in step, so adding an item returns to the same search.
     history.replaceState(null, '', '/?a=order' + (query ? '&q=' + encodeURIComponent(query) : ''));
     if (query.length < 2) {
@@ -43,19 +65,52 @@
   }
 
   input.addEventListener('input', function () {
+    showClear();
     clearTimeout(timer);
     timer = setTimeout(search, 200);
   });
 
-  // The Clear button: empty the box and the results on the spot, and put the cursor in the
+  // The category chips: show that category in the results on the spot. The search box is
+  // emptied, since a category and a search are never shown together. The chips sit in a
+  // card of their own, away from the results, so the page moves to bring the results into
+  // view when they are off the screen. (Without JavaScript a chip is a link that reloads
+  // the page at the results, with the category showing.)
+  function bringResultsIntoView() {
+    var where = results.getBoundingClientRect();
+    if (where.top >= 60 && where.top < window.innerHeight * 0.7) return; // already in view
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    results.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  }
+  if (cats) {
+    cats.addEventListener('click', function (event) {
+      var link = event.target.closest ? event.target.closest('a') : null;
+      if (!link) return;
+      event.preventDefault();
+      clearTimeout(timer);
+      input.value = '';
+      var mine = ++latest;
+      var address = link.getAttribute('href').split('#')[0]; // the link ends in #results, for use without the script
+      history.replaceState(null, '', address); // so adding an item returns to the same category
+      markCategory(link);
+      fetch(address + '&partial=1', { credentials: 'same-origin' })
+        .then(function (response) { return response.ok ? response.text() : ''; })
+        .then(function (html) {
+          if (mine !== latest) return;
+          results.innerHTML = html;
+          bringResultsIntoView();
+        })
+        .catch(function () { window.location.href = link.getAttribute('href'); }); // fall back to an ordinary page load
+    });
+  }
+
+  // Pressing Clear: empty the box and the results on the spot, and put the cursor in the
   // box ready for the next search. (Without JavaScript it is a link that reloads the page.)
-  var clear = document.getElementById('clear-search');
   if (clear) {
     clear.addEventListener('click', function (event) {
       event.preventDefault();
       clearTimeout(timer);
       input.value = '';
-      search();
+      search(); // empties the results and any category, which also hides this button
       input.focus();
     });
   }
@@ -159,6 +214,9 @@
     // out of date after more typing or after Clear.)
     var box = document.getElementById('q');
     if (box) data.set('q', box.value.trim().length < 2 ? '' : box.value.trim());
+    // The same for a category being browsed: the address says which one is showing now.
+    var showing = /[?&]cat=([a-z]+)/.exec(window.location.search);
+    data.set('cat', showing ? showing[1] : '');
 
     fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin' })
       .then(function (response) {
@@ -200,15 +258,22 @@
   });
 })();
 
-// My order page: "My favorites" folds away when its heading is pressed (the browser does
-// that by itself). This only remembers the choice, so it is still folded on the next visit.
+// My order page: "My favorites" and "Browse by category" fold away when their heading is
+// pressed (the browser does that by itself). This only remembers the choice, so a box is
+// still folded on the next visit. Each box says what to remember it as (data-remember).
+// A box marked data-fold-on-phone starts folded on a narrow screen until the person opens
+// it, because there it would push the results a long way down.
 (function () {
-  var box = document.getElementById('favorites-box');
-  if (!box) return;
-  try {
-    if (window.localStorage.getItem('favorites-folded') === '1') box.open = false;
-    box.addEventListener('toggle', function () {
-      window.localStorage.setItem('favorites-folded', box.open ? '0' : '1');
-    });
-  } catch (err) { /* private browsing can refuse storage: folding still works, it is just not remembered */ }
+  var boxes = document.querySelectorAll('details[data-remember]');
+  Array.prototype.forEach.call(boxes, function (box) {
+    var name = box.getAttribute('data-remember');
+    try {
+      var stored = window.localStorage.getItem(name);
+      if (stored === '1') box.open = false;
+      if (stored === null && box.hasAttribute('data-fold-on-phone') && window.innerWidth < 700) box.open = false;
+      box.addEventListener('toggle', function () {
+        window.localStorage.setItem(name, box.open ? '0' : '1');
+      });
+    } catch (err) { /* private browsing can refuse storage: folding still works, it is just not remembered */ }
+  });
 })();
