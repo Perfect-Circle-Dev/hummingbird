@@ -144,8 +144,8 @@ function time_to_order_text(array $cycle, array $member, string $note, string $l
         . "It's time to place our " . cycle_month_name($cycle) . " order.\n\n"
         . "Order deadline: " . fmt_local($cycle['due_at'], 'l, M jS') . " at " . fmt_time_short($cycle['due_at']) . "\n"
         . (pickup_when($cycle) !== '' ? "Pickup begins: " . pickup_when($cycle) . "\n" : '')
-        . "\nYour own sign-in link:\n\n$link\n\n"
-        . "It works until the order is locked, so you can come back to this email whenever you like.\n";
+        . "\nYour sign-in link:\n\n$link\n\n"
+        . "It works all month, so you can come back to this email whenever you like.\n";
     if ($state['items'] > 0 && !$state['submitted']) {
         $text .= "\nYour household already has {$state['items']} "
             . ($state['items'] === 1 ? 'item on this order. It still needs' : 'items on this order. They still need')

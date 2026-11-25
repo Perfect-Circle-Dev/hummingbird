@@ -837,7 +837,7 @@ function organizer_month_emails(array $cycle): void
         <textarea id="note" name="note" rows="3"></textarea>
       </div>
       <p class="note">Goes to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?><?= $off ? ' (' . $off . ' ' . ($off === 1 ? 'has' : 'have') . ' turned group emails off)' : '' ?>.
-        After your note it gives the deadline, the pickup note, each person's own sign-in link, and the shares still looking for takers. The sign-in link works until you lock the month.</p>
+        After your note it gives the deadline, the pickup note, each person's own sign-in link, and the shares still looking for takers. The sign-in link works until you close the month, so members can use the same email to see their confirmed order.</p>
       <details>
         <summary>See what it says</summary>
         <pre class="email"><?= e($sample) ?></pre>
