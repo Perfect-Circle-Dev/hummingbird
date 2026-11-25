@@ -70,16 +70,17 @@ function page_start(string $title): void
     </span>
   </a>
   <?php if ($member): ?>
-  <?php // An organizer's menu has a fourth pill; "four" lets site.css set them two by two on a phone. ?>
-  <nav class="nav<?= $member['is_admin'] ? ' four' : '' ?>" aria-label="Main">
+  <nav class="nav" aria-label="Main">
     <?php // The page you are on is marked, which fills its pill in (see site.css).
+    // Each page has its full name and a short one. A phone shows the short one, so the
+    // whole menu fits on one line; site.css decides which of the two is seen.
     $here = (string) ($_GET['a'] ?? '');
-    $pages = ['order' => 'My order', 'shares' => 'Share items', 'household' => 'My household'];
+    $pages = ['order' => ['My order', 'Order'], 'shares' => ['Share items', 'Shares'], 'household' => ['My household', 'House']];
     if ($member['is_admin']) {
-        $pages['organizer'] = 'Organizer';
+        $pages['organizer'] = ['Organizer', 'Organizer'];
     }
-    foreach ($pages as $page => $label): ?>
-    <a href="/?a=<?= $page ?>"<?= $here === $page ? ' aria-current="page"' : '' ?>><?= $label ?></a>
+    foreach ($pages as $page => [$long, $short]): ?>
+    <a href="/?a=<?= $page ?>"<?= $here === $page ? ' aria-current="page"' : '' ?>><span class="label-long"><?= $long ?></span><span class="label-short"><?= $short ?></span></a>
     <?php endforeach; ?>
   </nav>
   <form method="post" action="/?a=logout" class="who">

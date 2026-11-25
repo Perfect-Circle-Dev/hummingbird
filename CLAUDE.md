@@ -88,6 +88,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
   its menu row stays: the header is parked above the window by the height of its first row,
   which is why that row has a set height (`--brand-row` in `site.css`). A signed-out page has
   no menu and its header scrolls away.
+- On a phone (under 520px) the header menu shows short names, "Order", "Shares" and "House",
+  so three pills, or an organizer's four, fit on one line. Both names are set in
+  `src/layout.php`; page headings keep the full names.
 - The look is the Talavera theme (`docs/THEME.md`), light and dark, following the device's
   setting. Every colour in `public/site.css` is a variable set in the two blocks at the top of
   the file (light, then dark); never write a colour straight into a rule. Body text is 17px and
