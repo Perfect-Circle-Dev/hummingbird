@@ -6,9 +6,10 @@
 #   1. Debian installs its own stable and security updates every day.
 #      It never restarts the server by itself.
 #   2. The organizer gets an email when an update needs a restart (usually a new kernel).
-#   3. The site follows GitHub: a change merged into main goes live by itself a few
-#      minutes later (see CHECK_EVERY_MINUTES below).
-#   4. The "Gitupdate" command, to check GitHub and update at once, by hand.
+#   3. The "Gitupdate" command: type it on the server to bring the site up to date with
+#      the main branch on GitHub. This is how changes go live.
+#   4. If CHECK_EVERY_MINUTES below is set above 0, the server also checks GitHub by itself
+#      that often and updates when main has moved. It is off (0).
 #   5. Each night: the catalog refresh, then a database backup (a copy is emailed weekly).
 #   6. Every minute: emails waiting in the queue are sent.
 set -euo pipefail
@@ -16,7 +17,8 @@ set -euo pipefail
 # How often the server looks at GitHub by itself, in minutes (1 to 30).
 # 0 switches the automatic checks off; the site then updates only when someone
 # types "Gitupdate" on the server. After changing this, run this script again.
-CHECK_EVERY_MINUTES=2
+# Switched off on 2026-11-25, once the site was stable: updates now go live with Gitupdate.
+CHECK_EVERY_MINUTES=0
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 

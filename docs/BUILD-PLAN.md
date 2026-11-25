@@ -74,7 +74,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Group name on every page, and a slot for the dancing bean logo (waiting for the file)
 - [x] The Talavera theme (`docs/THEME.md`): light and dark, larger text and buttons, fonts kept on the site
 - [x] Nightly jobs: catalog sync, share expiry, database backup (30 kept, one emailed weekly)
-- [x] Server follows GitHub: merging into `main` deploys within about 2 minutes (`deploy/setup-auto.sh`)
+- [x] Updates go live with the `Gitupdate` command on the server (the automatic two-minute check was switched off on 2026-11-25)
 - [x] Debian updates itself daily; email to the organizer when a restart is needed
 
 ## Waiting on
