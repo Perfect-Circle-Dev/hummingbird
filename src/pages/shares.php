@@ -54,7 +54,8 @@ function page_shares(array $member, bool $isPost): void
       <div class="card"><p>Nothing is up for sharing right now.</p></div>
     <?php endif; ?>
 
-    <div class="columns">
+    <?php // "cards" lays the shares out in equal columns, each row as tall as its tallest card. ?>
+    <div class="cards">
     <?php foreach ($shares as $s):
         $mine = null;
         foreach ($s['claims'] as $c) {
@@ -85,7 +86,10 @@ function page_shares(array $member, bool $isPost): void
         <?php elseif ($s['full']): ?>
           <p class="notice">Fully claimed. It goes on the next order.</p>
         <?php endif; ?>
-        <?php if ($editable && (!$s['full'] || $mine)): ?>
+        <?php // The foot of the card sits at the bottom, so the boxes and buttons of a row line up. ?>
+        <?php if ($editable): ?>
+        <div class="card-foot stack">
+        <?php if (!$s['full'] || $mine): ?>
           <form method="post" action="/?a=shares" class="row">
             <?= csrf_field() ?>
             <input type="hidden" name="share_id" value="<?= (int) $s['id'] ?>">
@@ -104,8 +108,8 @@ function page_shares(array $member, bool $isPost): void
           </form>
           <?php endif; ?>
         <?php endif; ?>
-        <?php if ($editable): ?>
           <div class="note">Started by <?= e($s['started_by_name']) ?> on <?= e(fmt_local($s['created_at'], 'M j')) ?> · comes off the list <?= e(fmt_local($s['expires_at'], 'M j')) ?> if not filled</div>
+        </div>
         <?php endif; ?>
       </div>
     <?php endforeach; ?>

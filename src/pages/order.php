@@ -118,6 +118,19 @@ function page_order(array $member, bool $isPost): void
         <?php
     };
 
+    // One line of the sums under an order table (regular items, deposits, the amount due).
+    // It is a row of the table itself, with the amount in the Total column, so that it lines
+    // up with the line totals above it. The label sits under the three price columns.
+    $sumRow = function (string $label, int $cents, bool $due = false): void {
+        ?>
+        <tr class="sum<?= $due ? ' due' : '' ?>" role="row">
+          <td class="wide-only" colspan="3" role="cell"></td>
+          <td class="sum-label" colspan="3" role="cell"><?= e($label) ?></td>
+          <td class="money total" role="cell"><?= money($cents) ?></td>
+        </tr>
+        <?php
+    };
+
     page_start('My order');
     if (!$cycle) {
         echo '<div class="card"><h1>My order</h1><p>No order is open right now. You\'ll get an email when the next one opens. Until then, anything you add is saved for it, and you can set up your favorites.</p></div>';
@@ -180,14 +193,16 @@ function page_order(array $member, bool $isPost): void
                 </tr>
               <?php endforeach; ?>
               </tbody>
+              <tfoot role="rowgroup">
+              <?php
+              $sumRow('Regular items', $summary['items_cents']);
+              $sumRow('Container deposits', $summary['deposits_cents']);
+              $sumRow('Our part of filled shares', $summary['shares_cents']);
+              $sumRow($open ? 'Estimated due at pickup' : 'Due at pickup', $summary['due_cents'], true);
+              ?>
+              </tfoot>
             </table>
           </div>
-          <dl class="totals">
-            <div><dt>Regular items</dt><dd><?= money($summary['items_cents']) ?></dd></div>
-            <div><dt>Container deposits</dt><dd><?= money($summary['deposits_cents']) ?></dd></div>
-            <div><dt>Our part of filled shares</dt><dd><?= money($summary['shares_cents']) ?></dd></div>
-            <div class="due"><dt><?= $open ? 'Estimated due at pickup' : 'Due at pickup' ?></dt><dd><?= money($summary['due_cents']) ?></dd></div>
-          </dl>
           <?php if ($order['paid_at']): ?>
             <p class="notice"><?= e(paid_text($order['paid_at'], $order['paid_method'])) ?>. Thank you!</p>
           <?php endif; ?>
@@ -219,11 +234,11 @@ function page_order(array $member, bool $isPost): void
             <tbody role="rowgroup">
             <?php foreach ($saved['lines'] as $l) { $lineRow($l, 'qty_later'); } ?>
             </tbody>
+            <tfoot role="rowgroup">
+            <?php $sumRow('Estimated total so far', $saved['items_cents'] + $saved['deposits_cents'], true); ?>
+            </tfoot>
           </table>
         </div>
-        <dl class="totals">
-          <div class="due"><dt>Estimated total so far</dt><dd><?= money($saved['items_cents'] + $saved['deposits_cents']) ?></dd></div>
-        </dl>
       <?php endif; ?>
     </div>
     </div>

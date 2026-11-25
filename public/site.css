@@ -182,6 +182,13 @@ html { scroll-padding-top: 88px; }
 .stack > * + * { margin-top: 12px; }
 .columns { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
 .columns > .card { flex: 1 1 320px; min-width: 0; margin-bottom: 0; }
+/* Cards of one size (Share items): as many equal columns as fit, each at least 300px wide,
+   which is three across on a full-width screen. A row is as tall as its tallest card, and
+   a last row with fewer cards keeps them the same width as the rest. */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 16px; margin-bottom: 16px; }
+.cards > .card { display: flex; flex-direction: column; min-width: 0; margin-bottom: 0; }
+/* The last part of such a card is pushed to the bottom of it. */
+.cards .card-foot { margin-top: auto; padding-top: 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 .row.end { justify-content: flex-end; align-items: center; }
 .grow { flex: 1 1 200px; min-width: 0; }
@@ -275,6 +282,15 @@ table.wide { min-width: 800px; }
    two lines. A screen too narrow for it gets the three-column layout further down. */
 table.order { min-width: 860px; }
 table.order td:first-child { min-width: 180px; }
+/* The sums under an order table are rows of the table ("sum"), with each amount in the Total
+   column, so they line up with the line totals above. The amount due is in bold. */
+table.order tr.due td { font-size: 17px; font-weight: 700; }
+@media (min-width: 941px) {
+  table.order tr.sum td { padding-top: 3px; padding-bottom: 3px; border-bottom: 0; }
+  table.order tr.sum:first-child td { padding-top: 10px; }
+  table.order tr.due td { padding-top: 8px; }
+  table.order tr.due td.sum-label, table.order tr.due td.total { border-top: 1px solid var(--line); }
+}
 /* The size, repeated beside the item number: shown only in that three-column layout. */
 .narrow-only { display: none; }
 th { text-align: left; font-size: 15px; line-height: 1.4; font-weight: 400; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
@@ -300,7 +316,7 @@ td.center { min-width: 160px; }
    ("wide-only") are left out; the totals under the table still show deposits. Nothing
    scrolls sideways. */
 @media (max-width: 940px) {
-  table.order, table.order thead, table.order tbody { display: block; min-width: 0; }
+  table.order, table.order thead, table.order tbody, table.order tfoot { display: block; min-width: 0; }
   table.order tr { display: grid; grid-template-columns: minmax(0, 1fr) 120px 72px; column-gap: 6px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
   table.order th, table.order td { min-width: 0; padding: 0; border: 0; }
   table.order .wide-only { display: none; }
@@ -317,6 +333,12 @@ td.center { min-width: 160px; }
   table.order td.total { grid-column: 3; grid-row: 2; }
   table.order .money.total { min-width: 0; text-align: right; }
   table.order .qty { gap: 0; }
+  /* The sums: the label at the left, the amount at the right-hand edge under the line totals. */
+  table.order tr.sum { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; border-bottom: 0; }
+  table.order tr.sum:first-child { padding-top: 10px; }
+  table.order tr.due { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+  /* When the amount due is the only sum, the line under the last item is rule enough. */
+  table.order tr.due:first-child { margin-top: 0; border-top: 0; }
 }
 
 /* ---- Share items ---- */
