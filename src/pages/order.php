@@ -163,29 +163,23 @@ function page_order(array $member, bool $isPost): void
         <form method="get" action="/" class="search" id="search-form">
           <input type="hidden" name="a" value="order">
           <label for="q">Spill the beans: what are you after?</label>
-          <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129" autocomplete="off">
+          <?php // Clear sits inside the box, at its right-hand end, and shows only when there is
+                // something to clear: text in the box, or a category being browsed. It is a
+                // plain link to this page with nothing showing, so it works without the script.
+                // With the script it empties the box on the spot and puts the cursor in it.
+                $clearable = $query !== '' || $cat !== ''; ?>
+          <div class="box<?= $clearable ? ' has-clear' : '' ?>">
+            <input id="q" name="q" type="text" value="<?= e($query) ?>" placeholder="Try honey, almonds or G129" autocomplete="off">
+            <a class="clear" id="clear-search" href="/?a=order" aria-label="Clear the search"<?= $clearable ? '' : ' hidden' ?>><span>Clear</span></a>
+          </div>
           <button class="btn" type="submit">Search</button>
-          <?php // Clear is a plain link to this page with no search, so it works without the
-                // script. With the script it empties the box on the spot and puts the cursor in it. ?>
-          <a class="tap clear" id="clear-search" href="/?a=order" aria-label="Clear the search">Clear</a>
         </form>
-        <?php // Browse by category: each link shows everything in that category in the results
-              // below. It folds away like "My favorites", and site.js remembers the choice. ?>
-        <?php $categories = categories_in_use(); ?>
-        <?php if ($categories): ?>
-        <details class="fold cats-box" id="cats-box" data-remember="categories-folded" data-fold-on-phone open>
-          <summary><h3>Browse by category</h3></summary>
-          <nav class="cats" id="cats" aria-label="Categories">
-            <?php foreach ($categories as $key => $name): ?>
-              <a href="/?a=order&amp;cat=<?= e($key) ?>"<?= $cat === $key ? ' aria-current="true"' : '' ?>><?= e($name) ?></a>
-            <?php endforeach; ?>
-          </nav>
-        </details>
-        <?php endif; ?>
         <?php // Read out by screen readers when an item is added or saved; nothing to see. ?>
         <p class="visually-hidden" id="order-said" role="status"></p>
         <div id="results" class="stack" aria-live="polite"><?php $showResults(); ?></div>
       </div>
+      <?php // The right-hand column: My favorites, and Browse by category under it. ?>
+      <div class="side">
       <details class="card fold" id="favorites-box" data-remember="favorites-folded" open>
         <summary><h2>My favorites <span class="note" id="favorites-count"><?= $favorites ? '(' . count($favorites) . ')' : '' ?></span></h2></summary>
         <div class="stack" id="favorites">
@@ -195,6 +189,21 @@ function page_order(array $member, bool $isPost): void
           <?php foreach ($favorites as $v) { $itemRow($v); } ?>
         </div>
       </details>
+      <?php // Browse by category: each chip shows everything in that category in the results under
+            // the search box. The link ends in #results so that, without the script, the page
+            // opens at the results. It folds away like "My favorites", and site.js remembers. ?>
+      <?php $categories = categories_in_use(); ?>
+      <?php if ($categories): ?>
+      <details class="card fold" id="cats-box" data-remember="categories-folded" data-fold-on-phone open>
+        <summary><h2>Browse by category</h2></summary>
+        <nav class="cats" id="cats" aria-label="Categories">
+          <?php foreach ($categories as $key => $name): ?>
+            <a href="/?a=order&amp;cat=<?= e($key) ?>#results"<?= $cat === $key ? ' aria-current="true"' : '' ?>><?= e($name) ?></a>
+          <?php endforeach; ?>
+        </nav>
+      </details>
+      <?php endif; ?>
+      </div>
     </div>
     <div id="order-lists">
     <?php

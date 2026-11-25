@@ -29,8 +29,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
   organizer's "out of stock for everyone" box ticking the others. It also remembers whether
   "My favorites" was left folded away (the folding itself is a plain `<details>`), turns
   "Add" and "Save for next month" into "Added" and "Saved" for a moment after they work (the
-  `done` class), and makes the Clear button under the search box empty it on the spot (without
-  the script Clear is a link that reloads the page with no search). On every page it marks
+  `done` class), and makes the Clear button inside the search box empty it on the spot (without
+  the script Clear is a link that reloads the page with no search). Clear shows only when
+  there is text in the box or a category on show. On every page it marks
   the header `stuck` once the page has scrolled. `page_end()` in `src/layout.php` loads it, so
   pages do not add it themselves.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`,
@@ -138,8 +139,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
   "started by" line (`.card-foot`) at the bottom of the card.
   My household uses the same grid held to two across (`.cards.pair`), one on a phone, with
   "Add someone to your household" as its last card.
-- "Browse by category" under the search box on My order: each chip lists everything in that
-  category. A category is a name and the letters its item numbers begin with (L is beans, N is
+- "Browse by category" on My order, a card of its own under My favorites: each chip lists
+  everything in that category, in the results under the search box (the page moves to them if
+  they are out of view). A category is a name and the letters its item numbers begin with (L is beans, N is
   nuts); the whole list is `CATEGORIES` in `src/orders.php`, and adding or renaming one means
   changing only that list. A category with nothing in the catalog is not shown. A search and a
   category are never shown together: typing empties the category, and a chip empties the box.
