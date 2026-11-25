@@ -210,24 +210,49 @@ function catalog_tidy(array $variants): array
  * Gathers a list of catalog items into products, each with its sizes, for showing one card
  * per product: [['title' => ..., 'description' => ..., 'sizes' => [items]], ...].
  * Products come out in the order their first size appears; sizes run from cheapest (smallest)
- * to dearest. Sizes belong together when their item numbers share a stem, the letters and
- * first run of digits: G129 and G129-5# are both "G129". Going by the stem, not by
- * Hummingbird's product, is what puts the two halves of a product it lists twice on one card.
+ * to dearest.
+ *
+ * Two sizes go on the same card when either of these is true:
+ *   - Hummingbird has them under the same product. (Its sizes do not always share an item
+ *     number: Avocado Oil is O181, O182 and O183.)
+ *   - Their item numbers share a stem, the letters and first run of digits: G129 and G129-5#
+ *     are both "G129". This is what joins the two halves of a product Hummingbird lists twice.
+ * Each size is tied to its product and to its stem, and whatever ends up tied together,
+ * directly or through another size, is one card.
  */
 function group_by_product(array $variants): array
 {
+    // $card[$name] says which card a product or a stem belongs to. Following it until a name
+    // points at itself finds the card.
+    $card = [];
+    $find = function (string $name) use (&$card): string {
+        $card[$name] ??= $name;
+        while ($card[$name] !== $name) {
+            $name = $card[$name];
+        }
+        return $name;
+    };
+    foreach ($variants as $v) {
+        $product = 'product ' . $v['product_id'];
+        $a = $find($product);
+        if (preg_match('/^[A-Za-z]+(-[A-Za-z]+)?\d+/', (string) $v['sku'], $m)) {
+            $b = $find('stem ' . strtoupper($m[0]));
+            if ($a !== $b) {
+                $card[$b] = $a; // the stem's card joins the product's card
+            }
+        }
+    }
+
     $products = [];
     foreach ($variants as $v) {
-        $stem = preg_match('/^[A-Za-z]+(-[A-Za-z]+)?\d+/', (string) $v['sku'], $m)
-            ? strtoupper($m[0])
-            : 'product ' . $v['product_id']; // no usable item number: fall back to Hummingbird's product
-        if (!isset($products[$stem])) {
-            $products[$stem] = ['title' => (string) $v['product_title'], 'description' => '', 'sizes' => []];
+        $key = $find('product ' . $v['product_id']);
+        if (!isset($products[$key])) {
+            $products[$key] = ['title' => (string) $v['product_title'], 'description' => '', 'sizes' => []];
         }
-        if ($products[$stem]['description'] === '' && !empty($v['product_description'])) {
-            $products[$stem]['description'] = (string) $v['product_description'];
+        if ($products[$key]['description'] === '' && !empty($v['product_description'])) {
+            $products[$key]['description'] = (string) $v['product_description'];
         }
-        $products[$stem]['sizes'][] = $v;
+        $products[$key]['sizes'][] = $v;
     }
     foreach ($products as &$p) {
         usort($p['sizes'], fn(array $a, array $b): int => (int) $a['list_price_cents'] <=> (int) $b['list_price_cents']);

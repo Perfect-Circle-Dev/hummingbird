@@ -159,9 +159,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   drum or tote (`BIGGEST_GALLONS`, `BIGGEST_POUNDS`, `size_too_big()`). And where Hummingbird
   lists a product twice (same item number, size and price under two products; 38 such pairs
   on 2026-11-25) it keeps one: the one in stock, else the newer. Both stay in the database, so
-  orders and favorites pointing at either keep working. Sizes are grouped by the stem of the
-  item number (G129 and G129-5# are both G129), which is what joins the two halves of a
-  double listing. My favorites stays one row per size.
+  orders and favorites pointing at either keep working. Two sizes share a card when Hummingbird
+  has them under one product (Avocado Oil is O181, O182 and O183) or when their item numbers
+  share a stem (G129 and G129-5# are both G129), which is what joins the two halves of a
+  double listing. Each card is a bordered box, with a dotted line between its sizes.
+  My favorites stays one row per size.
 - The nightly catalog refresh stores each product's description as plain text
   (`products.description`, `plain_description()`): tags and scripts are stripped, so a
   description can never alter a page. "Description" beside a product's name opens it in a

@@ -278,11 +278,10 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
    card, with a background, so items passing underneath do not show beside it; the padding
    on the right is what keeps Close under Clear. */
 .results-head { position: sticky; top: var(--under-header); z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: calc(var(--search-w) + 10px); background: var(--surface); box-shadow: 0 1px 0 var(--line); }
-/* The row's own line takes the place of the line over the first product. */
-.results-head + .product { border-top: 0; }
 
 /* ---- A product in the results: its name and "Description" link, then a row for each size ---- */
-.product { border-top: 1px solid var(--line); padding-top: 12px; }
+/* Each product in the results is a box of its own, so one is easy to tell from the next. */
+.product { padding: 10px; border: 1px solid var(--muted); border-radius: 10px; }
 .product-head { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 16px; }
 .product .item { border-top: 0; padding-top: 6px; }
 /* A light dotted line between one size and the next, so the rows do not run together. */
