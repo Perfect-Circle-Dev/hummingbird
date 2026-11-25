@@ -50,7 +50,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists
 - [x] Organizer: months (open, change, lock, close), combined order, unfinished flags
 - [x] At lock: fix prices, move filled shares onto the order, and settle the odd cent when a share's parts don't add up exactly (it goes to whoever started the share)
-- [x] My household page: members add people to their household, fix names and phones, change their own email
+- [x] My household page: members add people to their household, remove them, fix names and phones, change their own email
 - [x] Reopen a locked month
 - [x] "Save for next month" list, always available to members
 - [x] Organizer: out-of-stock and price edits, with update emails; out-of-stock items and shares carry over to next month at close

@@ -1,8 +1,9 @@
 <?php
 // "My household" page: members look after their own household. They can correct names
 // and phone numbers, change their own email address (confirmed by a link sent to the new
-// address) and add a partner or friend to share the order. Archiving people, moving them
-// between households and making organizers stay with the organizer.
+// address), add a partner or friend to share the order, and take someone off the household
+// (which archives that person's account). Restoring people, moving them between households
+// and making organizers stay with the organizer.
 declare(strict_types=1);
 
 // Sentences shown after a button is pressed. The address carries only the short word.
@@ -11,6 +12,7 @@ const HOUSEHOLD_DONE = [
     'added'     => 'Added. They have been emailed a sign-in link, and Brent has been told.',
     'email'     => 'Check your new address: we have sent a link there. Your email changes when you press the button it leads to.',
     'cancelled' => 'The change of email address has been cancelled.',
+    'removed'   => 'Removed. They can no longer sign in, and they and Brent have been told.',
 ];
 const HOUSEHOLD_PROBLEMS = [
     'name'      => 'A name is needed.',
@@ -20,6 +22,9 @@ const HOUSEHOLD_PROBLEMS = [
     'full'      => 'Your household has as many people as it can add by itself. Ask Brent to add more.',
     'not_yours' => 'That person is not in your household.',
     'not_sent'  => 'The confirmation email could not be sent, so nothing was changed. Please try again later.',
+    'self'      => 'You can\'t remove yourself. To leave the group, contact Brent.',
+    'organizer' => 'That person is an organizer, so only an organizer can remove them.',
+    'unsure'    => 'Nobody was removed. Tick the box to confirm, then press the button again.',
 ];
 
 function page_household(array $member, bool $isPost): void
@@ -39,6 +44,10 @@ function page_household(array $member, bool $isPost): void
         } elseif ($do === 'email') {
             $problem = email_change_request($member, (string) ($_POST['email'] ?? ''));
             $done = 'email';
+        } elseif ($do === 'remove') {
+            // Removing needs its box ticked, like the organizer's lock and close buttons.
+            $problem = empty($_POST['sure']) ? 'unsure' : household_person_remove($member, (int) ($_POST['member_id'] ?? 0));
+            $done = 'removed';
         } elseif ($do === 'email_cancel') {
             email_change_cancel((int) $member['id']);
             $done = 'cancelled';
@@ -67,7 +76,7 @@ function page_household(array $member, bool $isPost): void
         <h2><?= e($p['name']) ?><?= $isMe ? ' <span class="flag">you</span>' : '' ?><?= $p['active'] ? '' : ' <span class="flag">archived</span>' ?></h2>
         <?php if (!$p['active']): ?>
           <p class="note"><?= e($p['email']) ?></p>
-          <p class="note">This account is archived, so it can't sign in. To switch it back on, contact Brent.</p>
+          <p class="note">This account is archived, so it can't sign in or add to your order. To switch it back on, contact Brent.</p>
         <?php else: ?>
           <form method="post" action="/?a=household" class="stack">
             <?= csrf_field() ?>
@@ -108,6 +117,18 @@ function page_household(array $member, bool $isPost): void
               </details>
             <?php endif; ?>
           </div>
+          <?php if (!$isMe && !$p['is_admin']): ?>
+          <details class="step">
+            <summary>Remove <?= e($p['name']) ?> from this household</summary>
+            <form method="post" action="/?a=household" class="stack">
+              <?= csrf_field() ?>
+              <input type="hidden" name="member_id" value="<?= $id ?>">
+              <p class="note"><?= e($p['name']) ?> will no longer be able to sign in or add to your order, and will stop getting the group's emails. They are told by email, and so is Brent, who can set them up again. Anything they added to your order stays on it.</p>
+              <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove <?= e($p['name']) ?></label>
+              <div><button class="btn quiet" name="do" value="remove">Remove from my household</button></div>
+            </form>
+          </details>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
     <?php endforeach; ?>
@@ -132,7 +153,6 @@ function page_household(array $member, bool $isPost): void
         </div>
         <div><button class="btn" name="do" value="add">Add to my household</button></div>
       </form>
-      <p class="note">To take someone off your household, or move them to another, contact Brent.</p>
     </div>
     <?php
     page_end();

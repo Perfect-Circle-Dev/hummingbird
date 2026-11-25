@@ -138,7 +138,7 @@ function page_order(array $member, bool $isPost): void
           <button class="btn" type="submit">Search</button>
           <?php // Clear is a plain link to this page with no search, so it works without the
                 // script. With the script it empties the box on the spot and puts the cursor in it. ?>
-          <a class="btn quiet small clear" id="clear-search" href="/?a=order" aria-label="Clear the search">Clear</a>
+          <a class="tap clear" id="clear-search" href="/?a=order" aria-label="Clear the search">Clear</a>
         </form>
         <?php // Read out by screen readers when an item is added or saved; nothing to see. ?>
         <p class="visually-hidden" id="order-said" role="status"></p>

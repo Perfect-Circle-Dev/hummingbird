@@ -427,6 +427,50 @@ function household_person_add(array $acting, string $name, string $email, string
 }
 
 /**
+ * Takes someone off the acting member's own household by archiving their account: they can
+ * no longer sign in and get no more emails, and their past orders keep their name. It is the
+ * same thing as Archive on the organizer's Members page, where it can be undone. Nobody can
+ * remove themselves, and only an organizer can remove an organizer. The person is told by
+ * email, and so are the organizers. Returns a problem code, or null if it was done.
+ */
+function household_person_remove(array $acting, int $memberId): ?string
+{
+    $person = find_member($memberId);
+    // The household check is what stops one household removing another's people.
+    if (!$person || (int) $person['household_id'] !== (int) $acting['household_id'] || !$person['active']) {
+        return 'not_yours';
+    }
+    if ($memberId === (int) $acting['id']) {
+        return 'self';
+    }
+    if ($person['is_admin']) {
+        return 'organizer';
+    }
+    q('UPDATE members SET active = 0 WHERE id = ?', [$memberId]);
+    member_sign_out_everywhere($memberId);
+
+    $household = (string) q('SELECT name FROM households WHERE id = ?', [(int) $acting['household_id']])->fetchColumn();
+    send_email($person['email'], config('site_name') . ": you have been taken off the $household household",
+        "Hi {$person['name']},\n\n"
+        . "{$acting['name']} has taken you off the $household household at " . config('site_name') . ".\n\n"
+        . "That means two things: your sign-in link won't work for now, and you won't get the group's emails.\n"
+        . "Nothing has been deleted.\n\n"
+        . "If this was a mistake, or you would like to keep ordering with the group on your own,\n"
+        . "just reply to this email, or write to " . config('mail_from') . ", and Brent will set you up again.\n");
+
+    $body = "{$acting['name']} ({$acting['email']}) has taken someone off the $household household:\n\n"
+        . "  {$person['name']} <{$person['email']}>\n\n"
+        . "Their account is archived: they can't sign in and get no emails. They have been told, and that\n"
+        . "they can write to you to come back. Anything they put on the household's order stays on it.\n\n"
+        . "To restore them, or to give them a household of their own, use the Members page:\n"
+        . config('base_url') . "/?a=organizer&view=members\n";
+    foreach (q('SELECT email FROM members WHERE is_admin = 1 AND active = 1')->fetchAll(PDO::FETCH_COLUMN) as $organizer) {
+        send_email($organizer, config('site_name') . ": {$person['name']} was taken off $household", $body);
+    }
+    return null;
+}
+
+/**
  * Starts a change of the acting member's own email address. Nothing changes yet: a link
  * goes to the NEW address, and the change happens only when that link is confirmed, so a
  * mistyped address can't lock anyone out. The old address is told too, in case it was not
