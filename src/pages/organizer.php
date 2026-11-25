@@ -562,7 +562,10 @@ function organizer_order_placed(array $cycle): void
     $emailCount = household_email_count($households);
     $sentLately = emails_last_24h();
     // A sample of the email, written for the first household on the order.
-    $sample = $households ? order_placed_text($cycle, $households[0], '(your note goes here)') : '';
+    // Each person's own first name goes where the sample says (their first name).
+    $sample = $households
+        ? str_replace('{first_name}', '(their first name)', order_placed_text($cycle, $households[0], '(your note goes here)'))
+        : '';
     ?>
     <div class="card stack">
       <h2>Order placed</h2>
@@ -680,7 +683,7 @@ function organizer_report(array $cycle): void
         <?= csrf_field() ?>
         <input type="hidden" name="cycle_id" value="<?= $id ?>">
         <h3>Pickup reminder</h3>
-        <p class="note">A reminder for households not yet marked paid. Everyone already has their confirmed total from the "Order placed" email (sent from the combined order page); this one says the order is ready, with your pickup note, the amount due, how to pay, and their order in full. Send it if you want to nudge whoever has not paid.
+        <p class="note">A reminder for households not yet marked paid. Everyone already has their confirmed total from the "Order placed" email (sent from the combined order page); this one says the order is ready, with the amount due, how to pay, and their order in full. It leaves out the pickup day, since it goes out after pickup has begun. Send it if you want to nudge whoever has not paid.
           <?= venmo_handle() !== '' ? 'It includes a Venmo link for @' . e(venmo_handle()) . '.' : 'There is no Venmo link yet: add your Venmo name under <a href="/?a=organizer&amp;view=settings">Settings</a>.' ?></p>
         <?php if (!$toEmail): ?>
           <p class="note">Nobody owes anything, so there is nobody to email.</p>
@@ -837,7 +840,7 @@ function organizer_month_emails(array $cycle): void
         <textarea id="note" name="note" rows="3"></textarea>
       </div>
       <p class="note">Goes to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?><?= $off ? ' (' . $off . ' ' . ($off === 1 ? 'has' : 'have') . ' turned group emails off)' : '' ?>.
-        After your note it gives the deadline, the pickup note, each person's own sign-in link, and the shares still looking for takers. The sign-in link works until you lock the month.</p>
+        After your note it gives the deadline, the pickup note, each person's own sign-in link, and the shares still looking for takers. The sign-in link works until you close the month, so members can use the same email to see their confirmed order.</p>
       <details>
         <summary>See what it says</summary>
         <pre class="email"><?= e($sample) ?></pre>

@@ -89,6 +89,13 @@ a little, and wants to be able to follow and lightly edit the code. So:
   member keeps it in step. Speak to a member by first name, with `first_name($member)`: the
   greeting of every email, the name beside "Sign out" and the hello on the home page. Use the full name wherever people are
   listed or identified (share claims, My household, organizer pages, the report, notices).
+- Email wording is Brent's (set 2026-11-25); change it only when he asks. Emails about an order
+  call it the "Hummingbird order" and name the month alone ("Your December Hummingbird order"),
+  with the year only in subjects. An email that goes to a whole household through
+  `email_household()` can say `{first_name}`, which is filled in for each person. The sums in
+  `order_text()` take their labels from the caller ("Share items", "December Total").
+  `pickup_when()` is the pickup note without its opening "Pickup from", and `fmt_time_short()`
+  writes "7pm".
 - Email text has no line breaks inside a paragraph: a paragraph is one long line and mail
   programs wrap it to fit. Break the line only between paragraphs (a blank line), before a link
   on its own line, and in lists of items or amounts. In the code a long paragraph is several
@@ -194,8 +201,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
   member's own order still arrive. Organizers can flip it on the Members page.
 - Three kinds of sign-in link (`check_login_token`): the one requested on the sign-in page works
   once for 30 minutes; the one an organizer sends from the Members page works once within 7 days;
-  the one in a group email (`login_tokens.cycle_id` set) works as often as needed while that
-  month is open, and again if the month is reopened.
+  the one in a group email (`login_tokens.cycle_id` set) works as often as needed until that
+  month is closed: while it is open and while it is locked, so members can use the same email
+  to see their confirmed order (Brent's choice, 2026-11-25; it used to stop at lock). It does
+  not work forever, so that an old email is not a permanent way in.
 - Scheduled jobs all live in `/etc/cron.d/hummingbird-auto`, written by `deploy/setup-auto.sh`.
   The server's clock is UTC, so times there are UTC: catalog refresh 11:15 (3:15 am Pacific in
   winter), backup 11:45, end-of-year tidy-up 12:30 (acts only on December 31), restart check 15:00,

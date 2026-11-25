@@ -44,13 +44,14 @@ function send_login_link(string $email, bool $fromOrganizer = false, string $int
  * Is this sign-in token still good? Returns the member id, or null.
  * There are two kinds of link. The usual one, asked for on the sign-in page, works once
  * and for a short time. The one in a "time to order" email (it has a cycle_id) works as
- * often as needed, on any device, for as long as that month is open.
+ * often as needed, on any device, until that month is closed: while it is open, and after it
+ * is locked, when members come back to see their confirmed order.
  */
 function check_login_token(string $token): ?int
 {
     $row = q("SELECT t.member_id FROM login_tokens t LEFT JOIN cycles c ON c.id = t.cycle_id
               WHERE t.token_hash = ? AND t.expires_at > ?
-                AND ((t.cycle_id IS NULL AND t.used_at IS NULL) OR c.status = 'open')",
+                AND ((t.cycle_id IS NULL AND t.used_at IS NULL) OR c.status IN ('open', 'locked'))",
         [token_hash($token), now_utc()])->fetch();
     return $row ? (int) $row['member_id'] : null;
 }

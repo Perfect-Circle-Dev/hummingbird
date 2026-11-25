@@ -64,7 +64,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Organizer: mark each order paid (check, Venmo or cash); pickup reminder with the amount due and a Venmo link
 - [x] Organizer: members and households (add, paste a list, edit, switch off), settings (discount, deposits, share expiry, Venmo name)
 - [x] Emails: time to order (button, with a note), last call (automatic), pickup notice, share expiry warning (automatic)
-- [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is locked
+- [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is closed
 - [x] Email queue with a daily limit, so a big mailing can't go over Resend's cap
 - [x] Deposits on a case of several jugs: one deposit for each container in the case
 - [x] Unsubscribe link and footer on group emails

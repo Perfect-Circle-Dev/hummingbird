@@ -285,18 +285,38 @@ function order_submit(array $order, array $cycle): void
 {
     q("UPDATE orders SET status = 'submitted', submitted_at = ?, updated_at = ? WHERE id = ?",
         [now_utc(), now_utc(), $order['id']]);
-    $body = "Thanks! Here is your " . config('site_name') . " order for {$cycle['label']}.\n\n"
-        . order_text(order_summary($order), 'Estimated total due at pickup') . "\n"
-        . "Prices are estimates until the order is placed. You can change your order until it is locked: "
-        . config('base_url') . "/?a=order\nIf you make changes, submit again to get an updated summary.\n";
-    email_household((int) $order['household_id'], config('site_name') . " order received for {$cycle['label']}", $body);
+    // {first_name} is filled in for each person in the household by email_household().
+    $body = "Hey {first_name},\n\n"
+        . "Thanks for the order! I will send you an email with your final total once I've placed our order "
+        . "with Hummingbird and they've confirmed that everything is in stock.\n\n"
+        . order_text(order_summary($order), 'Estimated total', 'Share orders') . "\n"
+        . "If you need to, you can change your order until " . fmt_time_short($cycle['due_at']) . " on "
+        . fmt_local($cycle['due_at'], 'l') . " with this link:\n\n"
+        . config('base_url') . "/?a=order\n\n"
+        . "If you make changes, hit the submit button again to get an updated summary.\n";
+    email_household((int) $order['household_id'], "Hummingbird order received for {$cycle['label']}", $body);
 }
 
 /**
  * An order written out as plain text for an email: each item, each share part, then the totals.
  * The two labels differ by reader: "Your part of filled shares" to a member, plainer for the organizer.
  */
-function order_text(array $summary, string $totalLabel, string $sharesLabel = 'Your part of filled shares'): string
+/**
+ * When pickup is, without the opening "Pickup from", for sentences that begin their own way
+ * ("Pickup begins: Wednesday, Dec 16 after 4pm"). '' when the month has no pickup note.
+ */
+function pickup_when(array $cycle): string
+{
+    return trim((string) preg_replace('/^pick\s*up\s*(from|on|starts|begins|is)?\s*:?\s*/i', '', pickup_text($cycle)));
+}
+
+/** A time written short, the way it is said: "7pm", or "7:30pm" when it is not on the hour. */
+function fmt_time_short(string $utc): string
+{
+    return fmt_local($utc, fmt_local($utc, 'i') === '00' ? 'ga' : 'g:ia');
+}
+
+function order_text(array $summary, string $totalLabel, string $sharesLabel = 'Share items', bool $gapBeforeTotal = false): string
 {
     $text = '';
     foreach ($summary['lines'] as $l) {
@@ -318,6 +338,7 @@ function order_text(array $summary, string $totalLabel, string $sharesLabel = 'Y
     return $text . "\nRegular items: " . money($summary['items_cents'])
         . "\nContainer deposits: " . money($summary['deposits_cents'])
         . "\n$sharesLabel: " . money($summary['shares_cents'])
+        . ($gapBeforeTotal ? "\n" : '')
         . "\n$totalLabel: " . money($summary['due_cents']) . "\n";
 }
 
@@ -328,12 +349,14 @@ function order_text(array $summary, string $totalLabel, string $sharesLabel = 'Y
  */
 function email_household(int $householdId, string $subject, string $body, bool $queued = false): int
 {
-    $members = q('SELECT email FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchAll();
+    $members = q('SELECT * FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchAll();
     foreach ($members as $m) {
+        // Each person gets the same email, with their own first name wherever it says {first_name}.
+        $own = str_replace('{first_name}', first_name($m), $body);
         if ($queued) {
-            queue_email($m['email'], $subject, $body);
+            queue_email($m['email'], $subject, $own);
         } else {
-            send_email($m['email'], $subject, $body);
+            send_email($m['email'], $subject, $own);
         }
     }
     return count($members);
