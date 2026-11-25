@@ -174,7 +174,7 @@ function household_email_count(array $households): int
 {
     $count = 0;
     foreach ($households as $h) {
-        $count += count($h['people']);
+        $count += count(household_email_recipients((int) $h['id']));
     }
     return $count;
 }

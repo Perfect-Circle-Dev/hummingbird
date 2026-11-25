@@ -191,6 +191,50 @@ function cycle_close(int $cycleId): bool
 
 /** Moves a month's out-of-stock items and shares along to next month. Called once, at close. */
 /**
+ * The organizer changes the quantity on one line of a household's order, from the report
+ * page (the plus and minus buttons there). Nought takes the line off. It works while a month
+ * is open or locked, not once it is closed. Unlike a member's own change, it does not set the
+ * order back to "not submitted": the order stays as the household left it, only adjusted.
+ * Nobody is emailed; "Email their order" on the same page does that when asked.
+ * Returns the household whose order it was, or null if the line is not in this month.
+ */
+function order_line_adjust(array $cycle, int $lineId, int $qty): ?int
+{
+    if (!in_array($cycle['status'], ['open', 'locked'], true)) {
+        return null;
+    }
+    $line = q('SELECT l.id, o.id AS order_id, o.household_id FROM order_lines l JOIN orders o ON o.id = l.order_id
+               WHERE l.id = ? AND o.cycle_id = ?', [$lineId, $cycle['id']])->fetch();
+    if (!$line) {
+        return null;
+    }
+    if ($qty <= 0) {
+        q('DELETE FROM order_lines WHERE id = ?', [$lineId]);
+    } else {
+        q('UPDATE order_lines SET qty = ? WHERE id = ?', [min($qty, 99), $lineId]);
+    }
+    q('UPDATE orders SET updated_at = ? WHERE id = ?', [now_utc(), $line['order_id']]);
+    return (int) $line['household_id'];
+}
+
+/**
+ * Emails one household its order as it stands now, with the total. For after the organizer
+ * has adjusted it on the report page. Sent at once. Returns how many people were emailed.
+ */
+function order_email_household(array $cycle, int $householdId): int
+{
+    $order = household_order((int) $cycle['id'], $householdId);
+    $month = cycle_month_name($cycle);
+    $total = $cycle['status'] === 'open' ? 'Estimated total' : "$month Total";
+    // {first_name} is filled in for each person in the household by email_household().
+    $body = "Hi {first_name},\n\n"
+        . "Your $month Hummingbird order has been updated. Here it is as it stands now:\n\n"
+        . order_text(order_summary($order), $total, 'Share items', true) . "\n"
+        . "You can see it any time at " . config('base_url') . "/?a=order\n";
+    return email_household($householdId, "Hummingbird order update for {$cycle['label']}", $body);
+}
+
+/**
  * The orders in a month that have items but were never submitted, not even once.
  * (An order that was submitted and then changed is a different thing: it counts as ordered.)
  */

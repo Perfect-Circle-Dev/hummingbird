@@ -24,6 +24,7 @@ const HOUSEHOLD_PROBLEMS = [
     'not_sent'  => 'The confirmation email could not be sent, so nothing was changed. Please try again later.',
     'self'      => 'You can\'t remove yourself. To leave the group, contact Brent.',
     'organizer' => 'That person is an organizer, so only an organizer can remove them.',
+    'last_one'  => 'Nothing was saved. At least one person in a household has to receive the notification emails, so that emails about your order reach someone.',
     'unsure'    => 'Nobody was removed. Tick the box to confirm, then press the button again.',
 ];
 
@@ -34,8 +35,10 @@ function page_household(array $member, bool $isPost): void
         $problem = null;
         $done = '';
         if ($do === 'person') {
+            // An unticked box sends nothing, so has_notify_box says the box was on the form.
+            $notify = isset($_POST['has_notify_box']) ? !empty($_POST['notify']) : null;
             $problem = household_person_save($member, (int) ($_POST['member_id'] ?? 0),
-                (string) ($_POST['first_name'] ?? ''), (string) ($_POST['last_name'] ?? ''), (string) ($_POST['phone'] ?? ''));
+                (string) ($_POST['first_name'] ?? ''), (string) ($_POST['last_name'] ?? ''), (string) ($_POST['phone'] ?? ''), $notify);
             $done = 'saved';
         } elseif ($do === 'add') {
             $problem = household_person_add($member, (string) ($_POST['first_name'] ?? ''), (string) ($_POST['last_name'] ?? ''),
@@ -96,6 +99,11 @@ function page_household(array $member, bool $isPost): void
             <div>
               <label for="phone-<?= $id ?>">Phone, for texts about the order (optional)</label>
               <input id="phone-<?= $id ?>" name="phone" type="text" inputmode="tel" value="<?= e($p['phone'] ?? '') ?>" autocomplete="off">
+            </div>
+            <div>
+              <input type="hidden" name="has_notify_box" value="1">
+              <label class="check"><input type="checkbox" name="notify" value="1" <?= $p['email_opt_out'] ? '' : 'checked' ?>> Receives notification emails</label>
+              <p class="note">Time to order, last call, share reminders, and emails about your household's order. At least one of you has to receive them.</p>
             </div>
             <div><button class="btn" name="do" value="person">Save</button></div>
           </form>

@@ -122,7 +122,7 @@ function organizer_member_fields(?array $m, array $households): void
     <?php if ($m): ?>
       <label class="check"><input type="checkbox" name="active" value="1" <?= $m['active'] ? 'checked' : '' ?>> Active (untick to archive: they can't sign in and get no emails)</label>
       <input type="hidden" name="has_group_box" value="1">
-      <label class="check"><input type="checkbox" name="group_emails" value="1" <?= $m['email_opt_out'] ? '' : 'checked' ?>> Gets group emails (time to order, last call, share reminders)</label>
+      <label class="check"><input type="checkbox" name="group_emails" value="1" <?= $m['email_opt_out'] ? '' : 'checked' ?>> Receives notification emails (time to order, last call, share reminders, and emails about their household's order)</label>
     <?php endif; ?>
     <?php
 }

@@ -59,8 +59,8 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
     $householdId = (int) ($data['household_id'] ?? 0);
     $isAdmin = empty($data['is_admin']) ? 0 : 1;
     $active = empty($data['active']) ? 0 : 1;
-    // The "gets group emails" box is only on the edit form (has_group_box says it was there).
-    // A new member gets group emails until they unsubscribe.
+    // The "Receives notification emails" box is only on the edit form (has_group_box says it was
+    // there). A new member receives them until they, or someone in their household, untick it.
     $optOut = !empty($data['has_group_box']) && empty($data['group_emails']) ? 1 : 0;
 
     if ($first === '') {
@@ -379,7 +379,7 @@ function household_members(int $householdId): array
  * Email addresses are not changed here: each person changes only their own, with a
  * confirmation (see email_change_request). Returns a problem code, or null if saved.
  */
-function household_person_save(array $acting, int $memberId, string $first, string $last, string $phone): ?string
+function household_person_save(array $acting, int $memberId, string $first, string $last, string $phone, ?bool $notify = null): ?string
 {
     $person = find_member($memberId);
     // The household check is what stops one household editing another's people.
@@ -391,8 +391,19 @@ function household_person_save(array $acting, int $memberId, string $first, stri
     if ($first === '') {
         return 'name';
     }
-    q('UPDATE members SET name = ?, first_name = ?, last_name = ?, phone = ? WHERE id = ?',
-        [full_name($first, $last), $first, $last, trim($phone) ?: null, $memberId]);
+    // "Receives notification emails". $notify is null when the form had no such box, which
+    // leaves it as it was. The last person in a household still getting them can't be switched
+    // off here, so that emails about the household's order always reach someone.
+    $optOut = $notify === null ? (int) $person['email_opt_out'] : ($notify ? 0 : 1);
+    if ($optOut && !$person['email_opt_out']) {
+        $others = (int) q('SELECT COUNT(*) FROM members WHERE household_id = ? AND active = 1 AND email_opt_out = 0 AND id <> ?',
+            [$person['household_id'], $memberId])->fetchColumn();
+        if ($others === 0) {
+            return 'last_one';
+        }
+    }
+    q('UPDATE members SET name = ?, first_name = ?, last_name = ?, phone = ?, email_opt_out = ? WHERE id = ?',
+        [full_name($first, $last), $first, $last, trim($phone) ?: null, $optOut, $memberId]);
     return null;
 }
 
