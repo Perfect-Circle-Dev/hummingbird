@@ -116,6 +116,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - The cards on Share items sit in a grid (`.cards`): equal columns at least 300px wide, three
   across at full width, each row as tall as its tallest card, with the claim box and
   "started by" line (`.card-foot`) at the bottom of the card.
+  My household uses the same grid held to two across (`.cards.pair`), one on a phone, with
+  "Add someone to your household" as its last card.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 
