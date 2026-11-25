@@ -103,13 +103,14 @@ function pickup_emails_send(array $cycle): int
     foreach ($households as $h) {
         $due = $h['summary']['due_cents'];
         $link = venmo_link($due, config('site_name') . ' ' . $cycle['label']);
-        $body = "Your " . config('site_name') . " order for {$cycle['label']} is ready to pick up.\n\n"
-            . (pickup_text($cycle) !== '' ? pickup_text($cycle) . "\n\n" : '')
-            . "Amount due: " . money($due) . "\n"
+        $month = cycle_month_name($cycle);
+        $body = "Your $month Hummingbird order is ready to pick up.\n\n"
+            . (pickup_when($cycle) !== '' ? "Pickup starts " . pickup_when($cycle) . "\n\n" : '')
+            . "Your total for $month: " . money($due) . "\n\n"
             . "You can pay at pickup by check, Venmo or cash.\n"
-            . ($link ? "To pay by Venmo now: $link\n" : '')
+            . ($link ? "\nMy Venmo link: $link\n" : '')
             . "\nYour order:\n\n"
-            . order_text($h['summary'], 'Total due at pickup') . "\n"
+            . order_text($h['summary'], "$month Total", 'Share items', true) . "\n"
             . "You can see it any time at " . config('base_url') . "/?a=order\n";
         email_household((int) $h['id'], config('site_name') . " pickup for {$cycle['label']}: " . money($due) . " due", $body, true);
     }
@@ -126,23 +127,23 @@ function pickup_emails_send(array $cycle): int
 function order_placed_text(array $cycle, array $h, string $note): string
 {
     $due = $h['summary']['due_cents'];
+    $month = cycle_month_name($cycle);
     if ($due === 0) {
         $money = "Nothing is due: everything on your order was out of stock this month.\n";
     } elseif ($h['paid_at'] !== null) {
-        $money = "Your total is " . money($due) . ", and it is marked as paid. Thank you!\n";
+        $money = "Your total for $month is " . money($due) . ", and it is marked as paid. Thank you!\n";
     } else {
         $link = venmo_link($due, config('site_name') . ' ' . $cycle['label']);
-        $money = "Amount due: " . money($due) . "\n"
+        $money = "Your total for $month: " . money($due) . "\n\n"
             . "You can pay at pickup by check, Venmo or cash.\n"
-            . ($link ? "To pay by Venmo now: $link\n" : '');
+            . ($link ? "\nMy Venmo link: $link\n" : '');
     }
-    return "Your " . config('site_name') . " order for {$cycle['label']} has been placed with Hummingbird. "
-        . "These are your confirmed figures.\n\n"
+    return "Your $month Hummingbird order has been placed. These are your confirmed figures.\n\n"
         . (trim($note) !== '' ? trim($note) . "\n\n" : '')
-        . (pickup_text($cycle) !== '' ? pickup_text($cycle) . "\n\n" : '')
+        . (pickup_when($cycle) !== '' ? "Pickup starts " . pickup_when($cycle) . "\n\n" : '')
         . $money
         . "\nYour order:\n\n"
-        . order_text($h['summary'], 'Total due at pickup') . "\n"
+        . order_text($h['summary'], "$month Total", 'Share items', true) . "\n"
         . "You can see it any time at " . config('base_url') . "/?a=order\n";
 }
 
@@ -156,7 +157,7 @@ function order_placed_send(array $cycle, string $note): int
     $households = month_report($cycle)['households'];
     foreach ($households as $h) {
         $due = $h['summary']['due_cents'];
-        $subject = config('site_name') . " order placed for {$cycle['label']}"
+        $subject = "Hummingbird order placed for {$cycle['label']}"
             . ($due > 0 && $h['paid_at'] === null ? ': ' . money($due) . ' due' : '');
         email_household((int) $h['id'], $subject, order_placed_text($cycle, $h, $note), true);
     }

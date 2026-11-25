@@ -89,6 +89,13 @@ a little, and wants to be able to follow and lightly edit the code. So:
   member keeps it in step. Speak to a member by first name, with `first_name($member)`: the
   greeting of every email, the name beside "Sign out" and the hello on the home page. Use the full name wherever people are
   listed or identified (share claims, My household, organizer pages, the report, notices).
+- Email wording is Brent's (set 2026-11-25); change it only when he asks. Emails about an order
+  call it the "Hummingbird order" and name the month alone ("Your December Hummingbird order"),
+  with the year only in subjects. An email that goes to a whole household through
+  `email_household()` can say `{first_name}`, which is filled in for each person. The sums in
+  `order_text()` take their labels from the caller ("Share items", "December Total").
+  `pickup_when()` is the pickup note without its opening "Pickup from", and `fmt_time_short()`
+  writes "7pm".
 - Email text has no line breaks inside a paragraph: a paragraph is one long line and mail
   programs wrap it to fit. Break the line only between paragraphs (a blank line), before a link
   on its own line, and in lists of items or amounts. In the code a long paragraph is several

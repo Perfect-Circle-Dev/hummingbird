@@ -332,12 +332,14 @@ function stock_and_prices_email(array $cycle, array $notes): int
 {
     foreach ($notes as $householdId => $sentences) {
         $order = household_order((int) $cycle['id'], (int) $householdId);
-        $body = "There is news about your " . config('site_name') . " order for {$cycle['label']}.\n\n"
-            . "- " . implode("\n- ", $sentences) . "\n\n"
+        // {first_name} is filled in for each person in the household by email_household().
+        $body = "Hi {first_name},\n\n"
+            . "Hummingbird had a price change or something on your order was out of stock. Here is what changed:\n\n"
+            . "- " . implode("\n\n- ", $sentences) . "\n\n"
             . "Your order now:\n\n"
-            . order_text(order_summary($order), 'Total due at pickup') . "\n"
+            . order_text(order_summary($order), cycle_month_name($cycle) . ' Total', 'Share items', true) . "\n"
             . "You can see it any time at " . config('base_url') . "/?a=order\n";
-        email_household((int) $householdId, config('site_name') . " order update for {$cycle['label']}", $body, true);
+        email_household((int) $householdId, "Hummingbird order update for {$cycle['label']}", $body, true);
     }
     return count($notes);
 }
@@ -494,7 +496,8 @@ function month_report_text(array $cycle, string $occasion): string
 {
     $report = month_report($cycle);
     $count = count($report['households']);
-    $text = config('site_name') . " report for {$cycle['label']}\n$occasion\n\n";
+    // $occasion (why this copy was sent) is no longer printed; the heading is the same each time.
+    $text = config('site_name') . " {$cycle['label']} order summary.\n\n";
     if ($count === 0) {
         return $text . "Nobody has ordered anything.\n";
     }
@@ -514,10 +517,10 @@ function month_report_text(array $cycle, string $occasion): string
 
     // Then each household in full.
     foreach ($report['households'] as $h) {
-        $text .= "\n" . str_repeat('-', 40) . "\n" . mb_strtoupper($h['name'])
+        $text .= "\n" . str_repeat('-', 40) . "\n\n" . mb_strtoupper($h['name'])
             . ($h['people'] ? ' (' . implode(', ', $h['people']) . ')' : '')
             . ($h['unfinished'] ? "\nUNFINISHED: this order was not submitted." : '') . "\n\n"
-            . order_text($h['summary'], 'Total due', 'Part of filled shares');
+            . order_text($h['summary'], 'Total due', 'Share items');
     }
     return $text . "\n" . str_repeat('-', 40) . "\nOn the site: " . config('base_url')
         . '/?a=organizer&month=' . (int) $cycle['id'] . "&view=report\n";

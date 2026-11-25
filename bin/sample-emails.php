@@ -188,7 +188,8 @@ order_add($order($lena), $syrup, (int) $lena['id']);
 // ---- 5. Share about to expire ----
 $beanShare = share_start($beans, (int) $rosa['id'], 8);
 share_set_claim($beanShare, (int) $priya['id'], 5);
-q('UPDATE shares SET expires_at = ? WHERE id = ?', [now_utc(5 * 86400), $beanShare]);
+// As if it had been listed for three months and had five days left.
+q('UPDATE shares SET created_at = ?, expires_at = ? WHERE id = ?', [now_utc(-86 * 86400), now_utc(5 * 86400), $beanShare]);
 share_expiry_warnings();
 take('A share is about to expire',
     'By itself, 7 days before an unfilled share comes off Share items.',

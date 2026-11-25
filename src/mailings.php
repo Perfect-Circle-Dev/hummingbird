@@ -141,9 +141,10 @@ function time_to_order_text(array $cycle, array $member, string $note, string $l
     $state = household_order_state((int) $cycle['id'], (int) $member['household_id']);
     $text = "Hi " . first_name($member) . ",\n\n"
         . (trim($note) !== '' ? trim($note) . "\n\n" : '')
-        . "The {$cycle['label']} order is open. Orders are due " . fmt_local($cycle['due_at']) . ".\n"
-        . (pickup_text($cycle) !== '' ? "\n" . pickup_text($cycle) . "\n" : '')
-        . "\nYour own sign-in link:\n$link\n"
+        . "It's time to place our " . cycle_month_name($cycle) . " order.\n\n"
+        . "Order deadline: " . fmt_local($cycle['due_at'], 'l, M jS') . " at " . fmt_time_short($cycle['due_at']) . "\n"
+        . (pickup_when($cycle) !== '' ? "Pickup begins: " . pickup_when($cycle) . "\n" : '')
+        . "\nYour own sign-in link:\n\n$link\n\n"
         . "It works until the order is locked, so you can come back to this email whenever you like.\n";
     if ($state['items'] > 0 && !$state['submitted']) {
         $text .= "\nYour household already has {$state['items']} "
@@ -199,13 +200,24 @@ function last_call_queue(array $cycle): int
         if ($state['submitted']) {
             continue;
         }
-        $text = "Hi " . first_name($m) . ",\n\n"
-            . "The {$cycle['label']} order closes " . fmt_local($cycle['due_at']) . ".\n\n"
-            . ($state['items'] > 0
-                ? "Your household has {$state['items']} " . ($state['items'] === 1 ? 'item' : 'items')
-                    . " on its order, but the order has not been submitted. Sign in, look it over and press \"Submit my order\".\n"
-                : "Your household has not ordered yet. If you are skipping this month, there is nothing to do.\n")
-            . "\nYour own sign-in link:\n" . month_login_link((int) $m['id'], (int) $cycle['id']) . "\n";
+        $month = cycle_month_name($cycle);
+        $closes = fmt_local($cycle['due_at']);
+        $link = month_login_link((int) $m['id'], (int) $cycle['id']);
+        if ($state['items'] > 0) {
+            // Items are on the order but "Submit my order" was never pressed.
+            $one = $state['items'] === 1;
+            $text = "Hi " . first_name($m) . ",\n\n"
+                . "The $month Hummingbird order closes $closes.\n\n"
+                . "You have {$state['items']} " . ($one ? 'item' : 'items') . " in your order, but you haven't submitted "
+                . ($one ? 'it' : 'them') . " yet.\n\n"
+                . "You can see the " . ($one ? 'item' : 'items') . " using the link below. If you decide you want "
+                . ($one ? 'it' : 'them') . " this month, just press \"Submit my order\".\n\n"
+                . "Your sign-in link:\n\n$link\n";
+        } else {
+            $text = "Hi " . first_name($m) . ",\n\n"
+                . "This is just a reminder that our $month Hummingbird order closes $closes.\n\n"
+                . "If you want anything this month, here's your link to sign-in:\n\n$link\n";
+        }
         queue_group_email($m, config('site_name') . ": last call for {$cycle['label']}", $text);
         $queued++;
     }
@@ -235,11 +247,15 @@ function share_expiry_warnings(): int
             if (!$member) {
                 continue;
             }
+            // How long a share is listed in all, to the nearest ten days: "almost 90 days" for 3 months.
+            $listedDays = (int) (round((strtotime($share['expires_at']) - strtotime($share['created_at'])) / 864000) * 10);
             $text = "Hi " . first_name($member) . ",\n\n"
                 . "The share of {$share['product_title']}, {$share['size']} that you are part of still has "
-                . fmt_amount($share['left']) . " {$share['size_unit']} unclaimed, and it comes off Share items on "
+                . fmt_amount($share['left']) . " {$share['size_unit']} unclaimed. It's been on the share list for almost "
+                . "$listedDays days and it will automatically be removed on "
                 . fmt_local($share['expires_at'], 'l, F j') . " unless it fills.\n\n"
-                . "If you know someone who might want some, now is a good time to ask. You can also raise your own amount.\n\n"
+                . "If you know someone who might want some, now is a good time to ask. "
+                . "You can also increase your share of it to fill the order.\n\n"
                 . "Share items: " . config('base_url') . "/?a=shares\n";
             queue_group_email($member, config('site_name') . ": a share you are on is about to expire", $text);
             $queued++;
