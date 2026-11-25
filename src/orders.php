@@ -146,10 +146,94 @@ function category_items(string $key): array
     if ($letters === null) {
         return [];
     }
-    $all = q('SELECT v.*, p.title AS product_title FROM variants v JOIN products p ON p.id = v.product_id
+    $all = q('SELECT v.*, p.title AS product_title, p.description AS product_description
+              FROM variants v JOIN products p ON p.id = v.product_id
               WHERE v.active = 1 ORDER BY p.title COLLATE NOCASE, v.list_price_cents')->fetchAll();
-    return array_values(array_filter($all,
-        fn(array $v): bool => in_array(sku_letters((string) $v['sku']), $letters, true)));
+    return catalog_tidy(array_values(array_filter($all,
+        fn(array $v): bool => in_array(sku_letters((string) $v['sku']), $letters, true))));
+}
+
+// Sizes too big for a household are left out of search results and categories: anything over
+// 5 gallons, anything over 60 lb (a 5-gallon bucket of honey is 55 lb), and anything sold as a
+// barrel, drum or tote. They stay in the catalog, so an order that already has one is unharmed.
+const BIGGEST_GALLONS = 5;
+const BIGGEST_POUNDS = 60;
+
+/** Is this size one of the very big ones that are not offered? */
+function size_too_big(array $v): bool
+{
+    $amount = (float) $v['size_amount'];
+    return ($v['size_unit'] === 'gal' && $amount > BIGGEST_GALLONS)
+        || ($v['size_unit'] === 'lb' && $amount > BIGGEST_POUNDS)
+        || preg_match('/\b(barrel|drum|tote|pallet)\b/i', (string) $v['title']) === 1;
+}
+
+/**
+ * Tidies a list of catalog items before it is shown. Two things:
+ *   - Very big sizes are dropped (see size_too_big).
+ *   - Hummingbird lists some products twice, as two products with the same item number, size
+ *     and price. Only one of each pair is kept: the one in stock if just one is, otherwise the
+ *     newer listing. Both stay in the catalog, so orders and favorites that point at either
+ *     keep working; this only decides which is offered.
+ * The order of the list is kept.
+ */
+function catalog_tidy(array $variants): array
+{
+    $best = []; // item number + size => where in $variants the one to keep is
+    foreach ($variants as $i => $v) {
+        if (size_too_big($v)) {
+            continue;
+        }
+        $key = strtolower(trim((string) $v['sku']) . '|' . trim((string) $v['title']));
+        if (!isset($best[$key])) {
+            $best[$key] = $i;
+            continue;
+        }
+        $kept = $variants[$best[$key]];
+        $better = [(int) $v['available'], (int) $v['id']] > [(int) $kept['available'], (int) $kept['id']];
+        // The better one takes the earlier one's place in the list, so the order does not jump.
+        [$keep, $drop] = $better ? [$v, $kept] : [$kept, $v];
+        // Sometimes only one of the pair has a description; it is not lost with the other.
+        if (empty($keep['product_description']) && !empty($drop['product_description'])) {
+            $keep['product_description'] = $drop['product_description'];
+        }
+        $variants[$best[$key]] = $keep;
+    }
+    $tidy = [];
+    foreach ($best as $i) {
+        $tidy[] = $variants[$i];
+    }
+    return $tidy;
+}
+
+/**
+ * Gathers a list of catalog items into products, each with its sizes, for showing one card
+ * per product: [['title' => ..., 'description' => ..., 'sizes' => [items]], ...].
+ * Products come out in the order their first size appears; sizes run from cheapest (smallest)
+ * to dearest. Sizes belong together when their item numbers share a stem, the letters and
+ * first run of digits: G129 and G129-5# are both "G129". Going by the stem, not by
+ * Hummingbird's product, is what puts the two halves of a product it lists twice on one card.
+ */
+function group_by_product(array $variants): array
+{
+    $products = [];
+    foreach ($variants as $v) {
+        $stem = preg_match('/^[A-Za-z]+(-[A-Za-z]+)?\d+/', (string) $v['sku'], $m)
+            ? strtoupper($m[0])
+            : 'product ' . $v['product_id']; // no usable item number: fall back to Hummingbird's product
+        if (!isset($products[$stem])) {
+            $products[$stem] = ['title' => (string) $v['product_title'], 'description' => '', 'sizes' => []];
+        }
+        if ($products[$stem]['description'] === '' && !empty($v['product_description'])) {
+            $products[$stem]['description'] = (string) $v['product_description'];
+        }
+        $products[$stem]['sizes'][] = $v;
+    }
+    foreach ($products as &$p) {
+        usort($p['sizes'], fn(array $a, array $b): int => (int) $a['list_price_cents'] <=> (int) $b['list_price_cents']);
+    }
+    unset($p);
+    return array_values($products);
 }
 
 function search_catalog(string $query, int $limit = 30): array
@@ -168,7 +252,7 @@ function search_catalog(string $query, int $limit = 30): array
         $like = '%' . $esc($word) . '%';
         array_push($params, $like, $like, $like);
     }
-    $candidates = q("SELECT v.*, p.title AS product_title
+    $candidates = q("SELECT v.*, p.title AS product_title, p.description AS product_description
                      FROM variants v JOIN products p ON p.id = v.product_id
                      WHERE v.active = 1 AND " . implode(' AND ', $where) . "
                      ORDER BY p.title, v.list_price_cents", $params)->fetchAll();
@@ -184,7 +268,8 @@ function search_catalog(string $query, int $limit = 30): array
     }
     // Sorting by rank keeps the name-and-price order from step 1 within each rank.
     usort($found, fn(array $a, array $b): int => $a['match_rank'] <=> $b['match_rank']);
-    return array_slice($found, 0, $limit);
+    // Very big sizes and double listings go (see catalog_tidy) before the list is cut to length.
+    return array_slice(catalog_tidy($found), 0, $limit);
 }
 
 /** How well one catalog item matches the typed words: 0 is best; null means leave it out. */

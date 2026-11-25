@@ -28,6 +28,7 @@ add_column_if_missing('members', 'pending_email_token', 'TEXT');
 add_column_if_missing('members', 'pending_email_expires_at', 'TEXT');
 add_column_if_missing('login_tokens', 'cycle_id', 'INTEGER');
 add_column_if_missing('shares', 'expiry_warned_at', 'TEXT');
+add_column_if_missing('products', 'description', 'TEXT');
 add_column_if_missing('cycles', 'placed_at', 'TEXT');
 add_column_if_missing('cycles', 'placed_note', 'TEXT');
 add_column_if_missing('members', 'first_name', "TEXT NOT NULL DEFAULT ''");

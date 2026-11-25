@@ -136,6 +136,28 @@
   }
 })();
 
+// The "Description" pop-ups on My order open and close by themselves (each is a <details>).
+// This adds the two ways people expect to close one: the Esc key, and a click or tap anywhere
+// else. Opening one also closes any other that was open.
+(function () {
+  function closeAll(except) {
+    Array.prototype.forEach.call(document.querySelectorAll('details.desc[open]'), function (box) {
+      if (box !== except) box.open = false;
+    });
+  }
+  document.addEventListener('click', function (event) {
+    var inside = event.target.closest ? event.target.closest('details.desc') : null;
+    closeAll(inside);
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    var open = document.querySelector('details.desc[open]');
+    if (!open) return;
+    open.open = false;
+    open.querySelector('summary').focus(); // back to the link that opened it
+  });
+})();
+
 // Organizer's combined order: ticking "Out of stock for everyone" ticks each
 // household's box for that item, and unticking it clears them.
 // Without JavaScript nothing moves on screen, but saving gives the same result.
@@ -197,10 +219,14 @@
     button.textContent = word;
     button.classList.add('done');
     // The same news for someone using a screen reader, with the item's name.
+    // The name is on the product's card, or on the row itself in My favorites; the size is on the row.
     var said = document.getElementById('order-said');
-    var name = button.closest('.item') && button.closest('.item').querySelector('.item-name');
+    var row = button.closest('.item');
+    var name = (button.closest('.product') || row || document).querySelector('.item-name');
+    var size = row ? row.querySelector('.size-name') : null;
     if (said && name) {
-      said.textContent = (word === 'Added' ? 'Added to your order: ' : 'Saved for next month: ') + name.textContent;
+      said.textContent = (word === 'Added' ? 'Added to your order: ' : 'Saved for next month: ')
+        + name.textContent + (size ? ', ' + size.textContent : '');
     }
     setTimeout(function () {
       button.textContent = was;
