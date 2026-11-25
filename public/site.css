@@ -139,10 +139,14 @@ html { scroll-padding-top: 88px; }
   /* The pills share the row between them, so three fit on the narrowest phone. */
   .nav a { flex: 1 1 auto; max-width: 220px; padding: 0 8px; font-size: 15px; }
 }
-/* An organizer has a fourth pill, which does not fit beside the others on a phone: there the
-   four sit two by two. */
+/* On a phone the menu uses its short names ("Order", "Shares", "House"), so that it fits on
+   one line: three pills for a member, four for an organizer. Both names are in the page;
+   only one is shown. */
+.label-short { display: none; }
 @media (max-width: 520px) {
-  .nav.four a { flex-basis: 40%; }
+  .label-long { display: none; }
+  .label-short { display: inline; }
+  .nav a { padding: 0 6px; }
 }
 
 /* ---- Cards and layout helpers ---- */
