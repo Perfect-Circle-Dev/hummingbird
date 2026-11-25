@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS products (
     title TEXT NOT NULL,
     handle TEXT,
     product_type TEXT,
-    tags TEXT
+    tags TEXT,
+    description TEXT                     -- Hummingbird's description, as plain text (see plain_description)
 );
 
 CREATE TABLE IF NOT EXISTS variants (

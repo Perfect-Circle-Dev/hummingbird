@@ -153,6 +153,19 @@ a little, and wants to be able to follow and lightly edit the code. So:
   changing only that list. A category with nothing in the catalog is not shown. A search and a
   category are never shown together: typing empties the category, and a chip empties the box.
   The address carries `&cat=beans`, as it carries `&q=` for a search.
+- Search results and categories on My order show one card per product, with a row for each
+  size (`group_by_product()`), after `catalog_tidy()` has done two things to the list.
+  It drops sizes too big for a household: over 5 gallons, over 60 lb, or sold as a barrel,
+  drum or tote (`BIGGEST_GALLONS`, `BIGGEST_POUNDS`, `size_too_big()`). And where Hummingbird
+  lists a product twice (same item number, size and price under two products; 38 such pairs
+  on 2026-11-25) it keeps one: the one in stock, else the newer. Both stay in the database, so
+  orders and favorites pointing at either keep working. Sizes are grouped by the stem of the
+  item number (G129 and G129-5# are both G129), which is what joins the two halves of a
+  double listing. My favorites stays one row per size.
+- The nightly catalog refresh stores each product's description as plain text
+  (`products.description`, `plain_description()`): tags and scripts are stripped, so a
+  description can never alter a page. "Description" beside a product's name opens it in a
+  pop-up (a `<details>`, so it works without the script). No pictures are stored.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 

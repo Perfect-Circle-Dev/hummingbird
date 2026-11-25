@@ -48,51 +48,95 @@ function page_order(array $member, bool $isPost): void
     $favoriteIds = array_column($favorites, 'id');
     $results = $cat !== '' ? category_items($cat) : search_catalog($query);
 
-    // One row of the catalog, used for both search results and favorites.
-    $itemRow = function (array $v) use ($favoriteIds, $open, $query, $cat): void {
+    // The star, Add and Save buttons for one size of one product. Used by the favorites rows and
+    // by the size rows of a product card, so the two can never drift apart.
+    $itemButtons = function (array $v) use ($favoriteIds, $open, $query, $cat): void {
         $isFav = in_array($v['id'], $favoriteIds);
-        $deposit = variant_deposit_cents($v);
         ?>
-        <div class="item">
-          <div class="item-text">
-            <div class="item-name"><?= e($v['product_title']) ?></div>
-            <div class="note"><?= e($v['sku']) ?> · <?= e($v['title']) ?> · <?= money(member_price_cents((int) $v['list_price_cents'])) ?><?= $deposit ? ' + ' . money($deposit) . ' deposit' : '' ?><?= $v['available'] ? '' : ' · out of stock at Hummingbird right now' ?></div>
-          </div>
           <form method="post" action="/?a=order">
             <?= csrf_field() ?>
             <input type="hidden" name="q" value="<?= e($query) ?>">
             <input type="hidden" name="cat" value="<?= e($cat) ?>">
             <input type="hidden" name="variant_id" value="<?= (int) $v['id'] ?>">
             <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></button>
-            <?php if ($open): ?><button class="btn" name="do" value="add">Add</button><?php endif; ?>
-            <button class="btn<?= $open ? ' quiet' : '' ?>" name="do" value="later">Save for next month</button>
+            <?php if ($open): ?><button class="btn" name="do" value="add" aria-label="Add <?= e($v['product_title'] . ', ' . $v['title']) ?>">Add</button><?php endif; ?>
+            <button class="btn<?= $open ? ' quiet' : '' ?>" name="do" value="later" aria-label="Save for next month: <?= e($v['product_title'] . ', ' . $v['title']) ?>">Save for next month</button>
           </form>
           <?php if ($v['size_amount']): ?>
             <a class="note" href="/?a=shares&amp;start=<?= (int) $v['id'] ?>">Share it</a>
           <?php endif; ?>
+        <?php
+    };
+
+    // One product in the search results or a category: its name once, a "Description" link
+    // that opens Hummingbird's description in a small pop-up, then a row for each size with
+    // its price and its own buttons. $p comes from group_by_product().
+    $productCard = function (array $p) use ($itemButtons): void {
+        ?>
+        <div class="product">
+          <div class="product-head">
+            <span class="item-name"><?= e($p['title']) ?></span>
+            <?php if ($p['description'] !== ''): // a <details>, so it opens and closes without the script ?>
+            <details class="desc">
+              <summary>Description</summary>
+              <div class="desc-box">
+                <p class="desc-title"><?= e($p['title']) ?></p>
+                <?php foreach (explode(PARAGRAPH_BREAK, $p['description']) as $paragraph): ?>
+                  <p><?= e($paragraph) ?></p>
+                <?php endforeach; ?>
+                <p class="note">From Hummingbird Wholesale.</p>
+              </div>
+            </details>
+            <?php endif; ?>
+          </div>
+          <?php foreach ($p['sizes'] as $v):
+              $deposit = variant_deposit_cents($v); ?>
+            <div class="item">
+              <div class="item-text">
+                <div><span class="size-name"><?= e($v['title']) ?></span> · <?= money(member_price_cents((int) $v['list_price_cents'])) ?><?= $deposit ? ' + ' . money($deposit) . ' deposit' : '' ?></div>
+                <div class="note"><?= e($v['sku']) ?><?= $v['available'] ? '' : ' · out of stock at Hummingbird right now' ?></div>
+              </div>
+              <?php $itemButtons($v); ?>
+            </div>
+          <?php endforeach; ?>
         </div>
         <?php
     };
 
-    $showResults = function () use ($query, $cat, $results, $itemRow): void {
+    // One row of My favorites: a single size of a product, with the product's name.
+    $itemRow = function (array $v) use ($itemButtons): void {
+        $deposit = variant_deposit_cents($v);
+        ?>
+        <div class="item">
+          <div class="item-text">
+            <div class="item-name"><?= e($v['product_title']) ?></div>
+            <div class="note"><?= e($v['sku']) ?> · <span class="size-name"><?= e($v['title']) ?></span> · <?= money(member_price_cents((int) $v['list_price_cents'])) ?><?= $deposit ? ' + ' . money($deposit) . ' deposit' : '' ?><?= $v['available'] ? '' : ' · out of stock at Hummingbird right now' ?></div>
+          </div>
+          <?php $itemButtons($v); ?>
+        </div>
+        <?php
+    };
+    $showResults = function () use ($query, $cat, $results, $productCard): void {
         if ($query === '' && $cat === '') {
             return;
         }
-        $n = count($results);
+        // Sizes of the same product are gathered onto one card, so the count is of products.
+        $products = group_by_product($results);
+        $n = count($products);
         if ($cat !== '') {
             // A whole category: every size of everything in it.
             $heading = e(CATEGORIES[$cat][0]) . ': ' . ($n ? $n . ' ' . ($n === 1 ? 'item' : 'items') : 'nothing listed right now');
         } else {
             $heading = $n ? $n . ' matching ' . ($n === 1 ? 'item' : 'items')
-                . ($n === 30 ? ' (showing the first 30; add a word to narrow it)' : '') : 'No items match that search.';
+                . (count($results) === 30 ? ' (there may be more; add a word to narrow it)' : '') : 'No items match that search.';
         }
         // The count, with a Close button at the right, under the Clear button in the box above.
         // Close puts the list away, the same as Clear. It is a plain link to this page with
         // nothing showing, so it works without the script.
         echo '<div class="results-head"><p class="note">' . $heading . '</p>'
             . '<a class="close" href="/?a=order" data-close aria-label="Close this list"><span>Close</span></a></div>';
-        foreach ($results as $v) {
-            $itemRow($v);
+        foreach ($products as $p) {
+            $productCard($p);
         }
     };
 

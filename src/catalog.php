@@ -75,15 +75,41 @@ function recompute_deposits(): void
 }
 
 /** Saves one page of products. Returns how many variants it saw. */
+// What separates the paragraphs of a stored description: one blank line.
+const PARAGRAPH_BREAK = "\n\n";
+
+/**
+ * Hummingbird's description of a product arrives as HTML. This turns it into plain text, one
+ * paragraph to a line with a blank line between, and nothing else: no tags, no styling, no
+ * scripts. Plain text is all the site ever shows, so nothing in a description can alter a page.
+ */
+function plain_description(?string $html): string
+{
+    $text = preg_replace('#<(script|style)\b.*?</\1>#is', '', (string) $html);
+    // The ends of paragraphs, list items and the like become line breaks before the tags go.
+    $text = preg_replace('#<br\s*/?>|</(p|div|li|h[1-6]|ul|ol|tr|blockquote)>#i', "\n", (string) $text);
+    $text = html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = str_replace("\u{00A0}", ' ', $text); // non-breaking spaces
+    $lines = [];
+    foreach (preg_split('/\R/u', $text) as $line) {
+        $line = trim((string) preg_replace('/\s+/u', ' ', $line));
+        if ($line !== '') {
+            $lines[] = $line;
+        }
+    }
+    return implode(PARAGRAPH_BREAK, $lines);
+}
+
 function save_products(array $products, string $syncedAt): int
 {
     $count = 0;
     foreach ($products as $p) {
         $tags = is_array($p['tags'] ?? null) ? implode(', ', $p['tags']) : (string) ($p['tags'] ?? '');
-        q('INSERT INTO products (id, title, handle, product_type, tags) VALUES (?, ?, ?, ?, ?)
+        q('INSERT INTO products (id, title, handle, product_type, tags, description) VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET title = excluded.title, handle = excluded.handle,
-               product_type = excluded.product_type, tags = excluded.tags',
-            [$p['id'], $p['title'], $p['handle'] ?? null, $p['product_type'] ?? null, $tags]);
+               product_type = excluded.product_type, tags = excluded.tags, description = excluded.description',
+            [$p['id'], $p['title'], $p['handle'] ?? null, $p['product_type'] ?? null, $tags,
+             plain_description($p['body_html'] ?? '')]);
 
         foreach ($p['variants'] ?? [] as $v) {
             [$amount, $unit] = parse_size((string) $v['title']);
