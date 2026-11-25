@@ -162,7 +162,7 @@ function page_order(array $member, bool $isPost): void
         echo '<p class="notice">Order submitted. Cool beans! A summary is on its way to your inbox.</p>';
     }
     ?>
-    <div class="columns">
+    <div class="columns even">
       <div class="card stack find">
         <h2>Find an item</h2>
         <form method="get" action="/" class="search" id="search-form">

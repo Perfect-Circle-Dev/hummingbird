@@ -98,7 +98,7 @@ strong { font-weight: 700; }
 .top { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
 /* A link to a place further down a page ("Back to top", a household on the report) stops
    clear of the header and is not hidden under it. */
-html { scroll-padding-top: 88px; }
+html { scroll-padding-top: 88px; --under-header: 53px; } /* --under-header: where the stuck header ends */
 .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--ink); }
 .brand-logo { height: 60px; width: auto; }
 .brand-text { display: flex; flex-direction: column; }
@@ -151,7 +151,7 @@ html { scroll-padding-top: 88px; }
    A signed-out page has no menu, so its header simply scrolls away.
    960px is where the name, the menu and "Sign out" stop fitting on one line. */
 @media (max-width: 960px) {
-  html { scroll-padding-top: 70px; }
+  html { scroll-padding-top: 70px; --under-header: 59px; }
   .top { position: static; padding: 8px 12px; }
   .top.has-menu { --brand-row: 66px; position: sticky; top: calc(-1 * (var(--brand-row) + 10px)); display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: var(--brand-row) auto; gap: 8px 12px; }
   .top.has-menu .brand { grid-area: 1 / 1; min-width: 0; }
@@ -181,6 +181,9 @@ html { scroll-padding-top: 88px; }
 .narrow-form { max-width: 640px; }
 .stack > * + * { margin-top: 12px; }
 .columns { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+/* "even": the two sides are the same height. On My order, Find an item is as tall as My
+   favorites and Browse by category together (and they as tall as it, when its list is long). */
+.columns.even { align-items: stretch; }
 .columns > .card, .columns > .side { flex: 1 1 320px; min-width: 0; margin-bottom: 0; }
 /* A column of cards beside another card: My favorites with Browse by category under it. */
 .columns > .side { display: flex; flex-direction: column; gap: 16px; }
@@ -268,7 +271,13 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
    the card's edge, plus the 10px gap between the box and the button. */
 .find { --search-w: 92px; }
 .find .search > .btn { width: var(--search-w); padding: 0; }
-.results-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-right: calc(var(--search-w) + 10px); }
+/* The row stays in view while its list is scrolled: it parks just under the header, with the
+   Close button in reach, and leaves with the end of the list. It is the full width of the
+   card, with a background, so items passing underneath do not show beside it; the padding
+   on the right is what keeps Close under Clear. */
+.results-head { position: sticky; top: var(--under-header); z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: calc(var(--search-w) + 10px); background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+/* The row's own line takes the place of the line over the first item. */
+.results-head + .item { border-top: 0; }
 .results-head .note { margin: 0; min-width: 0; }
 .results-head .close { flex: none; display: flex; align-items: center; min-height: 48px; padding: 0 8px; text-decoration: none; }
 

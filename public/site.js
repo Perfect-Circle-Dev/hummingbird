@@ -116,6 +116,10 @@
     clearTimeout(timer);
     input.value = '';
     search();
+    // Close may have been pressed far down a long list. With the list gone, go back up to
+    // the search box if it is now off the top of the window.
+    var card = results.closest('.card');
+    if (card && card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: 'start' });
     // Pressed from the keyboard (a click with no mouse or finger behind it): the button has
     // just gone, so put the keyboard's place in the search box, where it is not lost.
     if (event.detail === 0) input.focus();
