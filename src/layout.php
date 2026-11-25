@@ -96,8 +96,11 @@ function page_start(string $title): void
 
 function page_end(): void
 {
+    // site.js is small add-ons only; every page works without it. "defer" runs it after the
+    // page has been read, so it never holds the page up.
     ?>
 </main>
+<script src="<?= e(asset('site.js')) ?>" defer></script>
 </body>
 </html>
 <?php
