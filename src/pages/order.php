@@ -213,9 +213,14 @@ function page_order(array $member, bool $isPost): void
           <?php if ($open): ?>
           <form method="post" action="/?a=order" class="row end">
             <?= csrf_field() ?>
-            <p class="note grow"><?= $order['status'] === 'submitted'
-                ? 'Submitted ' . e(fmt_local($order['submitted_at'])) . '. If you change anything, submit again.'
-                : 'Not submitted yet. Submit to send your order in and get a summary by email.' ?></p>
+            <?php // Three cases: submitted; submitted and changed since; never submitted. ?>
+            <p class="note grow"><?php if ($order['status'] === 'submitted'): ?>
+                Submitted <?= e(fmt_local($order['submitted_at'])) ?>. If you change anything, submit again.
+              <?php elseif ($order['submitted_at']): ?>
+                Changed since you submitted it on <?= e(fmt_local($order['submitted_at'])) ?>. Your order will go in as it stands now. Submit again to get an updated summary by email.
+              <?php else: ?>
+                Not submitted yet. Submit to send your order in and get a summary by email. Anything not submitted when the order is placed stays on your list for next month.
+              <?php endif; ?></p>
             <button class="btn" name="do" value="submit">Submit my order</button>
           </form>
           <?php endif; ?>

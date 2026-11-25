@@ -107,6 +107,10 @@ function cycle_lock(int $cycleId): ?int
         // because the nightly refresh only touches a month that is open.
         refresh_open_order_prices();
 
+        // Households that never pressed "Submit my order" have not ordered: their items go to
+        // their list for next month and are left off this order.
+        roll_over_unsubmitted($cycleId);
+
         $moved = 0;
         foreach (q("SELECT id FROM shares WHERE status = 'open'")->fetchAll() as $row) {
             $share = find_share((int) $row['id']);
@@ -186,6 +190,44 @@ function cycle_close(int $cycleId): bool
 }
 
 /** Moves a month's out-of-stock items and shares along to next month. Called once, at close. */
+/**
+ * The orders in a month that have items but were never submitted, not even once.
+ * (An order that was submitted and then changed is a different thing: it counts as ordered.)
+ */
+function never_submitted_orders(int $cycleId): array
+{
+    return q("SELECT o.id, o.household_id FROM orders o
+              WHERE o.cycle_id = ? AND o.status = 'draft' AND o.submitted_at IS NULL
+                AND EXISTS (SELECT 1 FROM order_lines l WHERE l.order_id = o.id)", [$cycleId])->fetchAll();
+}
+
+/**
+ * Run when a month is locked. A household that never pressed "Submit my order" has not
+ * ordered, so its items are moved to its list for next month, where they wait to be
+ * submitted then, and they are not part of this order. A household that submitted and
+ * changed something afterwards is left alone: its order goes in as it stands.
+ * Returns how many households were rolled over.
+ */
+function roll_over_unsubmitted(int $cycleId): int
+{
+    $next = next_cycle();
+    $orders = never_submitted_orders($cycleId);
+    foreach ($orders as $o) {
+        $to = household_order((int) $next['id'], (int) $o['household_id']);
+        $lines = q('SELECT variant_id, qty, unit_price_cents, deposit_cents, added_by FROM order_lines WHERE order_id = ?',
+            [$o['id']])->fetchAll();
+        foreach ($lines as $l) {
+            // If they had already saved the same item for next month, the amounts are added.
+            q('INSERT INTO order_lines (order_id, variant_id, qty, unit_price_cents, deposit_cents, added_by)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(order_id, variant_id) DO UPDATE SET qty = MIN(99, qty + excluded.qty)',
+                [$to['id'], $l['variant_id'], $l['qty'], $l['unit_price_cents'], $l['deposit_cents'], $l['added_by']]);
+        }
+        q('DELETE FROM order_lines WHERE order_id = ?', [$o['id']]);
+    }
+    return count($orders);
+}
+
 function carry_over_out_of_stock(int $cycleId): void
 {
     $next = next_cycle();
@@ -470,6 +512,9 @@ function month_report(array $cycle): array
                 [$householdId])->fetchAll(PDO::FETCH_COLUMN),
             // Has items of its own that were never submitted (or were changed after submitting).
             'unfinished' => $summary['lines'] && $order['status'] !== 'submitted',
+            // Never submitted at all. Such an order is left off at the lock and its items move to
+            // next month, so this can only be true while the month is still open.
+            'never_submitted' => $summary['lines'] && $order['status'] !== 'submitted' && $order['submitted_at'] === null,
             'summary' => $summary,
             // Null until the organizer marks the order paid; then when, and how (check, venmo or cash).
             'paid_at' => $order['paid_at'],
@@ -519,7 +564,9 @@ function month_report_text(array $cycle, string $occasion): string
     foreach ($report['households'] as $h) {
         $text .= "\n" . str_repeat('-', 40) . "\n\n" . mb_strtoupper($h['name'])
             . ($h['people'] ? ' (' . implode(', ', $h['people']) . ')' : '')
-            . ($h['unfinished'] ? "\nUNFINISHED: this order was not submitted." : '') . "\n\n"
+            . ($h['unfinished'] ? "\n" . ($h['never_submitted']
+                ? "NOT SUBMITTED: unless it is submitted before the lock, these items move to next month."
+                : "CHANGED after it was submitted, and not submitted again. It goes in as it stands.") : '') . "\n\n"
             . order_text($h['summary'], 'Total due', 'Share items');
     }
     return $text . "\n" . str_repeat('-', 40) . "\nOn the site: " . config('base_url')

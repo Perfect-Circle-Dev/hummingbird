@@ -117,7 +117,8 @@ are written by the site's own code, so the wording is exactly what goes out, but
 database of made-up people and orders: nobody else is emailed and nothing real is changed. The
 links in them lead nowhere. They count toward Resend's 100 emails a day.
 
-`php bin/sample-emails.php --dry-run` prints them in the terminal and sends nothing.
+`php bin/sample-emails.php --dry-run` prints them in the terminal and sends nothing. Add
+`--only=10` to either form for just sample number 10.
 
 The notices the server sends about itself (weekly backup, restart needed, failed update) are not
 in the set.
