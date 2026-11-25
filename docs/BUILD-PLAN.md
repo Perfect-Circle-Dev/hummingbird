@@ -31,11 +31,15 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 3. Last-call email goes out by itself a day before the deadline, to households that have not submitted.
 4. Tuesday: organizer reviews the combined order (unfinished orders are flagged), locks it,
    and places it with Hummingbird.
-5. Organizer ticks anything out of stock and corrects any price. Saving emails the members affected.
-   Out-of-stock items are not charged and are carried over to next month when the month is closed.
-6. Final report is saved on the site for the month and emailed to the organizer.
-7. Pickup email goes to each household with the amount due and a Venmo link.
-8. Organizer marks orders paid.
+5. Hummingbird confirms the order. Organizer ticks anything out of stock and corrects any price
+   on the combined order. Out-of-stock items are not charged and are carried over to next month
+   when the month is closed.
+6. Organizer presses "Order placed", with a note of their own if they like. Every household on
+   the order is emailed its confirmed total, how to pay (with a Venmo link), the pickup note and
+   the organizer's note. A change saved after this emails the households it affects.
+7. Final report is saved on the site for the month and emailed to the organizer.
+8. If wanted, a pickup reminder goes to each household not yet marked paid.
+9. Organizer marks orders paid.
 
 ## Build checklist
 
@@ -56,7 +60,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Organizer: out-of-stock and price edits, with update emails; out-of-stock items and shares carry over to next month at close
 - [x] Organizer: report by household, on the site for every month and emailed to the organizers at lock, at close and on request
 - [x] Organizer: split sheets for shared items, with amounts as read on a scale
-- [x] Organizer: mark each order paid (check, Venmo or cash); pickup emails with the amount due and a Venmo link
+- [x] Organizer: "Order placed" step: every household is emailed its confirmed total, how to pay, the pickup note and a note from the organizer
+- [x] Organizer: mark each order paid (check, Venmo or cash); pickup reminder with the amount due and a Venmo link
 - [x] Organizer: members and households (add, paste a list, edit, switch off), settings (discount, deposits, share expiry, Venmo name)
 - [x] Emails: time to order (button, with a note), last call (automatic), pickup notice, share expiry warning (automatic)
 - [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is locked

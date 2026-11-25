@@ -238,8 +238,17 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Payment happens at pickup by check, Venmo or cash. The organizer marks each household's order
   paid with the method (`orders.paid_at`, `paid_method`) on the report page, for a locked or a
   closed month. Paid or not, nothing is recorded about amounts.
-- Pickup emails go out when the organizer presses the button on a locked month: to every
-  household that owes something and is not marked paid. A second send needs a ticked box.
+- "Order placed" is the step between locking and pickup. The organizer places the order with
+  Hummingbird, enters what they confirmed on the combined order (out of stock, changed prices),
+  then presses "Order placed" there, with an optional note of their own (`order_placed_send()`,
+  `order_placed_text()`; `cycles.placed_at`, `placed_note`). Every household with anything on
+  the order is emailed its confirmed total, how to pay with the Venmo link, the pickup note, the
+  organizer's note and its order in full. A second send needs a ticked box. Reopening the
+  month clears it. Until it is pressed, saving out-of-stock ticks or prices emails nobody unless
+  the box is ticked; afterwards the box starts ticked.
+- The pickup email is now a reminder. It goes out when the organizer presses the button on the
+  report page of a locked month: to every household that owes something and is not marked
+  paid. A second send needs a ticked box.
   The Venmo pay link is built from `settings.venmo_handle`; with no handle there is no link.
 - Settings (discount, the two deposit amounts, share expiry months, Venmo name) take effect at
   once: deposits are recomputed for the whole catalog, then open orders and saved lists are
@@ -249,7 +258,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 Items 1 to 9 are built (months, combined order with unfinished flags, the lock step,
 out of stock and price corrections with update emails, the report by household, split sheets,
-paid marking and pickup emails, members, households and settings, group emails, the
+paid marking, the "Order placed" email and pickup reminders, members, households and settings, group emails, the
 Hummingbird cart link, the logo slot, nightly backups). All twelve items are built.
 
 Still open from that list:

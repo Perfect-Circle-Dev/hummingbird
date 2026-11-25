@@ -84,6 +84,19 @@ function page_organizer(array $member, bool $isPost): void
             redirect('/?a=organizer&month=' . $cycleId . '&view=report&pickup=' . pickup_emails_send($cycle));
         }
 
+        if ($do === 'placed') {
+            // "Order placed": every household on the order is emailed its confirmed total.
+            $cycle = find_cycle($cycleId);
+            if (!$cycle || $cycle['status'] !== 'locked') {
+                redirect('/?a=organizer&problem=not_locked');
+            }
+            // Sending a second time needs the box ticked, so a double tap can't email everyone twice.
+            if ($cycle['placed_at'] && !$sure) {
+                redirect('/?a=organizer&month=' . $cycleId . '&problem=unsure');
+            }
+            redirect('/?a=organizer&month=' . $cycleId . '&placed=' . order_placed_send($cycle, (string) ($_POST['note'] ?? '')));
+        }
+
         if ($do === 'time_to_order') {
             $cycle = find_cycle($cycleId);
             if (!$cycle || $cycle['status'] !== 'open') {
@@ -255,6 +268,11 @@ function organizer_months(): void
         <p class="note">
           Due <?= e(fmt_local($cycle['due_at'])) ?><?= pickup_text($cycle) !== '' ? ' · ' . e(pickup_text($cycle)) : '' ?>
           <?= $isOpen ? '' : '<br>Locked ' . e(fmt_local($cycle['locked_at'])) ?>
+          <?php if (!$isOpen): ?>
+            <br><?= $cycle['placed_at']
+                ? 'Order placed, and members told their confirmed totals, ' . e(fmt_local($cycle['placed_at']))
+                : 'Not yet marked as placed. When Hummingbird has confirmed the order, enter any changes on the combined order and press "Order placed" there.' ?>
+          <?php endif; ?>
         </p>
         <p>
           <?= (int) $combined['household_count'] ?> <?= $combined['household_count'] === 1 ? 'household is' : 'households are' ?> on the order<?= $isOpen ? ' so far' : '' ?>,
@@ -356,7 +374,15 @@ function organizer_combined_order(array $cycle): void
                 . ($emailed ? ' and ' . ($told === 1 ? 'has' : 'have') . ' been emailed.' : '; no email was sent.');
         }
     }
+    if (isset($_GET['placed'])) {
+        $n = (int) $_GET['placed'];
+        $saved = 'The order is marked as placed. ' . $n . ' ' . ($n === 1 ? 'household is' : 'households are')
+            . ' being emailed the confirmed figures. Emails go out a few at a time over the next few minutes.';
+    }
     $problem = ORGANIZER_PROBLEMS[(string) ($_GET['problem'] ?? '')] ?? null;
+    // Before "Order placed" is pressed, saving changes emails nobody unless the box is ticked:
+    // members hear once, with final figures. Afterwards a change is news, so the box starts ticked.
+    $placed = !empty($cycle['placed_at']);
 
     page_start('Combined order');
     ?>
@@ -396,7 +422,11 @@ function organizer_combined_order(array $cycle): void
         <p>Nothing has been ordered yet.</p>
       <?php else: ?>
       <?php if ($canEdit): ?>
-        <p class="note">When Hummingbird confirms the order, tick anything that was out of stock and correct any price that changed, then save. Each household affected gets one email saying what changed, with their new total.</p>
+        <?php if ($placed): ?>
+        <p class="note">The order is placed and members have their confirmed totals. If something changes now, tick or correct it here and save: each household affected gets one email saying what changed, with their new total.</p>
+        <?php else: ?>
+        <p class="note">When Hummingbird confirms the order, tick anything that was out of stock and correct any price that changed, then save. Nobody is emailed about it yet, unless you tick the box beside Save: members get their confirmed figures when you press "Order placed" further down.</p>
+        <?php endif; ?>
         <form method="post" action="/?a=organizer" class="stack">
           <?= csrf_field() ?>
           <input type="hidden" name="do" value="stock">
@@ -485,7 +515,7 @@ function organizer_combined_order(array $cycle): void
       </div>
       <?php if ($canEdit): ?>
           <div class="row end">
-            <label class="check grow"><input type="checkbox" name="email" value="1" checked> Email the households affected</label>
+            <label class="check grow"><input type="checkbox" name="email" value="1"<?= $placed ? ' checked' : '' ?>> Email the households affected<?= $placed ? '' : ' now' ?></label>
             <button class="btn" type="submit">Save changes</button>
           </div>
         </form>
@@ -514,10 +544,50 @@ function organizer_combined_order(array $cycle): void
       <?php endif; ?>
       <?php endif; ?>
     </div>
+    <?php if ($canEdit && $combined['items']) { organizer_order_placed($cycle); } ?>
     <?php
     // Lets the "for everyone" box tick each household's box as you click it.
     // Saving works the same without it.
     page_end();
+}
+
+/**
+ * The "Order placed" card on the combined order of a locked month. Pressing its button tells
+ * every household on the order its confirmed total, how to pay, the pickup note and the
+ * organizer's note for the month.
+ */
+function organizer_order_placed(array $cycle): void
+{
+    $households = month_report($cycle)['households'];
+    $emailCount = household_email_count($households);
+    $sentLately = emails_last_24h();
+    // A sample of the email, written for the first household on the order.
+    $sample = $households ? order_placed_text($cycle, $households[0], '(your note goes here)') : '';
+    ?>
+    <div class="card stack">
+      <h2>Order placed</h2>
+      <p class="note">Press this once you have placed the order with Hummingbird and saved anything they told you above: what was out of stock, and any price that changed. Each household on the order is emailed its confirmed total, how to pay<?= venmo_handle() !== '' ? ' (with a Venmo link for @' . e(venmo_handle()) . ')' : '' ?>, the pickup note and its order in full.</p>
+      <form method="post" action="/?a=organizer" class="stack">
+        <?= csrf_field() ?>
+        <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
+        <div>
+          <label for="placed-note">A note from you, for the top of the email (optional)</label>
+          <textarea id="placed-note" name="note" rows="3" placeholder="For example: I'll be home for pickup Wednesday from 4 to 7 and Thursday after 5. Away Friday."></textarea>
+        </div>
+        <p>This sends <?= $emailCount ?> <?= $emailCount === 1 ? 'email' : 'emails' ?> to <?= count($households) ?> <?= count($households) === 1 ? 'household' : 'households' ?>.
+          <span class="note">The site has sent <?= $sentLately ?> in the last 24 hours. Past its daily limit, the rest wait and go out the next day.</span></p>
+        <details>
+          <summary>See what it says</summary>
+          <pre class="email"><?= e($sample) ?></pre>
+        </details>
+        <?php if ($cycle['placed_at']): ?>
+          <p class="note">Sent <?= e(fmt_local($cycle['placed_at'])) ?>. <?= $cycle['placed_note'] ? 'Your note was: ' . e($cycle['placed_note']) : 'No note went with it.' ?></p>
+          <label class="check"><input type="checkbox" name="sure" value="1" required> Send it to everyone again</label>
+        <?php endif; ?>
+        <div><button class="btn" name="do" value="placed">Order placed: email everyone</button></div>
+      </form>
+    </div>
+    <?php
 }
 
 /**
@@ -609,8 +679,8 @@ function organizer_report(array $cycle): void
       <form method="post" action="/?a=organizer" class="stack step">
         <?= csrf_field() ?>
         <input type="hidden" name="cycle_id" value="<?= $id ?>">
-        <h3>Pickup emails</h3>
-        <p class="note">Tells each household that still owes money that the order is ready: your pickup note, the amount due, how to pay, and their order in full. Send it once the order has arrived and any out-of-stock or price changes are saved.
+        <h3>Pickup reminder</h3>
+        <p class="note">A reminder for households not yet marked paid. Everyone already has their confirmed total from the "Order placed" email (sent from the combined order page); this one says the order is ready, with your pickup note, the amount due, how to pay, and their order in full. Send it if you want to nudge whoever has not paid.
           <?= venmo_handle() !== '' ? 'It includes a Venmo link for @' . e(venmo_handle()) . '.' : 'There is no Venmo link yet: add your Venmo name under <a href="/?a=organizer&amp;view=settings">Settings</a>.' ?></p>
         <?php if (!$toEmail): ?>
           <p class="note">Nobody owes anything, so there is nobody to email.</p>
@@ -624,7 +694,7 @@ function organizer_report(array $cycle): void
             <p class="note">Last sent <?= e(fmt_local($cycle['pickup_emailed_at'])) ?>.</p>
             <label class="check"><input type="checkbox" name="sure" value="1" required> Send them again</label>
           <?php endif; ?>
-          <div><button class="btn" name="do" value="pickup">Send pickup emails</button></div>
+          <div><button class="btn" name="do" value="pickup">Send pickup reminder</button></div>
         <?php endif; ?>
       </form>
       <?php endif; ?>

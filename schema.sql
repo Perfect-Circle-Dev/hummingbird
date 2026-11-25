@@ -94,7 +94,9 @@ CREATE TABLE IF NOT EXISTS cycles (
     closed_at TEXT,
     pickup_emailed_at TEXT,              -- when the pickup emails last went out
     order_emailed_at TEXT,               -- when the "time to order" email last went out
-    last_call_at TEXT                    -- when the last-call reminder went out
+    last_call_at TEXT,                   -- when the last-call reminder went out
+    placed_at TEXT,                      -- when "Order placed" was last pressed (members told their confirmed totals)
+    placed_note TEXT                     -- the organizer's note that went with it
 );
 
 -- One order per household per month.

@@ -222,27 +222,33 @@ take('Order update',
     'An organizer saves out-of-stock ticks or corrected prices on a locked month, with the email box ticked.',
     'Everyone in each household the change touches.', 'order update', $rosa['email']);
 
-// ---- 10. Pickup ----
+// ---- 10. Order placed ----
+order_placed_send(find_cycle($cycleId), 'This is where your own note appears, if you type one: the days and hours you will be home for pickup, for example. Leave the box empty and this paragraph is left out.');
+take('Order placed',
+    'An organizer presses "Order placed" on a locked month, after entering what Hummingbird confirmed.',
+    'Everyone in each household with anything on the order.', 'order placed', $rosa['email']);
+
+// ---- 11. Pickup reminder ----
 pickup_emails_send(find_cycle($cycleId));
-take('Pickup',
-    'An organizer presses "Send pickup emails" on a locked month.',
+take('Pickup reminder',
+    'An organizer presses "Send pickup reminder" on a locked month.',
     'Everyone in each household that owes something and is not marked paid.', 'pickup for', $rosa['email']);
 
-// ---- 11 and 12. Someone is added to a household ----
+// ---- 12 and 13. Someone is added to a household ----
 household_person_add($rosa, 'Sam', 'Alvarez', 'sam@example.com', '541-555-0142');
 take('Welcome to a household',
     'A member adds a partner or friend on the My household page.', 'The person who was added.', 'sign-in link', 'sam@example.com');
 take('Notice: someone was added to a household',
     'A member adds a partner or friend on the My household page.', 'Every organizer.', 'was added to', null, true);
 
-// ---- 13 and 14. Someone is taken off a household ----
+// ---- 14 and 15. Someone is taken off a household ----
 household_person_remove($rosa, (int) $tom['id']);
 take('Taken off a household',
     'A member removes someone on the My household page.', 'The person who was removed.', 'taken off the', $tom['email']);
 take('Notice: someone was taken off a household',
     'A member removes someone on the My household page.', 'Every organizer.', 'was taken off', $organizer['email'], true);
 
-// ---- 15 and 16. A change of email address ----
+// ---- 16 and 17. A change of email address ----
 email_change_request($priya, 'priya.new@example.com');
 take('Confirm a new email address',
     'A member asks to change their own email address on the My household page.',
@@ -251,7 +257,7 @@ take('Notice to the old address',
     'A member asks to change their own email address on the My household page.',
     'The address they have used until now, in case it was not them.', 'change of email address', $priya['email'], true);
 
-// ---- 17 and 18. The end-of-year tidy-up ----
+// ---- 18 and 19. The end-of-year tidy-up ----
 yearly_archive_run($year);
 take('Account archived',
     'By itself on December 31, for members whose household had nothing on any order that year.',
