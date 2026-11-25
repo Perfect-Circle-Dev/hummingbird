@@ -63,7 +63,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
   settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
   a `do` value; messages come back as short codes looked up in `ORGANIZER_DONE` / `ORGANIZER_PROBLEMS`.
 - `bin/`: command-line scripts (`migrate`, `add-member`, `open-cycle`, `sync-catalog`, `list-deposits`,
-  `notify-admin`, `check-reboot`, `mail-jobs`, `backup`).
+  `notify-admin`, `check-reboot`, `mail-jobs`, `backup`, `yearly-archive`, `sample-emails`).
+  `sample-emails` sends one of every member and organizer email to an organizer's address, made
+  by the site's own code from a throwaway database of made-up people. A new email needs a step
+  added there, so the set stays complete.
 - `schema.sql`: all tables. `bin/migrate.php` runs it; it must stay safe to re-run.
   To change an existing table, add a guarded `ALTER TABLE` step to `bin/migrate.php`.
 - `deploy/`: server setup, nginx template, `update.sh`, and `setup-auto.sh` / `auto-update.sh`

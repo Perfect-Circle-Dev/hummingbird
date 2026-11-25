@@ -104,6 +104,24 @@ Everyone then signs in again with a fresh link. To restore from an emailed copy,
 it up from the laptop: `scp hummingbird-2026-12-01.sqlite.gz hummingbird:/tmp/`, then use
 `/tmp/hummingbird-2026-12-01.sqlite.gz` in the `gunzip` line.
 
+## Reading the emails
+
+To see every email the site sends to members and organizers, as it arrives in a mail program:
+
+```
+sudo -u www-data php bin/sample-emails.php you@example.com
+```
+
+It sends about 18 emails, one of each kind, to that address, which must be an organizer's. They
+are written by the site's own code, so the wording is exactly what goes out, but from a throwaway
+database of made-up people and orders: nobody else is emailed and nothing real is changed. The
+links in them lead nowhere. They count toward Resend's 100 emails a day.
+
+`php bin/sample-emails.php --dry-run` prints them in the terminal and sends nothing.
+
+The notices the server sends about itself (weekly backup, restart needed, failed update) are not
+in the set.
+
 ## The logo
 
 Put a file named `logo.svg`, `logo.webp` or `logo.png` in `public/` and it appears beside the
