@@ -18,8 +18,10 @@ if ($householdId === false) {
     $householdId = db()->lastInsertId();
 }
 try {
-    q('INSERT INTO members (household_id, name, email, is_admin) VALUES (?, ?, ?, ?)',
-        [$householdId, $name, $email, $isAdmin]);
+    // "Rosa Alvarez" is kept as first name Rosa, last name Alvarez.
+    [$first, $last] = split_name($name);
+    q('INSERT INTO members (household_id, name, first_name, last_name, email, is_admin) VALUES (?, ?, ?, ?, ?, ?)',
+        [$householdId, full_name($first, $last), $first, $last, $email, $isAdmin]);
 } catch (PDOException $err) {
     exit("Could not add $email. Is that address already a member?\n");
 }

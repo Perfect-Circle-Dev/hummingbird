@@ -124,8 +124,9 @@ $person = function (string $name, string $email, string $household, int $admin =
         q('INSERT INTO households (name) VALUES (?)', [$household]);
         $id = db()->lastInsertId();
     }
-    q('INSERT INTO members (household_id, name, email, is_admin, created_at) VALUES (?, ?, ?, ?, ?)',
-        [$id, $name, $email, $admin, "$year-01-05 18:00:00"]);
+    [$first, $last] = split_name($name);
+    q('INSERT INTO members (household_id, name, first_name, last_name, email, is_admin, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [$id, $name, $first, $last, $email, $admin, "$year-01-05 18:00:00"]);
     return find_member((int) db()->lastInsertId());
 };
 $organizer = $person('Sample Organizer', 'organizer@example.com', 'Organizer', 1);
@@ -228,7 +229,7 @@ take('Pickup',
     'Everyone in each household that owes something and is not marked paid.', 'pickup for', $rosa['email']);
 
 // ---- 11 and 12. Someone is added to a household ----
-household_person_add($rosa, 'Sam Alvarez', 'sam@example.com', '541-555-0142');
+household_person_add($rosa, 'Sam', 'Alvarez', 'sam@example.com', '541-555-0142');
 take('Welcome to a household',
     'A member adds a partner or friend on the My household page.', 'The person who was added.', 'sign-in link', 'sam@example.com');
 take('Notice: someone was added to a household',

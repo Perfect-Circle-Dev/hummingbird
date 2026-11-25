@@ -84,7 +84,7 @@ function page_start(string $title): void
     <?php endforeach; ?>
   </nav>
   <form method="post" action="/?a=logout" class="who">
-    <span><?= e($member['name']) ?></span>
+    <span><?= e(first_name($member)) ?></span>
     <?= csrf_field() ?>
     <button class="link" type="submit">Sign out</button>
   </form>

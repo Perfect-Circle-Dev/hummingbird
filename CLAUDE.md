@@ -33,7 +33,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   the script Clear is a link that reloads the page with no search). On every page it marks
   the header `stuck` once the page has scrolled. `page_end()` in `src/layout.php` loads it, so
   pages do not add it themselves.
-- `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
+- `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`,
+  and the name helpers `first_name()`, `full_name()`, `split_name()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.
 - `src/mailings.php`: the email queue (`queue_email()`, `queue_send()`), the group emails
@@ -83,6 +84,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Always escape output with `e()`. Always use `q()` with `?` placeholders.
 - Every POST from a signed-in member is CSRF-checked in `index.php`; forms include `csrf_field()`.
   After handling a POST, redirect (no page is rendered from a POST).
+- A member has a first name and a last name (`members.first_name`, `last_name`; the last may be
+  empty). `members.name` holds the two joined and is what lists show; every place that saves a
+  member keeps it in step. Speak to a member by first name, with `first_name($member)`: the
+  name beside "Sign out" and the hello on the home page. Use the full name wherever people are
+  listed or identified (share claims, My household, organizer pages, the report, notices).
 - Orders belong to a household, not a person. Check `household_id` / `order_id` on every
   change so one household can never edit another's order.
 - Any change to an order sets it back to `draft`; the member must submit again.
@@ -197,7 +203,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - The "Fill my Hummingbird cart" link on the combined order (`hummingbird_cart_link()`) is a
   Shopify cart permalink built from variant ids and in-stock quantities.
 - Sign-in is by emailed link only. No passwords. Organizers add members on the Members page,
-  one at a time or by pasting a list (name, email, household, phone). Adding sends no email.
+  one at a time or by pasting a list (first name, last name, email, household, phone). Adding
+  sends no email.
   An archived member (`members.active = 0`) can't sign in and gets no emails, and is signed out
   at once; past orders keep their name. Each member on the Members page has Edit, Send login and
   Archive (or Restore) buttons. Only a member who has never used the site can be deleted. An

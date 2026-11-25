@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS households (
 CREATE TABLE IF NOT EXISTS members (
     id INTEGER PRIMARY KEY,
     household_id INTEGER NOT NULL REFERENCES households(id),
-    name TEXT NOT NULL,
+    name TEXT NOT NULL,                       -- the full name, for lists: first and last name joined
+    first_name TEXT NOT NULL DEFAULT '',      -- what they are called in greetings ("Hi Rosa,")
+    last_name TEXT NOT NULL DEFAULT '',       -- may be empty
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
     phone TEXT,
     is_admin INTEGER NOT NULL DEFAULT 0,

@@ -48,6 +48,26 @@ function set_setting(string $key, string $value): void
         [$key, $value]);
 }
 
+/** "Rosa" and "Alvarez" -> "Rosa Alvarez". The joined name is kept in members.name, for lists. */
+function full_name(string $first, string $last): string
+{
+    return trim(trim($first) . ' ' . trim($last));
+}
+
+/** A name given as one piece -> [first, last]: the first word, then everything after it. */
+function split_name(string $full): array
+{
+    $parts = preg_split('/\s+/', trim($full), 2);
+    return [$parts[0] ?? '', $parts[1] ?? ''];
+}
+
+/** What to call a member when speaking to them ("Hi Rosa,"): their first name. */
+function first_name(array $member): string
+{
+    $first = trim((string) ($member['first_name'] ?? ''));
+    return $first !== '' ? $first : split_name((string) ($member['name'] ?? ''))[0];
+}
+
 /** Escape text for HTML output. */
 function e(?string $text): string
 {

@@ -87,8 +87,12 @@ function organizer_member_fields(?array $m, array $households): void
     ?>
     <div class="row">
       <div class="grow">
-        <label for="m-name">Name</label>
-        <input id="m-name" name="name" type="text" value="<?= e($m['name'] ?? '') ?>" autocomplete="off" required>
+        <label for="m-first">First name</label>
+        <input id="m-first" name="first_name" type="text" value="<?= e($m ? first_name($m) : '') ?>" autocomplete="off" required>
+      </div>
+      <div class="grow">
+        <label for="m-last">Last name</label>
+        <input id="m-last" name="last_name" type="text" value="<?= e($m['last_name'] ?? '') ?>" autocomplete="off">
       </div>
       <div class="grow">
         <label for="m-email">Email address (this is how they sign in)</label>
@@ -201,9 +205,9 @@ function organizer_members(array $member): void
           <summary>Add several at once</summary>
           <form method="post" action="/?a=organizer" class="stack">
             <?= csrf_field() ?>
-            <label for="list">One person per line: name, email, household, phone</label>
-            <textarea id="list" name="list" rows="8" placeholder="Ana Alder, ana@example.com, Alder House, 541-555-0100&#10;Ben Alder, ben@example.com, Alder House&#10;Cora Cedar, cora@example.com"></textarea>
-            <p class="note">Put commas between the parts, or paste straight from a spreadsheet. Household and phone can be left off; someone with no household gets one named after them. People in the same household need the same household name. Anyone whose email is already on the list is skipped, so pasting the same list twice does no harm. A heading row is ignored.</p>
+            <label for="list">One person per line: first name, last name, email, household, phone</label>
+            <textarea id="list" name="list" rows="8" placeholder="Ana, Alder, ana@example.com, Alder House, 541-555-0100&#10;Ben, Alder, ben@example.com, Alder House&#10;Cora, Cedar, cora@example.com"></textarea>
+            <p class="note">Put commas between the parts, or paste straight from a spreadsheet. Household and phone can be left off; someone with no household gets one named after their last name. People in the same household need the same household name. Anyone whose email is already on the list is skipped, so pasting the same list twice does no harm. A heading row is ignored.</p>
             <div><button class="btn" name="do" value="members_import">Add everyone in the list</button></div>
           </form>
         </details>

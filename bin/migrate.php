@@ -28,6 +28,21 @@ add_column_if_missing('members', 'pending_email_token', 'TEXT');
 add_column_if_missing('members', 'pending_email_expires_at', 'TEXT');
 add_column_if_missing('login_tokens', 'cycle_id', 'INTEGER');
 add_column_if_missing('shares', 'expiry_warned_at', 'TEXT');
+add_column_if_missing('members', 'first_name', "TEXT NOT NULL DEFAULT ''");
+add_column_if_missing('members', 'last_name', "TEXT NOT NULL DEFAULT ''");
+
+// Members used to have one name. Anyone still without a first name has theirs split: the
+// first word becomes the first name and the rest the last name. An organizer can put right
+// any that split in the wrong place ("Mary Ann Smith") on the Members page.
+$split = 0;
+foreach (q("SELECT id, name FROM members WHERE first_name = ''")->fetchAll() as $m) {
+    [$first, $last] = split_name($m['name']);
+    q('UPDATE members SET first_name = ?, last_name = ? WHERE id = ?', [$first, $last, $m['id']]);
+    $split++;
+}
+if ($split) {
+    echo "Split $split member name(s) into first and last.\n";
+}
 
 // One-time changes to saved settings. Each leaves a mark so it happens only once,
 // and later changes made on the Settings page are never overwritten.

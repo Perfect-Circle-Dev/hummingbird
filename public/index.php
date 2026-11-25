@@ -144,12 +144,12 @@ page_start('Home');
   <?php if ($cycle && $cycle['status'] === 'open'): ?>
     <h1>Place your <?= e(cycle_month_name($cycle)) ?> order</h1>
   <?php else: ?>
-    <h1>Hello, <?= e($member['name']) ?></h1>
+    <h1>Hello, <?= e(first_name($member)) ?></h1>
   <?php endif; ?>
   <?php if (!$cycle): ?>
     <p>No order is open right now. You'll get an email when the next one opens. You can save items for it any time from My order.</p>
   <?php elseif ($cycle['status'] === 'open'): ?>
-    <p>Hello, <?= e($member['name']) ?>. Orders are due <?= e(fmt_local($cycle['due_at'])) ?>.</p>
+    <p>Hello, <?= e(first_name($member)) ?>. Orders are due <?= e(fmt_local($cycle['due_at'])) ?>.</p>
   <?php else: ?>
     <p>The <strong><?= e($cycle['label']) ?></strong> order is locked and being placed. Anything you add now is saved for next month.</p>
   <?php endif; ?>

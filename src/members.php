@@ -43,13 +43,16 @@ function households_tidy(): void
 
 /**
  * Adds a member (when $memberId is null) or changes one.
- * $data holds: name, email, phone, household_id or new_household, is_admin, active.
+ * $data holds: first_name, last_name, email, phone, household_id or new_household, is_admin,
+ * active. The last name may be left empty.
  * $actingId is the organizer doing this, who can't switch themselves off by mistake.
  * Returns a short code for what is wrong, or null if it was saved.
  */
 function member_save(?int $memberId, array $data, int $actingId): ?string
 {
-    $name = trim((string) ($data['name'] ?? ''));
+    $first = trim((string) ($data['first_name'] ?? ''));
+    $last = trim((string) ($data['last_name'] ?? ''));
+    $name = full_name($first, $last);
     $email = trim((string) ($data['email'] ?? ''));
     $phone = trim((string) ($data['phone'] ?? ''));
     $newHousehold = trim((string) ($data['new_household'] ?? ''));
@@ -60,7 +63,7 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
     // A new member gets group emails until they unsubscribe.
     $optOut = !empty($data['has_group_box']) && empty($data['group_emails']) ? 1 : 0;
 
-    if ($name === '') {
+    if ($first === '') {
         return 'member_name';
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -80,12 +83,12 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
     }
 
     if ($memberId === null) {
-        q('INSERT INTO members (household_id, name, email, phone, is_admin, active) VALUES (?, ?, ?, ?, ?, ?)',
-            [$householdId, $name, $email, $phone ?: null, $isAdmin, $active]);
+        q('INSERT INTO members (household_id, name, first_name, last_name, email, phone, is_admin, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [$householdId, $name, $first, $last, $email, $phone ?: null, $isAdmin, $active]);
     } else {
         $emailBefore = (string) q('SELECT email FROM members WHERE id = ?', [$memberId])->fetchColumn();
-        q('UPDATE members SET household_id = ?, name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
-           WHERE id = ?', [$householdId, $name, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
+        q('UPDATE members SET household_id = ?, name = ?, first_name = ?, last_name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
+           WHERE id = ?', [$householdId, $name, $first, $last, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
         // If the organizer has set a new email address, that is the last word: a change
         // the member had started themselves, and not yet confirmed, is dropped.
         if (strcasecmp($emailBefore, $email) !== 0) {
@@ -145,10 +148,10 @@ function household_rename(int $householdId, string $name): ?string
 
 /**
  * Adds many members from pasted text, one person per line, with commas or tabs between
- * the parts: name, email, household, phone. Household and phone can be left off; a person
- * with no household gets one named after them. The email is spotted wherever it sits in
- * the line, so "email, first name, last name" from a Mailchimp export also works (the
- * first name becomes the name and the last name the household).
+ * the parts: first name, last name, email, household, phone. Household and phone can be left
+ * off; a person with no household gets one named after their last name. The email is
+ * spotted wherever it sits in the line, and so is a phone number (a part that is all digits
+ * and punctuation), so "email, first name, last name" from a Mailchimp export also works.
  * Returns how many were added, how many were already members, and the numbers of the
  * lines that could not be read.
  */
@@ -166,10 +169,13 @@ function members_import(string $text): array
         $fields = array_map(fn($field): string => trim((string) $field), $fields);
 
         $email = null;
+        $phone = null;
         $others = [];
         foreach ($fields as $field) {
             if ($email === null && filter_var($field, FILTER_VALIDATE_EMAIL)) {
                 $email = $field;
+            } elseif ($phone === null && preg_match('/^[\d\s().+-]{7,}$/', $field)) {
+                $phone = $field; // "541-555-0142", "(541) 555 0142"
             } elseif ($field !== '') {
                 $others[] = $field;
             }
@@ -190,9 +196,11 @@ function members_import(string $text): array
             $already++;
             continue;
         }
-        [$name, $household, $phone] = [$others[0], $others[1] ?? $others[0], $others[2] ?? null];
-        q('INSERT INTO members (household_id, name, email, phone) VALUES (?, ?, ?, ?)',
-            [household_named($household), $name, $email, $phone]);
+        // What is left, in order: first name, last name, household.
+        [$first, $last] = [$others[0], $others[1] ?? ''];
+        $household = $others[2] ?? ($last !== '' ? $last : $first);
+        q('INSERT INTO members (household_id, name, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?, ?)',
+            [household_named($household), full_name($first, $last), $first, $last, $email, $phone]);
         $added++;
     }
     return ['added' => $added, 'already' => $already, 'bad' => $bad];
@@ -371,18 +379,20 @@ function household_members(int $householdId): array
  * Email addresses are not changed here: each person changes only their own, with a
  * confirmation (see email_change_request). Returns a problem code, or null if saved.
  */
-function household_person_save(array $acting, int $memberId, string $name, string $phone): ?string
+function household_person_save(array $acting, int $memberId, string $first, string $last, string $phone): ?string
 {
     $person = find_member($memberId);
     // The household check is what stops one household editing another's people.
     if (!$person || (int) $person['household_id'] !== (int) $acting['household_id'] || !$person['active']) {
         return 'not_yours';
     }
-    $name = trim($name);
-    if ($name === '') {
+    $first = trim($first);
+    $last = trim($last);
+    if ($first === '') {
         return 'name';
     }
-    q('UPDATE members SET name = ?, phone = ? WHERE id = ?', [$name, trim($phone) ?: null, $memberId]);
+    q('UPDATE members SET name = ?, first_name = ?, last_name = ?, phone = ? WHERE id = ?',
+        [full_name($first, $last), $first, $last, trim($phone) ?: null, $memberId]);
     return null;
 }
 
@@ -391,12 +401,14 @@ function household_person_save(array $acting, int $memberId, string $name, strin
  * household's order and sign in with their own email. They are sent a sign-in link, and
  * the organizers are told. Returns a problem code, or null if added.
  */
-function household_person_add(array $acting, string $name, string $email, string $phone): ?string
+function household_person_add(array $acting, string $first, string $last, string $email, string $phone): ?string
 {
-    $name = trim($name);
+    $first = trim($first);
+    $last = trim($last);
+    $name = full_name($first, $last);
     $email = trim($email);
     $householdId = (int) $acting['household_id'];
-    if ($name === '') {
+    if ($first === '') {
         return 'name';
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -408,8 +420,8 @@ function household_person_add(array $acting, string $name, string $email, string
     if ((int) q('SELECT COUNT(*) FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchColumn() >= HOUSEHOLD_MAX_MEMBERS) {
         return 'full';
     }
-    q('INSERT INTO members (household_id, name, email, phone) VALUES (?, ?, ?, ?)',
-        [$householdId, $name, $email, trim($phone) ?: null]);
+    q('INSERT INTO members (household_id, name, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?, ?)',
+        [$householdId, $name, $first, $last, $email, trim($phone) ?: null]);
 
     $household = (string) q('SELECT name FROM households WHERE id = ?', [$householdId])->fetchColumn();
     send_login_link($email, true, "{$acting['name']} has added you to the $household household at " . config('site_name')
