@@ -104,8 +104,10 @@ function pickup_emails_send(array $cycle): int
         $due = $h['summary']['due_cents'];
         $link = venmo_link($due, config('site_name') . ' ' . $cycle['label']);
         $month = cycle_month_name($cycle);
-        $body = "Your $month Hummingbird order is ready to pick up.\n\n"
-            . (pickup_when($cycle) !== '' ? "Pickup starts " . pickup_when($cycle) . "\n\n" : '')
+        // {first_name} is filled in for each person in the household by email_household().
+        // No pickup day here: this reminder goes out after pickup has begun.
+        $body = "Hi {first_name},\n\n"
+            . "Just a reminder that your $month Hummingbird order is ready to pick up.\n\n"
             . "Your total for $month: " . money($due) . "\n\n"
             . "You can pay at pickup by check, Venmo or cash.\n"
             . ($link ? "\nMy Venmo link: $link\n" : '')

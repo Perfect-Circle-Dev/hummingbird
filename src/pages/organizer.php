@@ -683,7 +683,7 @@ function organizer_report(array $cycle): void
         <?= csrf_field() ?>
         <input type="hidden" name="cycle_id" value="<?= $id ?>">
         <h3>Pickup reminder</h3>
-        <p class="note">A reminder for households not yet marked paid. Everyone already has their confirmed total from the "Order placed" email (sent from the combined order page); this one says the order is ready, with your pickup note, the amount due, how to pay, and their order in full. Send it if you want to nudge whoever has not paid.
+        <p class="note">A reminder for households not yet marked paid. Everyone already has their confirmed total from the "Order placed" email (sent from the combined order page); this one says the order is ready, with the amount due, how to pay, and their order in full. It leaves out the pickup day, since it goes out after pickup has begun. Send it if you want to nudge whoever has not paid.
           <?= venmo_handle() !== '' ? 'It includes a Venmo link for @' . e(venmo_handle()) . '.' : 'There is no Venmo link yet: add your Venmo name under <a href="/?a=organizer&amp;view=settings">Settings</a>.' ?></p>
         <?php if (!$toEmail): ?>
           <p class="note">Nobody owes anything, so there is nobody to email.</p>
