@@ -105,6 +105,22 @@
 
   // Pressing Clear: empty the box and the results on the spot, and put the cursor in the
   // box ready for the next search. (Without JavaScript it is a link that reloads the page.)
+  // The Close button over a list of results puts the list away, as Clear does. The results
+  // are redrawn each time, so the press is caught here, on the box that holds them. The
+  // cursor is left where it is: on a phone, moving it to the search box would bring up the
+  // keyboard, which nobody asked for by pressing Close.
+  results.addEventListener('click', function (event) {
+    var close = event.target.closest ? event.target.closest('a[data-close]') : null;
+    if (!close) return;
+    event.preventDefault();
+    clearTimeout(timer);
+    input.value = '';
+    search();
+    // Pressed from the keyboard (a click with no mouse or finger behind it): the button has
+    // just gone, so put the keyboard's place in the search box, where it is not lost.
+    if (event.detail === 0) input.focus();
+  });
+
   if (clear) {
     clear.addEventListener('click', function (event) {
       event.preventDefault();

@@ -260,8 +260,17 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .search .box.has-clear input { padding-right: 78px; }
 .search .clear { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 0 8px; text-decoration: none; }
 .search .clear[hidden] { display: none; }
-.search .clear span { padding: 3px 10px; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.4; }
-.search .clear:hover span { border-color: var(--primary); }
+.search .clear span, .results-head .close span { padding: 3px 10px; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.4; }
+.search .clear:hover span, .results-head .close:hover span { border-color: var(--primary); }
+/* Over a list of results: how many there are, and a Close button that puts the list away.
+   Close sits straight under Clear. For that, this row has to end where the search box ends,
+   so the Search button is given a set width (--search-w) and the row stops that far short of
+   the card's edge, plus the 10px gap between the box and the button. */
+.find { --search-w: 92px; }
+.find .search > .btn { width: var(--search-w); padding: 0; }
+.results-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-right: calc(var(--search-w) + 10px); }
+.results-head .note { margin: 0; min-width: 0; }
+.results-head .close { flex: none; display: flex; align-items: center; min-height: 48px; padding: 0 8px; text-decoration: none; }
 
 /* ---- Messages ---- */
 /* A plain .notice says something went well: solid colour, with a check mark at the left. */

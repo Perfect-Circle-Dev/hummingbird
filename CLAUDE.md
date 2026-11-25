@@ -31,7 +31,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
   "Add" and "Save for next month" into "Added" and "Saved" for a moment after they work (the
   `done` class), and makes the Clear button inside the search box empty it on the spot (without
   the script Clear is a link that reloads the page with no search). Clear shows only when
-  there is text in the box or a category on show. On every page it marks
+  there is text in the box or a category on show. The Close button over a list of results (a
+  search or a category) does the same as Clear; it is drawn as part of the results, straight
+  under Clear, which is why the Search button has a set width (`--search-w` in `site.css`). On every page it marks
   the header `stuck` once the page has scrolled. `page_end()` in `src/layout.php` loads it, so
   pages do not add it themselves.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`,
