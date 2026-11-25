@@ -30,7 +30,8 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
    Each submit sends a confirmation email. Changes after submitting need a resubmit.
 3. Last-call email goes out by itself a day before the deadline, to households that have not submitted.
 4. Tuesday: organizer reviews the combined order (unfinished orders are flagged), locks it,
-   and places it with Hummingbird.
+   and places it with Hummingbird. Items a household never submitted are left off and moved to
+   its next-month list; an order changed after it was submitted goes in as it stands.
 5. Hummingbird confirms the order. Organizer ticks anything out of stock and corrects any price
    on the combined order. Out-of-stock items are not charged and are carried over to next month
    when the month is closed.
@@ -68,7 +69,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Email queue with a daily limit, so a big mailing can't go over Resend's cap
 - [x] Deposits on a case of several jugs: one deposit for each container in the case
 - [x] Unsubscribe link and footer on group emails
-- [x] Fill-the-Hummingbird-cart link on the combined order (still needs a test from the organizer's login)
+- [x] Fill-the-Hummingbird-cart link on the combined order (tried by Brent on 2026-11-25; it works)
 - [x] Group name on every page, and a slot for the dancing bean logo (waiting for the file)
 - [x] The Talavera theme (`docs/THEME.md`): light and dark, larger text and buttons, fonts kept on the site
 - [x] Nightly jobs: catalog sync, share expiry, database backup (30 kept, one emailed weekly)
@@ -79,5 +80,4 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 
 - Venmo name for the pickup email: Brent types it in under Organizer, Settings. The pay link needs one try with a real account
 - Dancing bean logo file: add it to `public/` as `logo.webp`, `logo.png` or `logo.svg`
-- A try of the "Fill my Hummingbird cart" link from Brent's wholesale login
 - Member list (names, emails, households) exported from Mailchimp: paste it in under Organizer, Members

@@ -109,9 +109,11 @@ function month_login_link(int $memberId, int $cycleId): string
 /** How many items a household has on its order for a month, and whether it has submitted. */
 function household_order_state(int $cycleId, int $householdId): array
 {
-    $row = q('SELECT o.status, (SELECT COUNT(*) FROM order_lines l WHERE l.order_id = o.id) AS line_count
+    $row = q('SELECT o.submitted_at, (SELECT COUNT(*) FROM order_lines l WHERE l.order_id = o.id) AS line_count
               FROM orders o WHERE o.cycle_id = ? AND o.household_id = ?', [$cycleId, $householdId])->fetch();
-    return ['items' => (int) ($row['line_count'] ?? 0), 'submitted' => ($row['status'] ?? '') === 'submitted'];
+    // "Submitted" means submitted at least once. An order changed since then still goes in at
+    // the lock, as it stands, so that household needs no reminder.
+    return ['items' => (int) ($row['line_count'] ?? 0), 'submitted' => !empty($row['submitted_at'])];
 }
 
 // ---- "Time to order" ----
@@ -209,7 +211,9 @@ function last_call_queue(array $cycle): int
             $text = "Hi " . first_name($m) . ",\n\n"
                 . "The $month Hummingbird order closes $closes.\n\n"
                 . "You have {$state['items']} " . ($one ? 'item' : 'items') . " in your order, but you haven't submitted "
-                . ($one ? 'it' : 'them') . " yet.\n\n"
+                . ($one ? 'it' : 'them') . " yet. If you do nothing the " . ($one ? 'item' : 'items')
+                . " will stay in your order and you can submit " . ($one ? 'it' : 'them')
+                . " next month if you still want " . ($one ? 'it' : 'them') . ".\n\n"
                 . "You can see the " . ($one ? 'item' : 'items') . " using the link below. If you decide you want "
                 . ($one ? 'it' : 'them') . " this month, just press \"Submit my order\".\n\n"
                 . "Your sign-in link:\n\n$link\n";

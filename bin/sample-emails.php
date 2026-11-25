@@ -2,8 +2,9 @@
 // Sends one sample of every email the site sends to members and organizers, so their
 // wording and layout can be read in a real mail program.
 //
-//   php bin/sample-emails.php you@example.com     send the whole set to that address
-//   php bin/sample-emails.php --dry-run           print them here and send nothing
+//   php bin/sample-emails.php you@example.com              send the whole set to that address
+//   php bin/sample-emails.php you@example.com --only=10    send just sample number 10
+//   php bin/sample-emails.php --dry-run                    print them here and send nothing
 //
 // How it stays safe:
 //   - The emails are made by the site's own code, so the wording is exactly what goes out,
@@ -31,13 +32,18 @@ require dirname(__DIR__) . '/src/mailings.php';
 
 $dryRun = in_array('--dry-run', $argv, true);
 $to = '';
+$only = 0; // with --only=10, just sample number 10 is shown or sent
 foreach (array_slice($argv, 1) as $arg) {
-    if ($arg !== '--dry-run') {
+    if (preg_match('/^--only=(\d+)$/', $arg, $m)) {
+        $only = (int) $m[1];
+    } elseif ($arg !== '--dry-run') {
         $to = trim($arg);
     }
 }
 if (!$dryRun && !filter_var($to, FILTER_VALIDATE_EMAIL)) {
-    exit("Usage: php bin/sample-emails.php you@example.com\n       php bin/sample-emails.php --dry-run\n");
+    exit("Usage: php bin/sample-emails.php you@example.com\n"
+        . "       php bin/sample-emails.php you@example.com --only=10    (just sample number 10)\n"
+        . "       php bin/sample-emails.php --dry-run\n");
 }
 
 // ---- The real database: looked at twice, and never used to build the samples ----
@@ -280,6 +286,15 @@ foreach ($samples as $n => &$s) {
         . "and the links in it will not work.\n$rule\n\n" . $s['body'];
 }
 unset($s);
+
+// --only=N keeps just that one, with its number unchanged ("Sample 10 of 19").
+if ($only) {
+    $samples = array_values(array_filter($samples, fn(array $s): bool => $s['number'] === $only));
+    if (!$samples) {
+        exit("There is no sample number $only. They run from 1 to $total.\n");
+    }
+    $total = count($samples);
+}
 
 if ($dryRun) {
     foreach ($samples as $s) {

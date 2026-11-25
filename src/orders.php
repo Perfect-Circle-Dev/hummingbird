@@ -289,7 +289,7 @@ function order_submit(array $order, array $cycle): void
     $body = "Hey {first_name},\n\n"
         . "Thanks for the order! I will send you an email with your final total once I've placed our order "
         . "with Hummingbird and they've confirmed that everything is in stock.\n\n"
-        . order_text(order_summary($order), 'Estimated total', 'Share orders') . "\n"
+        . order_text(order_summary($order), 'Estimated total', 'Share items') . "\n"
         . "If you need to, you can change your order until " . fmt_time_short($cycle['due_at']) . " on "
         . fmt_local($cycle['due_at'], 'l') . " with this link:\n\n"
         . config('base_url') . "/?a=order\n\n"

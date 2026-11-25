@@ -188,6 +188,12 @@ a little, and wants to be able to follow and lightly edit the code. So:
   be undone. Lock, reopen and close each need a ticked box.
 - Deadline is soft: members see Monday 7 pm, but nothing closes until the organizer locks
   the month, around 11 am Tuesday. Late orders on Tuesday morning are welcome.
+- Only a submitted order is ordered. At lock, a household that never pressed "Submit my order"
+  has its items moved to its next-month list and left off the order (`roll_over_unsubmitted()`);
+  nobody is emailed about it, since the last-call email and My order both say so beforehand. A
+  household that submitted and then changed something without submitting again is different:
+  its order goes in as it stands. So after a lock, "unfinished" means only that second kind.
+  `household_order_state()` counts an order as submitted if it was submitted at least once.
 - Several logins can share one household order.
 - Email: anything sent to many people at once goes into `email_queue` (`queue_email()`, or
   `email_household(..., true)`), and `bin/mail-jobs.php` sends a few a minute, stopping at
@@ -272,10 +278,12 @@ Hummingbird cart link, the logo slot, nightly backups). All twelve items are bui
 
 Still open from that list:
 
-- The cart link has not been tried with Brent's wholesale login. The combined order page
-  carries a warning saying so; take the warning out once he confirms it works.
-- The dancing bean logo file has not been supplied. The header shows it as soon as a
-  `logo.*` file is added to `public/` (WebP preferred, per Brent's usual practice).
+- The dancing bean logo file has not been supplied, and Brent is happy with the site without
+  it (2026-11-25). The slot stays: the header shows a logo as soon as a `logo.*` file is added
+  to `public/` (WebP preferred, per Brent's usual practice).
+
+Brent tried the "Fill my Hummingbird cart" link from his wholesale login on 2026-11-25 and it
+works; the warning that used to sit beside it is gone.
 
 Members said no to a "reorder last month" button; favorites cover it.
 

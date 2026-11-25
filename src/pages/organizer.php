@@ -10,6 +10,7 @@ const ORGANIZER_DONE = [
     'order_emailed' => 'The "time to order" email is on its way. Emails go out a few at a time over the next few minutes.',
     'saved'  => 'Saved.',
     'locked' => 'The month is locked. Prices are fixed and every fully claimed share is on the order. The report has been emailed to the organizers.',
+    'locked_rolled' => 'The month is locked. Prices are fixed and every fully claimed share is on the order. Items that were never submitted have been moved to those households\' lists for next month and are not on this order. The report has been emailed to the organizers.',
     'reopened' => 'The month is open again. Members can change their orders, and prices follow the catalog until you lock it.',
     'closed' => 'The month is closed. The final report has been emailed to the organizers.',
     'member_added'   => 'Member added. Nothing has been emailed to them.',
@@ -135,8 +136,10 @@ function page_organizer(array $member, bool $isPost): void
             $done = 'saved';
         } elseif ($do === 'lock') {
             // Locking needs a ticked box first, so it can't happen by a stray tap.
+            // Counted first, because locking moves those households' items to next month.
+            $rolled = $sure ? count(never_submitted_orders($cycleId)) : 0;
             $problem = !$sure ? 'unsure' : (cycle_lock($cycleId) === null ? 'not_open' : null);
-            $done = 'locked';
+            $done = $rolled ? 'locked_rolled' : 'locked';
             if (!$problem) {
                 month_report_email(find_cycle($cycleId), 'Sent when the month was locked. This is what was ordered.');
             }
@@ -294,6 +297,10 @@ function organizer_months(): void
           <input type="hidden" name="cycle_id" value="<?= (int) $cycle['id'] ?>">
           <h3>Lock the month</h3>
           <p class="note">Do this when you are ready to place the order. Prices are fixed, every fully claimed share goes onto this order, and members can no longer change their orders. Anything they add after that is saved for next month. You can reopen the month if you lock it too early.</p>
+          <?php $never = count(never_submitted_orders((int) $cycle['id'])); ?>
+          <?php if ($never): ?>
+            <p class="notice warn"><?= $never ?> <?= $never === 1 ? 'household has items it has' : 'households have items they have' ?> never submitted. When you lock, those items move to <?= $never === 1 ? 'its list' : 'their lists' ?> for next month and are left off this order. The combined order page says who, with their phone and email.</p>
+          <?php endif; ?>
           <label class="check"><input type="checkbox" name="sure" value="1" required> I'm ready to lock <?= e($cycle['label']) ?></label>
           <button class="btn" name="do" value="lock">Lock the month</button>
         </form>
@@ -395,7 +402,11 @@ function organizer_combined_order(array $cycle): void
     <?php if ($combined['unfinished']): ?>
       <div class="card stack">
         <h2>Unfinished orders</h2>
-        <p class="note">These households have items on their order but have not submitted it. Their items are in the list below, marked unfinished.</p>
+        <?php if ($cycle['status'] === 'open'): ?>
+        <p class="note">These households have items in the list below, marked unfinished. <strong>Never submitted:</strong> unless they press "Submit my order" before you lock, their items move to their list for next month and are not ordered. <strong>Changed after submitting:</strong> their order goes in as it stands.</p>
+        <?php else: ?>
+        <p class="note">These households changed their order after submitting it and did not submit again. Their orders went in as they stood, and their items are in the list below, marked unfinished.</p>
+        <?php endif; ?>
         <ul class="plain">
           <?php foreach ($combined['unfinished'] as $o): ?>
             <li>
@@ -538,7 +549,6 @@ function organizer_combined_order(array $cycle): void
         <?php if ($cart['skipped']): ?>
           <p class="notice warn">Not in the link, because Hummingbird no longer lists <?= count($cart['skipped']) === 1 ? 'it' : 'them' ?>: <?= e(implode('; ', $cart['skipped'])) ?>. Ask Hummingbird about <?= count($cart['skipped']) === 1 ? 'it' : 'these' ?>.</p>
         <?php endif; ?>
-        <p class="notice warn">This link has not been tried with a real wholesale login yet. The first time you use it, check every line of the cart against the list above.</p>
         <div><a class="btn" href="<?= e($cart['url']) ?>" target="_blank" rel="noopener">Fill my Hummingbird cart</a></div>
       </div>
       <?php endif; ?>
@@ -714,7 +724,7 @@ function organizer_report(array $cycle): void
         $summary = $h['summary']; ?>
       <div class="card stack" id="household-<?= (int) $h['id'] ?>">
         <h2><?= e($h['name']) ?><?= $h['unfinished'] ? ' <span class="flag">unfinished</span>' : '' ?></h2>
-        <p class="note"><?= e(implode(', ', $h['people'])) ?><?= $h['unfinished'] ? ' · this order was not submitted' : '' ?></p>
+        <p class="note"><?= e(implode(', ', $h['people'])) ?><?= $h['unfinished'] ? ($h['never_submitted'] ? ' · never submitted: these items move to next month unless it is submitted before the lock' : ' · changed after it was submitted, and not submitted again; it goes in as it stands') : '' ?></p>
         <div class="scroll">
           <table>
             <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th><th>Deposit</th><th>Total</th></tr></thead>
