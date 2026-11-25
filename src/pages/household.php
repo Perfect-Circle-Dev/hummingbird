@@ -15,7 +15,7 @@ const HOUSEHOLD_DONE = [
     'removed'   => 'Removed. They can no longer sign in, and they and Brent have been told.',
 ];
 const HOUSEHOLD_PROBLEMS = [
-    'name'      => 'A name is needed.',
+    'name'      => 'A first name is needed.',
     'email'     => 'That email address doesn\'t look right.',
     'same'      => 'That is already your email address.',
     'taken'     => 'That email address already belongs to a member. If that seems wrong, contact Brent.',
@@ -35,10 +35,10 @@ function page_household(array $member, bool $isPost): void
         $done = '';
         if ($do === 'person') {
             $problem = household_person_save($member, (int) ($_POST['member_id'] ?? 0),
-                (string) ($_POST['name'] ?? ''), (string) ($_POST['phone'] ?? ''));
+                (string) ($_POST['first_name'] ?? ''), (string) ($_POST['last_name'] ?? ''), (string) ($_POST['phone'] ?? ''));
             $done = 'saved';
         } elseif ($do === 'add') {
-            $problem = household_person_add($member, (string) ($_POST['name'] ?? ''),
+            $problem = household_person_add($member, (string) ($_POST['first_name'] ?? ''), (string) ($_POST['last_name'] ?? ''),
                 (string) ($_POST['email'] ?? ''), (string) ($_POST['phone'] ?? ''));
             $done = 'added';
         } elseif ($do === 'email') {
@@ -83,9 +83,15 @@ function page_household(array $member, bool $isPost): void
           <form method="post" action="/?a=household" class="stack">
             <?= csrf_field() ?>
             <input type="hidden" name="member_id" value="<?= $id ?>">
-            <div>
-              <label for="name-<?= $id ?>">Name</label>
-              <input id="name-<?= $id ?>" name="name" type="text" value="<?= e($p['name']) ?>" autocomplete="off" required>
+            <div class="row">
+              <div class="grow">
+                <label for="first-<?= $id ?>">First name</label>
+                <input id="first-<?= $id ?>" name="first_name" type="text" value="<?= e(first_name($p)) ?>" autocomplete="off" required>
+              </div>
+              <div class="grow">
+                <label for="last-<?= $id ?>">Last name</label>
+                <input id="last-<?= $id ?>" name="last_name" type="text" value="<?= e($p['last_name']) ?>" autocomplete="off">
+              </div>
             </div>
             <div>
               <label for="phone-<?= $id ?>">Phone, for texts about the order (optional)</label>
@@ -140,9 +146,15 @@ function page_household(array $member, bool $isPost): void
       <p class="note">For a partner, housemate or friend who orders with you. They share this order, sign in with their own email address, and get the group's emails. They are sent a sign-in link, and Brent is told.</p>
       <form method="post" action="/?a=household" class="stack">
         <?= csrf_field() ?>
-        <div>
-          <label for="add-name">Their name</label>
-          <input id="add-name" name="name" type="text" autocomplete="off" required>
+        <div class="row">
+          <div class="grow">
+            <label for="add-first">Their first name</label>
+            <input id="add-first" name="first_name" type="text" autocomplete="off" required>
+          </div>
+          <div class="grow">
+            <label for="add-last">Their last name</label>
+            <input id="add-last" name="last_name" type="text" autocomplete="off">
+          </div>
         </div>
         <div>
           <label for="add-email">Their email address</label>

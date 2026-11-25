@@ -150,7 +150,8 @@ function cycle_reopen(int $cycleId): bool
         // Out-of-stock ticks belong to the order as it was placed, so they are cleared too.
         // Corrected prices go back to following the catalog (the refresh below).
         q('UPDATE order_lines SET out_of_stock = 0 WHERE order_id IN (SELECT id FROM orders WHERE cycle_id = ?)', [$cycleId]);
-        q("UPDATE cycles SET status = 'open', locked_at = NULL WHERE id = ?", [$cycleId]);
+        // The order is no longer placed either: it will be placed afresh after the next lock.
+        q("UPDATE cycles SET status = 'open', locked_at = NULL, placed_at = NULL, placed_note = NULL WHERE id = ?", [$cycleId]);
         refresh_open_order_prices(); // catch up with any catalog changes made while it was locked
         db()->exec('COMMIT');
     } catch (Throwable $err) {

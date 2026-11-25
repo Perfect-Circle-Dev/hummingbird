@@ -43,13 +43,16 @@ function households_tidy(): void
 
 /**
  * Adds a member (when $memberId is null) or changes one.
- * $data holds: name, email, phone, household_id or new_household, is_admin, active.
+ * $data holds: first_name, last_name, email, phone, household_id or new_household, is_admin,
+ * active. The last name may be left empty.
  * $actingId is the organizer doing this, who can't switch themselves off by mistake.
  * Returns a short code for what is wrong, or null if it was saved.
  */
 function member_save(?int $memberId, array $data, int $actingId): ?string
 {
-    $name = trim((string) ($data['name'] ?? ''));
+    $first = trim((string) ($data['first_name'] ?? ''));
+    $last = trim((string) ($data['last_name'] ?? ''));
+    $name = full_name($first, $last);
     $email = trim((string) ($data['email'] ?? ''));
     $phone = trim((string) ($data['phone'] ?? ''));
     $newHousehold = trim((string) ($data['new_household'] ?? ''));
@@ -60,7 +63,7 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
     // A new member gets group emails until they unsubscribe.
     $optOut = !empty($data['has_group_box']) && empty($data['group_emails']) ? 1 : 0;
 
-    if ($name === '') {
+    if ($first === '') {
         return 'member_name';
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -80,12 +83,12 @@ function member_save(?int $memberId, array $data, int $actingId): ?string
     }
 
     if ($memberId === null) {
-        q('INSERT INTO members (household_id, name, email, phone, is_admin, active) VALUES (?, ?, ?, ?, ?, ?)',
-            [$householdId, $name, $email, $phone ?: null, $isAdmin, $active]);
+        q('INSERT INTO members (household_id, name, first_name, last_name, email, phone, is_admin, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [$householdId, $name, $first, $last, $email, $phone ?: null, $isAdmin, $active]);
     } else {
         $emailBefore = (string) q('SELECT email FROM members WHERE id = ?', [$memberId])->fetchColumn();
-        q('UPDATE members SET household_id = ?, name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
-           WHERE id = ?', [$householdId, $name, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
+        q('UPDATE members SET household_id = ?, name = ?, first_name = ?, last_name = ?, email = ?, phone = ?, is_admin = ?, active = ?, email_opt_out = ?
+           WHERE id = ?', [$householdId, $name, $first, $last, $email, $phone ?: null, $isAdmin, $active, $optOut, $memberId]);
         // If the organizer has set a new email address, that is the last word: a change
         // the member had started themselves, and not yet confirmed, is dropped.
         if (strcasecmp($emailBefore, $email) !== 0) {
@@ -145,10 +148,10 @@ function household_rename(int $householdId, string $name): ?string
 
 /**
  * Adds many members from pasted text, one person per line, with commas or tabs between
- * the parts: name, email, household, phone. Household and phone can be left off; a person
- * with no household gets one named after them. The email is spotted wherever it sits in
- * the line, so "email, first name, last name" from a Mailchimp export also works (the
- * first name becomes the name and the last name the household).
+ * the parts: first name, last name, email, household, phone. Household and phone can be left
+ * off; a person with no household gets one named after their last name. The email is
+ * spotted wherever it sits in the line, and so is a phone number (a part that is all digits
+ * and punctuation), so "email, first name, last name" from a Mailchimp export also works.
  * Returns how many were added, how many were already members, and the numbers of the
  * lines that could not be read.
  */
@@ -166,10 +169,13 @@ function members_import(string $text): array
         $fields = array_map(fn($field): string => trim((string) $field), $fields);
 
         $email = null;
+        $phone = null;
         $others = [];
         foreach ($fields as $field) {
             if ($email === null && filter_var($field, FILTER_VALIDATE_EMAIL)) {
                 $email = $field;
+            } elseif ($phone === null && preg_match('/^[\d\s().+-]{7,}$/', $field)) {
+                $phone = $field; // "541-555-0142", "(541) 555 0142"
             } elseif ($field !== '') {
                 $others[] = $field;
             }
@@ -190,9 +196,11 @@ function members_import(string $text): array
             $already++;
             continue;
         }
-        [$name, $household, $phone] = [$others[0], $others[1] ?? $others[0], $others[2] ?? null];
-        q('INSERT INTO members (household_id, name, email, phone) VALUES (?, ?, ?, ?)',
-            [household_named($household), $name, $email, $phone]);
+        // What is left, in order: first name, last name, household.
+        [$first, $last] = [$others[0], $others[1] ?? ''];
+        $household = $others[2] ?? ($last !== '' ? $last : $first);
+        q('INSERT INTO members (household_id, name, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?, ?)',
+            [household_named($household), full_name($first, $last), $first, $last, $email, $phone]);
         $added++;
     }
     return ['added' => $added, 'already' => $already, 'bad' => $bad];
@@ -306,12 +314,12 @@ function yearly_archive_candidates(int $year): array
 /** The note an archived member gets. Replies go to the organizer, because it is sent from his address. */
 function archive_email_text(array $member, int $year): string
 {
-    return "Hi {$member['name']},\n\n"
-        . "At the end of each year we tidy up the " . config('site_name') . " member list. Your household didn't\n"
+    return "Hi " . first_name($member) . ",\n\n"
+        . "At the end of each year we tidy up the " . config('site_name') . " member list. Your household didn't "
         . "place an order in $year, so your account has been archived.\n\n"
-        . "That only means two things: you won't get our emails, and your sign-in link won't work for now.\n"
+        . "That only means two things: you won't get our emails, and your sign-in link won't work for now. "
         . "Nothing has been deleted.\n\n"
-        . "You are welcome back any time. If you'd like to order with us again, next month or next year,\n"
+        . "You are welcome back any time. If you'd like to order with us again, next month or next year, "
         . "just reply to this email, or write to " . config('mail_from') . ", and I'll switch your account back on.\n\n"
         . "Thank you for being part of the group.\n\n"
         . "Brent\n";
@@ -340,7 +348,7 @@ function yearly_archive_run(int $year): array
         foreach ($members as $m) {
             $body .= "  {$m['name']} <{$m['email']}>, {$m['household_name']}\n";
         }
-        $body .= "\nEach has been sent a note saying their account is archived and that they can come back\n"
+        $body .= "\nEach has been sent a note saying their account is archived and that they can come back "
             . "any time by emailing you.\n\n"
             . "To bring someone back: Organizer, Members, then Restore beside their name.\n"
             . config('base_url') . "/?a=organizer&view=members\n";
@@ -371,18 +379,20 @@ function household_members(int $householdId): array
  * Email addresses are not changed here: each person changes only their own, with a
  * confirmation (see email_change_request). Returns a problem code, or null if saved.
  */
-function household_person_save(array $acting, int $memberId, string $name, string $phone): ?string
+function household_person_save(array $acting, int $memberId, string $first, string $last, string $phone): ?string
 {
     $person = find_member($memberId);
     // The household check is what stops one household editing another's people.
     if (!$person || (int) $person['household_id'] !== (int) $acting['household_id'] || !$person['active']) {
         return 'not_yours';
     }
-    $name = trim($name);
-    if ($name === '') {
+    $first = trim($first);
+    $last = trim($last);
+    if ($first === '') {
         return 'name';
     }
-    q('UPDATE members SET name = ?, phone = ? WHERE id = ?', [$name, trim($phone) ?: null, $memberId]);
+    q('UPDATE members SET name = ?, first_name = ?, last_name = ?, phone = ? WHERE id = ?',
+        [full_name($first, $last), $first, $last, trim($phone) ?: null, $memberId]);
     return null;
 }
 
@@ -391,12 +401,14 @@ function household_person_save(array $acting, int $memberId, string $name, strin
  * household's order and sign in with their own email. They are sent a sign-in link, and
  * the organizers are told. Returns a problem code, or null if added.
  */
-function household_person_add(array $acting, string $name, string $email, string $phone): ?string
+function household_person_add(array $acting, string $first, string $last, string $email, string $phone): ?string
 {
-    $name = trim($name);
+    $first = trim($first);
+    $last = trim($last);
+    $name = full_name($first, $last);
     $email = trim($email);
     $householdId = (int) $acting['household_id'];
-    if ($name === '') {
+    if ($first === '') {
         return 'name';
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -408,16 +420,16 @@ function household_person_add(array $acting, string $name, string $email, string
     if ((int) q('SELECT COUNT(*) FROM members WHERE household_id = ? AND active = 1', [$householdId])->fetchColumn() >= HOUSEHOLD_MAX_MEMBERS) {
         return 'full';
     }
-    q('INSERT INTO members (household_id, name, email, phone) VALUES (?, ?, ?, ?)',
-        [$householdId, $name, $email, trim($phone) ?: null]);
+    q('INSERT INTO members (household_id, name, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?, ?)',
+        [$householdId, $name, $first, $last, $email, trim($phone) ?: null]);
 
     $household = (string) q('SELECT name FROM households WHERE id = ?', [$householdId])->fetchColumn();
     send_login_link($email, true, "{$acting['name']} has added you to the $household household at " . config('site_name')
-        . ", the " . config('site_tagline') . ".\nYou share that household's order: either of you can add to it and submit it.");
+        . ", the " . config('site_tagline') . ". You share that household's order: either of you can add to it and submit it.");
 
     $body = "{$acting['name']} ({$acting['email']}) has added someone to the $household household:\n\n"
         . "  $name <$email>" . (trim($phone) !== '' ? ', ' . trim($phone) : '') . "\n\n"
-        . "They share that household's order and have been sent a sign-in link.\n"
+        . "They share that household's order and have been sent a sign-in link. "
         . "If this should not have happened, you can archive them on the Members page:\n"
         . config('base_url') . "/?a=organizer&view=members\n";
     foreach (q('SELECT email FROM members WHERE is_admin = 1 AND active = 1')->fetchAll(PDO::FETCH_COLUMN) as $organizer) {
@@ -451,16 +463,16 @@ function household_person_remove(array $acting, int $memberId): ?string
 
     $household = (string) q('SELECT name FROM households WHERE id = ?', [(int) $acting['household_id']])->fetchColumn();
     send_email($person['email'], config('site_name') . ": you have been taken off the $household household",
-        "Hi {$person['name']},\n\n"
+        "Hi " . first_name($person) . ",\n\n"
         . "{$acting['name']} has taken you off the $household household at " . config('site_name') . ".\n\n"
-        . "That means two things: your sign-in link won't work for now, and you won't get the group's emails.\n"
+        . "That means two things: your sign-in link won't work for now, and you won't get the group's emails. "
         . "Nothing has been deleted.\n\n"
-        . "If this was a mistake, or you would like to keep ordering with the group on your own,\n"
+        . "If this was a mistake, or you would like to keep ordering with the group on your own, "
         . "just reply to this email, or write to " . config('mail_from') . ", and Brent will set you up again.\n");
 
     $body = "{$acting['name']} ({$acting['email']}) has taken someone off the $household household:\n\n"
         . "  {$person['name']} <{$person['email']}>\n\n"
-        . "Their account is archived: they can't sign in and get no emails. They have been told, and that\n"
+        . "Their account is archived: they can't sign in and get no emails. They have been told, and that "
         . "they can write to you to come back. Anything they put on the household's order stays on it.\n\n"
         . "To restore them, or to give them a household of their own, use the Members page:\n"
         . config('base_url') . "/?a=organizer&view=members\n";
@@ -494,20 +506,20 @@ function email_change_request(array $acting, string $newEmail): ?string
 
     $link = config('base_url') . '/?a=confirm-email&t=' . $token;
     $sent = send_email($newEmail, 'Confirm your new email address for ' . config('site_name'),
-        "Hi {$acting['name']},\n\n"
-        . "You asked to use this address for " . config('site_name') . " in place of {$acting['email']}.\n"
+        "Hi " . first_name($acting) . ",\n\n"
+        . "You asked to use this address for " . config('site_name') . " in place of {$acting['email']}. "
         . "To confirm, open this link and press the button:\n\n$link\n\n"
-        . "It works for " . EMAIL_CHANGE_HOURS . " hours. Until you confirm, nothing changes and you sign in with\n"
+        . "It works for " . EMAIL_CHANGE_HOURS . " hours. Until you confirm, nothing changes and you sign in with "
         . "{$acting['email']} as before. If you didn't ask for this, you can ignore this email.\n");
     if (!$sent) {
         email_change_cancel((int) $acting['id']);
         return 'not_sent';
     }
     send_email($acting['email'], config('site_name') . ': a change of email address was asked for',
-        "Hi {$acting['name']},\n\n"
+        "Hi " . first_name($acting) . ",\n\n"
         . "Someone signed in as you asked to change your " . config('site_name') . " email address to:\n\n  $newEmail\n\n"
-        . "If that was you, there is nothing to do here: confirm it from the email sent to the new address.\n"
-        . "If it was not you, sign in and press \"Cancel this change\" on the My household page, or reply to\n"
+        . "If that was you, there is nothing to do here: confirm it from the email sent to the new address.\n\n"
+        . "If it was not you, sign in and press \"Cancel this change\" on the My household page, or reply to "
         . "this email. Nothing changes unless the link sent to the new address is confirmed.\n");
     return null;
 }

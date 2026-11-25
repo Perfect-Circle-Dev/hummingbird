@@ -33,7 +33,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   the script Clear is a link that reloads the page with no search). On every page it marks
   the header `stuck` once the page has scrolled. `page_end()` in `src/layout.php` loads it, so
   pages do not add it themselves.
-- `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
+- `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`,
+  and the name helpers `first_name()`, `full_name()`, `split_name()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.
 - `src/mailings.php`: the email queue (`queue_email()`, `queue_send()`), the group emails
@@ -83,6 +84,15 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Always escape output with `e()`. Always use `q()` with `?` placeholders.
 - Every POST from a signed-in member is CSRF-checked in `index.php`; forms include `csrf_field()`.
   After handling a POST, redirect (no page is rendered from a POST).
+- A member has a first name and a last name (`members.first_name`, `last_name`; the last may be
+  empty). `members.name` holds the two joined and is what lists show; every place that saves a
+  member keeps it in step. Speak to a member by first name, with `first_name($member)`: the
+  greeting of every email, the name beside "Sign out" and the hello on the home page. Use the full name wherever people are
+  listed or identified (share claims, My household, organizer pages, the report, notices).
+- Email text has no line breaks inside a paragraph: a paragraph is one long line and mail
+  programs wrap it to fit. Break the line only between paragraphs (a blank line), before a link
+  on its own line, and in lists of items or amounts. In the code a long paragraph is several
+  quoted pieces joined with dots; each piece but the last ends in a space, not `\n`.
 - Orders belong to a household, not a person. Check `household_id` / `order_id` on every
   change so one household can never edit another's order.
 - Any change to an order sets it back to `draft`; the member must submit again.
@@ -197,7 +207,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - The "Fill my Hummingbird cart" link on the combined order (`hummingbird_cart_link()`) is a
   Shopify cart permalink built from variant ids and in-stock quantities.
 - Sign-in is by emailed link only. No passwords. Organizers add members on the Members page,
-  one at a time or by pasting a list (name, email, household, phone). Adding sends no email.
+  one at a time or by pasting a list (first name, last name, email, household, phone). Adding
+  sends no email.
   An archived member (`members.active = 0`) can't sign in and gets no emails, and is signed out
   at once; past orders keep their name. Each member on the Members page has Edit, Send login and
   Archive (or Restore) buttons. Only a member who has never used the site can be deleted. An
@@ -227,8 +238,17 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Payment happens at pickup by check, Venmo or cash. The organizer marks each household's order
   paid with the method (`orders.paid_at`, `paid_method`) on the report page, for a locked or a
   closed month. Paid or not, nothing is recorded about amounts.
-- Pickup emails go out when the organizer presses the button on a locked month: to every
-  household that owes something and is not marked paid. A second send needs a ticked box.
+- "Order placed" is the step between locking and pickup. The organizer places the order with
+  Hummingbird, enters what they confirmed on the combined order (out of stock, changed prices),
+  then presses "Order placed" there, with an optional note of their own (`order_placed_send()`,
+  `order_placed_text()`; `cycles.placed_at`, `placed_note`). Every household with anything on
+  the order is emailed its confirmed total, how to pay with the Venmo link, the pickup note, the
+  organizer's note and its order in full. A second send needs a ticked box. Reopening the
+  month clears it. Until it is pressed, saving out-of-stock ticks or prices emails nobody unless
+  the box is ticked; afterwards the box starts ticked.
+- The pickup email is now a reminder. It goes out when the organizer presses the button on the
+  report page of a locked month: to every household that owes something and is not marked
+  paid. A second send needs a ticked box.
   The Venmo pay link is built from `settings.venmo_handle`; with no handle there is no link.
 - Settings (discount, the two deposit amounts, share expiry months, Venmo name) take effect at
   once: deposits are recomputed for the whole catalog, then open orders and saved lists are
@@ -238,7 +258,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
 
 Items 1 to 9 are built (months, combined order with unfinished flags, the lock step,
 out of stock and price corrections with update emails, the report by household, split sheets,
-paid marking and pickup emails, members, households and settings, group emails, the
+paid marking, the "Order placed" email and pickup reminders, members, households and settings, group emails, the
 Hummingbird cart link, the logo slot, nightly backups). All twelve items are built.
 
 Still open from that list:

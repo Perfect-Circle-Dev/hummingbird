@@ -135,7 +135,10 @@ function page_order(array $member, bool $isPost): void
     if (!$cycle) {
         echo '<div class="card"><h1>My order</h1><p>No order is open right now. You\'ll get an email when the next one opens. Until then, anything you add is saved for it, and you can set up your favorites.</p></div>';
     } elseif (!$open) {
-        echo '<p class="notice warn">The ' . e($cycle['label']) . ' order is locked and can no longer be changed. Anything you add now is saved for next month.</p>';
+        // Once the organizer has pressed "Order placed", the figures on this page are the confirmed ones.
+        echo '<p class="notice warn">The ' . e($cycle['label']) . (!empty($cycle['placed_at'])
+            ? ' order has been placed with Hummingbird and can no longer be changed. The amounts below are confirmed.'
+            : ' order is locked and can no longer be changed.') . ' Anything you add now is saved for next month.</p>';
     }
     if (isset($_GET['sent'])) {
         echo '<p class="notice">Order submitted. Cool beans! A summary is on its way to your inbox.</p>';

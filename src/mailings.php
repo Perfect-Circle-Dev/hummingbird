@@ -139,10 +139,10 @@ function open_shares_text(): string
 function time_to_order_text(array $cycle, array $member, string $note, string $link): string
 {
     $state = household_order_state((int) $cycle['id'], (int) $member['household_id']);
-    $text = "Hi {$member['name']},\n\n"
+    $text = "Hi " . first_name($member) . ",\n\n"
         . (trim($note) !== '' ? trim($note) . "\n\n" : '')
         . "The {$cycle['label']} order is open. Orders are due " . fmt_local($cycle['due_at']) . ".\n"
-        . (pickup_text($cycle) !== '' ? pickup_text($cycle) . "\n" : '')
+        . (pickup_text($cycle) !== '' ? "\n" . pickup_text($cycle) . "\n" : '')
         . "\nYour own sign-in link:\n$link\n"
         . "It works until the order is locked, so you can come back to this email whenever you like.\n";
     if ($state['items'] > 0 && !$state['submitted']) {
@@ -199,7 +199,7 @@ function last_call_queue(array $cycle): int
         if ($state['submitted']) {
             continue;
         }
-        $text = "Hi {$m['name']},\n\n"
+        $text = "Hi " . first_name($m) . ",\n\n"
             . "The {$cycle['label']} order closes " . fmt_local($cycle['due_at']) . ".\n\n"
             . ($state['items'] > 0
                 ? "Your household has {$state['items']} " . ($state['items'] === 1 ? 'item' : 'items')
@@ -235,7 +235,7 @@ function share_expiry_warnings(): int
             if (!$member) {
                 continue;
             }
-            $text = "Hi {$member['name']},\n\n"
+            $text = "Hi " . first_name($member) . ",\n\n"
                 . "The share of {$share['product_title']}, {$share['size']} that you are part of still has "
                 . fmt_amount($share['left']) . " {$share['size_unit']} unclaimed, and it comes off Share items on "
                 . fmt_local($share['expires_at'], 'l, F j') . " unless it fills.\n\n"

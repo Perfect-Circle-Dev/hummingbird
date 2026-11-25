@@ -117,6 +117,53 @@ function pickup_emails_send(array $cycle): int
     return count($households);
 }
 
+/**
+ * The "order placed" email for one household. It goes out once the organizer has placed the
+ * order with Hummingbird and entered what Hummingbird confirmed (anything out of stock, any
+ * changed price), so the figures in it are the real ones. $h is one household from
+ * month_report(). $note is the organizer's own paragraph for this month, or '' for none.
+ */
+function order_placed_text(array $cycle, array $h, string $note): string
+{
+    $due = $h['summary']['due_cents'];
+    if ($due === 0) {
+        $money = "Nothing is due: everything on your order was out of stock this month.\n";
+    } elseif ($h['paid_at'] !== null) {
+        $money = "Your total is " . money($due) . ", and it is marked as paid. Thank you!\n";
+    } else {
+        $link = venmo_link($due, config('site_name') . ' ' . $cycle['label']);
+        $money = "Amount due: " . money($due) . "\n"
+            . "You can pay at pickup by check, Venmo or cash.\n"
+            . ($link ? "To pay by Venmo now: $link\n" : '');
+    }
+    return "Your " . config('site_name') . " order for {$cycle['label']} has been placed with Hummingbird. "
+        . "These are your confirmed figures.\n\n"
+        . (trim($note) !== '' ? trim($note) . "\n\n" : '')
+        . (pickup_text($cycle) !== '' ? pickup_text($cycle) . "\n\n" : '')
+        . $money
+        . "\nYour order:\n\n"
+        . order_text($h['summary'], 'Total due at pickup') . "\n"
+        . "You can see it any time at " . config('base_url') . "/?a=order\n";
+}
+
+/**
+ * The "Order placed" step: emails every household with anything on the month's order its
+ * confirmed total, how to pay, the pickup note and the organizer's note, and records when.
+ * The emails are queued, so they go out a few a minute. Returns how many households.
+ */
+function order_placed_send(array $cycle, string $note): int
+{
+    $households = month_report($cycle)['households'];
+    foreach ($households as $h) {
+        $due = $h['summary']['due_cents'];
+        $subject = config('site_name') . " order placed for {$cycle['label']}"
+            . ($due > 0 && $h['paid_at'] === null ? ': ' . money($due) . ' due' : '');
+        email_household((int) $h['id'], $subject, order_placed_text($cycle, $h, $note), true);
+    }
+    q('UPDATE cycles SET placed_at = ?, placed_note = ? WHERE id = ?', [now_utc(), trim($note) ?: null, $cycle['id']]);
+    return count($households);
+}
+
 /** How many people a list of households (from month_report) has to email. */
 function household_email_count(array $households): int
 {
