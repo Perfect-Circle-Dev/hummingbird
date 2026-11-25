@@ -30,7 +30,9 @@ a little, and wants to be able to follow and lightly edit the code. So:
   "My favorites" was left folded away (the folding itself is a plain `<details>`), turns
   "Add" and "Save for next month" into "Added" and "Saved" for a moment after they work (the
   `done` class), and makes the Clear button under the search box empty it on the spot (without
-  the script Clear is a link that reloads the page with no search).
+  the script Clear is a link that reloads the page with no search). On every page it marks
+  the header `stuck` once the page has scrolled. `page_end()` in `src/layout.php` loads it, so
+  pages do not add it themselves.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`.
 - `src/auth.php`: emailed sign-in links, device sessions, CSRF helpers.
 - `src/mailer.php`: `send_email()` sends now; every message is written to `email_log`.
@@ -87,7 +89,12 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - The header stays at the top of the window as the page scrolls. On a screen under 960px only
   its menu row stays: the header is parked above the window by the height of its first row,
   which is why that row has a set height (`--brand-row` in `site.css`). A signed-out page has
-  no menu and its header scrolls away.
+  no menu and its header scrolls away. On a wide screen the stuck header is about a third
+  shorter (76px down to 53px: no tagline, smaller name, 40px pills). The height it gives up
+  comes back as a margin under it, so the page does not jump; `--head-full` and
+  `--head-small` in `site.css` hold the two heights and must match what is in the header
+  (they will need raising when the logo is added). The menu sits in the exact middle of the
+  page.
 - On a phone (under 520px) the header menu shows short names, "Order", "Shares" and "House",
   so three pills, or an organizer's four, fit on one line. Both names are set in
   `src/layout.php`; page headings keep the full names.

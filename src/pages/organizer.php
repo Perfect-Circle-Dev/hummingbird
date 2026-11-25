@@ -517,7 +517,6 @@ function organizer_combined_order(array $cycle): void
     <?php
     // Lets the "for everyone" box tick each household's box as you click it.
     // Saving works the same without it.
-    echo '<script src="' . e(asset('site.js')) . '" defer></script>';
     page_end();
 }
 

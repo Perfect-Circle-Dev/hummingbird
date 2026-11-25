@@ -1,3 +1,19 @@
+// Every page: once the page has scrolled far enough for the header to be sitting at the top
+// of the window, mark it "stuck". On a wide screen site.css makes a stuck header about a
+// third shorter. Without JavaScript the header stays in view at its full size.
+(function () {
+  var header = document.querySelector('header.top');
+  if (!header) return;
+  var strip = document.querySelector('.tiles');
+  function check() {
+    // The header reaches the top of the window when the tile strip above it has scrolled away.
+    var reached = window.scrollY > (strip ? strip.getBoundingClientRect().height : 0) + 4;
+    header.classList.toggle('stuck', reached);
+  }
+  window.addEventListener('scroll', check, { passive: true });
+  check();
+})();
+
 // Search as you type on the My order page.
 // Without JavaScript the Search button still works; this only makes it faster.
 (function () {

@@ -228,6 +228,5 @@ function page_order(array $member, bool $isPost): void
     </div>
     </div>
     <?php
-    echo '<script src="' . e(asset('site.js')) . '" defer></script>';
     page_end();
 }

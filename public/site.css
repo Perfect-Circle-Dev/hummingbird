@@ -105,7 +105,7 @@ html { scroll-padding-top: 88px; }
 .brand-name { font-family: var(--font-head); font-size: 30px; font-weight: 700; line-height: 1.1; }
 .brand-tag { font-size: 15px; color: var(--muted); }
 @media (max-width: 480px) { .brand-name { font-size: 24px; } }
-.who { display: flex; gap: 12px; align-items: center; font-size: 15px; }
+.who { display: flex; gap: 12px; align-items: center; padding-right: 8px; font-size: 15px; }
 
 /* The menu is a row of pills. The page you are on is filled in; the others are outlined. */
 .nav, .subnav { display: flex; flex-wrap: wrap; gap: 8px; font-weight: 700; }
@@ -115,6 +115,32 @@ html { scroll-padding-top: 88px; }
 /* The header's own menu is a little smaller, so the header takes less of the window. 44px is
    still a comfortable size to tap. */
 .nav a { min-height: 44px; padding: 0 16px; font-size: 16px; }
+
+/* ---- The header on a wide screen ----
+   Three columns: the name at the left, the menu in the middle, "Sign out" at the right. The
+   two outer columns are the same width, which is what puts the menu in the exact middle of
+   the page. (Each is at least as wide as what is in it, so on a screen only just wide
+   enough the name is not squeezed; the menu is then a little off the middle.)
+   Once the page has scrolled and the header is sitting at the top of the window, site.js
+   marks it "stuck" and it gets about a third shorter: less padding, a smaller name, no
+   tagline, slightly smaller pills. The space it gives up is handed back as a margin
+   underneath (--head-full less --head-small), so the page below does not jump. If the
+   header's contents change size, change those two numbers to match. */
+@media (min-width: 961px) {
+  .top { --head-full: 76px; --head-small: 53px; display: grid; grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr); min-height: var(--head-full); }
+  .top .who { justify-self: end; }
+  .top.stuck { min-height: var(--head-small); padding-top: 4px; padding-bottom: 4px; margin-bottom: calc(var(--head-full) - var(--head-small)); }
+  .top.stuck .brand-tag { display: none; }
+  .top.stuck .brand-name { font-size: 24px; }
+  .top.stuck .brand-logo { height: 40px; }
+  .top.stuck .nav a, .top.stuck .who .link { min-height: 40px; }
+}
+/* The change of size is eased, except for anyone who has asked their device for less movement. */
+@media (min-width: 961px) and (prefers-reduced-motion: no-preference) {
+  .top { transition: min-height 0.15s, padding 0.15s, margin-bottom 0.15s; }
+  .brand-name { transition: font-size 0.15s; }
+  .nav a { transition: min-height 0.15s; }
+}
 
 /* ---- The header on a phone, or a tablet held upright ----
    Two rows: the name with "Sign out" beside it, then the menu. When the page scrolls, the
@@ -135,7 +161,7 @@ html { scroll-padding-top: 88px; }
   .top.has-menu .who { grid-area: 1 / 2; flex-direction: column; align-items: flex-end; gap: 0; }
   .who span { max-width: 130px; }
   .who .link { min-height: 44px; }
-  .top.has-menu .nav { grid-area: 2 / 1 / 3 / 3; gap: 6px; }
+  .top.has-menu .nav { grid-area: 2 / 1 / 3 / 3; gap: 6px; justify-content: center; }
   /* The pills share the row between them, so three fit on the narrowest phone. */
   .nav a { flex: 1 1 auto; max-width: 220px; padding: 0 8px; font-size: 15px; }
 }
