@@ -68,7 +68,9 @@ function page_household(array $member, bool $isPost): void
     <?php if ($done): ?><p class="notice" role="status"><?= e($done) ?></p><?php endif; ?>
     <?php if ($problem): ?><p class="notice error" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
-    <div class="columns">
+    <?php // Two cards across (one on a phone), each row as tall as its taller card. The
+          // "Add someone" card is the last of them. ?>
+    <div class="cards pair">
     <?php foreach ($people as $p):
         $isMe = (int) $p['id'] === (int) $member['id'];
         $id = (int) $p['id']; ?>
@@ -132,9 +134,8 @@ function page_household(array $member, bool $isPost): void
         <?php endif; ?>
       </div>
     <?php endforeach; ?>
-    </div>
 
-    <div class="card stack narrow-form">
+    <div class="card stack">
       <h2>Add someone to your household</h2>
       <p class="note">For a partner, housemate or friend who orders with you. They share this order, sign in with their own email address, and get the group's emails. They are sent a sign-in link, and Brent is told.</p>
       <form method="post" action="/?a=household" class="stack">
@@ -153,6 +154,7 @@ function page_household(array $member, bool $isPost): void
         </div>
         <div><button class="btn" name="do" value="add">Add to my household</button></div>
       </form>
+    </div>
     </div>
     <?php
     page_end();

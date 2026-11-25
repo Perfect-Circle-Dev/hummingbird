@@ -189,6 +189,12 @@ html { scroll-padding-top: 88px; }
 .cards > .card { display: flex; flex-direction: column; min-width: 0; margin-bottom: 0; }
 /* The last part of such a card is pushed to the bottom of it. */
 .cards .card-foot { margin-top: auto; padding-top: 12px; }
+/* My household: the same grid, but always two across, or one on a phone. */
+.cards.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* These cards have nothing to push to the bottom, so they are laid out the ordinary way,
+   which keeps the spacing between their paragraphs as it is elsewhere. */
+.cards.pair > .card { display: block; }
+@media (max-width: 700px) { .cards.pair { grid-template-columns: minmax(0, 1fr); } }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 .row.end { justify-content: flex-end; align-items: center; }
 .grow { flex: 1 1 200px; min-width: 0; }
