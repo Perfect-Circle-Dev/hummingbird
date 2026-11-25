@@ -24,6 +24,16 @@
   var timer = null;
   var latest = 0;
   var cats = document.getElementById('cats');
+  var clear = document.getElementById('clear-search');
+
+  // The Clear button inside the box shows only when there is something to clear: text in
+  // the box, or a category being browsed.
+  function showClear() {
+    if (!clear) return;
+    var something = input.value !== '' || (cats && cats.querySelector('a[aria-current]') !== null);
+    clear.hidden = !something;
+    clear.parentNode.classList.toggle('has-clear', something);
+  }
 
   // Fills in the chip of the category being shown, and clears the others. With no link
   // given (a search, or Clear), none is filled in.
@@ -32,6 +42,7 @@
     Array.prototype.forEach.call(cats.querySelectorAll('a'), function (a) {
       if (a === link) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
     });
+    showClear();
   }
 
   function search() {
@@ -54,13 +65,22 @@
   }
 
   input.addEventListener('input', function () {
+    showClear();
     clearTimeout(timer);
     timer = setTimeout(search, 200);
   });
 
   // The category chips: show that category in the results on the spot. The search box is
-  // emptied, since a category and a search are never shown together. (Without JavaScript a
-  // chip is a link that reloads the page with the category showing.)
+  // emptied, since a category and a search are never shown together. The chips sit in a
+  // card of their own, away from the results, so the page moves to bring the results into
+  // view when they are off the screen. (Without JavaScript a chip is a link that reloads
+  // the page at the results, with the category showing.)
+  function bringResultsIntoView() {
+    var where = results.getBoundingClientRect();
+    if (where.top >= 60 && where.top < window.innerHeight * 0.7) return; // already in view
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    results.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  }
   if (cats) {
     cats.addEventListener('click', function (event) {
       var link = event.target.closest ? event.target.closest('a') : null;
@@ -69,25 +89,28 @@
       clearTimeout(timer);
       input.value = '';
       var mine = ++latest;
-      var address = link.getAttribute('href');
+      var address = link.getAttribute('href').split('#')[0]; // the link ends in #results, for use without the script
       history.replaceState(null, '', address); // so adding an item returns to the same category
       markCategory(link);
       fetch(address + '&partial=1', { credentials: 'same-origin' })
         .then(function (response) { return response.ok ? response.text() : ''; })
-        .then(function (html) { if (mine === latest) results.innerHTML = html; })
-        .catch(function () { window.location.href = address; }); // fall back to an ordinary page load
+        .then(function (html) {
+          if (mine !== latest) return;
+          results.innerHTML = html;
+          bringResultsIntoView();
+        })
+        .catch(function () { window.location.href = link.getAttribute('href'); }); // fall back to an ordinary page load
     });
   }
 
-  // The Clear button: empty the box and the results on the spot, and put the cursor in the
+  // Pressing Clear: empty the box and the results on the spot, and put the cursor in the
   // box ready for the next search. (Without JavaScript it is a link that reloads the page.)
-  var clear = document.getElementById('clear-search');
   if (clear) {
     clear.addEventListener('click', function (event) {
       event.preventDefault();
       clearTimeout(timer);
       input.value = '';
-      search();
+      search(); // empties the results and any category, which also hides this button
       input.focus();
     });
   }

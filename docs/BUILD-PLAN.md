@@ -50,7 +50,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Add members from the command line
 - [x] Server live at hummingbird.schefley.net with HTTPS; email sending through Resend
 - [x] Search ranked by best match, with results while typing
-- [x] Browse by category under the search box, from the letters item numbers begin with
+- [x] Browse by category, in a card under My favorites, from the letters item numbers begin with
 - [x] Order page: search, favorites, quantities, submit, confirmation email
 - [x] Share board: start, claim, change, cancel; filled shares show on household totals
 - [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists
