@@ -33,7 +33,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
   the script Clear is a link that reloads the page with no search). Clear shows only when
   there is text in the box or a category on show. The Close button over a list of results (a
   search or a category) does the same as Clear; it is drawn as part of the results, straight
-  under Clear, which is why the Search button has a set width (`--search-w` in `site.css`). On every page it marks
+  under Clear, which is why the Search button has a set width (`--search-w` in `site.css`).
+  That line (count and Close) stays in view under the header while its list is scrolled
+  (`--under-header` is where the stuck header ends). On a wide screen Find an item is as tall
+  as the two cards beside it (`.columns.even`). On every page it marks
   the header `stuck` once the page has scrolled. `page_end()` in `src/layout.php` loads it, so
   pages do not add it themselves.
 - `src/bootstrap.php`: config, `db()`, `q($sql, $params)`, `setting()`, `e()`, `money()`, `now_utc()`,
@@ -84,6 +87,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - SQLite database at `data/hummingbird.sqlite` (ignored by git). `config.php` is ignored too
   and holds the Resend API key. Never commit either, and never print the key.
 - Money is integer cents. Times are stored as UTC strings; show them with `fmt_local()`.
+  A time of day is written short, "7pm" (or "7:30pm" off the hour), never "7:00 pm", to match
+  the pickup note's "after 4pm". `fmt_local()` and `fmt_time_short()` both do that.
 - Always escape output with `e()`. Always use `q()` with `?` placeholders.
 - Every POST from a signed-in member is CSRF-checked in `index.php`; forms include `csrf_field()`.
   After handling a POST, redirect (no page is rendered from a POST).
