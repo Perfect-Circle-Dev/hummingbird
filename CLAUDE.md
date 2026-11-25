@@ -92,8 +92,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Email text has no line breaks inside a paragraph: a paragraph is one long line and mail
   programs wrap it to fit. Break the line only between paragraphs (a blank line), before a link
   on its own line, and in lists of items or amounts. In the code a long paragraph is several
-  quoted pieces joined with dots; each piece but the last ends in a space, not "
-".
+  quoted pieces joined with dots; each piece but the last ends in a space, not `\n`.
 - Orders belong to a household, not a person. Check `household_id` / `order_id` on every
   change so one household can never edit another's order.
 - Any change to an order sets it back to `draft`; the member must submit again.
