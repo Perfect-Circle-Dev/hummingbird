@@ -87,8 +87,13 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - A member has a first name and a last name (`members.first_name`, `last_name`; the last may be
   empty). `members.name` holds the two joined and is what lists show; every place that saves a
   member keeps it in step. Speak to a member by first name, with `first_name($member)`: the
-  name beside "Sign out" and the hello on the home page. Use the full name wherever people are
+  greeting of every email, the name beside "Sign out" and the hello on the home page. Use the full name wherever people are
   listed or identified (share claims, My household, organizer pages, the report, notices).
+- Email text has no line breaks inside a paragraph: a paragraph is one long line and mail
+  programs wrap it to fit. Break the line only between paragraphs (a blank line), before a link
+  on its own line, and in lists of items or amounts. In the code a long paragraph is several
+  quoted pieces joined with dots; each piece but the last ends in a space, not "
+".
 - Orders belong to a household, not a person. Check `household_id` / `order_id` on every
   change so one household can never edit another's order.
 - Any change to an order sets it back to `draft`; the member must submit again.

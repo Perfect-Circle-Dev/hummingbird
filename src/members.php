@@ -314,12 +314,12 @@ function yearly_archive_candidates(int $year): array
 /** The note an archived member gets. Replies go to the organizer, because it is sent from his address. */
 function archive_email_text(array $member, int $year): string
 {
-    return "Hi {$member['name']},\n\n"
-        . "At the end of each year we tidy up the " . config('site_name') . " member list. Your household didn't\n"
+    return "Hi " . first_name($member) . ",\n\n"
+        . "At the end of each year we tidy up the " . config('site_name') . " member list. Your household didn't "
         . "place an order in $year, so your account has been archived.\n\n"
-        . "That only means two things: you won't get our emails, and your sign-in link won't work for now.\n"
+        . "That only means two things: you won't get our emails, and your sign-in link won't work for now. "
         . "Nothing has been deleted.\n\n"
-        . "You are welcome back any time. If you'd like to order with us again, next month or next year,\n"
+        . "You are welcome back any time. If you'd like to order with us again, next month or next year, "
         . "just reply to this email, or write to " . config('mail_from') . ", and I'll switch your account back on.\n\n"
         . "Thank you for being part of the group.\n\n"
         . "Brent\n";
@@ -348,7 +348,7 @@ function yearly_archive_run(int $year): array
         foreach ($members as $m) {
             $body .= "  {$m['name']} <{$m['email']}>, {$m['household_name']}\n";
         }
-        $body .= "\nEach has been sent a note saying their account is archived and that they can come back\n"
+        $body .= "\nEach has been sent a note saying their account is archived and that they can come back "
             . "any time by emailing you.\n\n"
             . "To bring someone back: Organizer, Members, then Restore beside their name.\n"
             . config('base_url') . "/?a=organizer&view=members\n";
@@ -425,11 +425,11 @@ function household_person_add(array $acting, string $first, string $last, string
 
     $household = (string) q('SELECT name FROM households WHERE id = ?', [$householdId])->fetchColumn();
     send_login_link($email, true, "{$acting['name']} has added you to the $household household at " . config('site_name')
-        . ", the " . config('site_tagline') . ".\nYou share that household's order: either of you can add to it and submit it.");
+        . ", the " . config('site_tagline') . ". You share that household's order: either of you can add to it and submit it.");
 
     $body = "{$acting['name']} ({$acting['email']}) has added someone to the $household household:\n\n"
         . "  $name <$email>" . (trim($phone) !== '' ? ', ' . trim($phone) : '') . "\n\n"
-        . "They share that household's order and have been sent a sign-in link.\n"
+        . "They share that household's order and have been sent a sign-in link. "
         . "If this should not have happened, you can archive them on the Members page:\n"
         . config('base_url') . "/?a=organizer&view=members\n";
     foreach (q('SELECT email FROM members WHERE is_admin = 1 AND active = 1')->fetchAll(PDO::FETCH_COLUMN) as $organizer) {
@@ -463,16 +463,16 @@ function household_person_remove(array $acting, int $memberId): ?string
 
     $household = (string) q('SELECT name FROM households WHERE id = ?', [(int) $acting['household_id']])->fetchColumn();
     send_email($person['email'], config('site_name') . ": you have been taken off the $household household",
-        "Hi {$person['name']},\n\n"
+        "Hi " . first_name($person) . ",\n\n"
         . "{$acting['name']} has taken you off the $household household at " . config('site_name') . ".\n\n"
-        . "That means two things: your sign-in link won't work for now, and you won't get the group's emails.\n"
+        . "That means two things: your sign-in link won't work for now, and you won't get the group's emails. "
         . "Nothing has been deleted.\n\n"
-        . "If this was a mistake, or you would like to keep ordering with the group on your own,\n"
+        . "If this was a mistake, or you would like to keep ordering with the group on your own, "
         . "just reply to this email, or write to " . config('mail_from') . ", and Brent will set you up again.\n");
 
     $body = "{$acting['name']} ({$acting['email']}) has taken someone off the $household household:\n\n"
         . "  {$person['name']} <{$person['email']}>\n\n"
-        . "Their account is archived: they can't sign in and get no emails. They have been told, and that\n"
+        . "Their account is archived: they can't sign in and get no emails. They have been told, and that "
         . "they can write to you to come back. Anything they put on the household's order stays on it.\n\n"
         . "To restore them, or to give them a household of their own, use the Members page:\n"
         . config('base_url') . "/?a=organizer&view=members\n";
@@ -506,20 +506,20 @@ function email_change_request(array $acting, string $newEmail): ?string
 
     $link = config('base_url') . '/?a=confirm-email&t=' . $token;
     $sent = send_email($newEmail, 'Confirm your new email address for ' . config('site_name'),
-        "Hi {$acting['name']},\n\n"
-        . "You asked to use this address for " . config('site_name') . " in place of {$acting['email']}.\n"
+        "Hi " . first_name($acting) . ",\n\n"
+        . "You asked to use this address for " . config('site_name') . " in place of {$acting['email']}. "
         . "To confirm, open this link and press the button:\n\n$link\n\n"
-        . "It works for " . EMAIL_CHANGE_HOURS . " hours. Until you confirm, nothing changes and you sign in with\n"
+        . "It works for " . EMAIL_CHANGE_HOURS . " hours. Until you confirm, nothing changes and you sign in with "
         . "{$acting['email']} as before. If you didn't ask for this, you can ignore this email.\n");
     if (!$sent) {
         email_change_cancel((int) $acting['id']);
         return 'not_sent';
     }
     send_email($acting['email'], config('site_name') . ': a change of email address was asked for',
-        "Hi {$acting['name']},\n\n"
+        "Hi " . first_name($acting) . ",\n\n"
         . "Someone signed in as you asked to change your " . config('site_name') . " email address to:\n\n  $newEmail\n\n"
-        . "If that was you, there is nothing to do here: confirm it from the email sent to the new address.\n"
-        . "If it was not you, sign in and press \"Cancel this change\" on the My household page, or reply to\n"
+        . "If that was you, there is nothing to do here: confirm it from the email sent to the new address.\n\n"
+        . "If it was not you, sign in and press \"Cancel this change\" on the My household page, or reply to "
         . "this email. Nothing changes unless the link sent to the new address is confirmed.\n");
     return null;
 }

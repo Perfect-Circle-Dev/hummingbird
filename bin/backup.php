@@ -71,9 +71,9 @@ try {
             . ($tooBig
                 ? "The backup is now $size, too large to attach. It is on the server at $zipped.\n\n"
                 : "Attached: " . basename($zipped) . " ($size).\n\n")
-            . "It holds $members members and $months months of orders. Keep it somewhere safe: it has\n"
+            . "It holds $members members and $months months of orders. Keep it somewhere safe: it has "
             . "everyone's names, email addresses, phone numbers and orders.\n\n"
-            . "Left out on purpose: device sessions, sign-in links, and the text of past emails. After a\n"
+            . "Left out on purpose: device sessions, sign-in links, and the text of past emails. After a "
             . "restore, everyone signs in again with a fresh link.\n\n"
             . "The server keeps a backup from each of the last " . BACKUPS_KEPT . " nights. How to restore one is in README.md.\n";
         if (send_email(admin_email(), config('site_name') . ' weekly backup, ' . date('M j'), $body, [], $tooBig ? [] : [$zipped])) {

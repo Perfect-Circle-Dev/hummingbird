@@ -31,7 +31,7 @@ function send_login_link(string $email, bool $fromOrganizer = false, string $int
         [token_hash($token), $member['id'], now_utc($minutes * 60)]);
 
     $link = config('base_url') . '/?a=verify&t=' . $token;
-    $body = "Hi {$member['name']},\n\n"
+    $body = "Hi " . first_name($member) . ",\n\n"
         . ($intro !== '' ? $intro . "\n\n" : '')
         . "Here is your sign-in link for " . config('site_name') . ":\n\n$link\n\n"
         . ($fromOrganizer

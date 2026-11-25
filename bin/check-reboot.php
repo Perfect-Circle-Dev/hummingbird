@@ -34,11 +34,11 @@ $packages = is_file($flag . '.pkgs')
     ? array_unique(array_filter(array_map('trim', file($flag . '.pkgs'))))
     : [];
 
-$body = "Debian has installed updates on the " . config('site_name') . " server (" . gethostname() . ")\n"
+$body = "Debian has installed updates on the " . config('site_name') . " server (" . gethostname() . ") "
     . "that only take effect after a restart.\n\n"
     . ($packages ? "Waiting for the restart:\n  " . implode("\n  ", $packages) . "\n\n" : '')
     . "To restart, sign in to the server and run:\n  sudo reboot\n\n"
-    . "The site is offline for about a minute while it restarts. Any time works except when\n"
+    . "The site is offline for about a minute while it restarts. Any time works except when "
     . "members are likely to be ordering, such as the evening of a deadline.\n\n"
     . "This reminder repeats every " . REMINDER_DAYS . " days until the server has been restarted.\n";
 

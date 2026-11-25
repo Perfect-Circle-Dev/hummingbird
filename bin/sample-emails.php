@@ -269,7 +269,7 @@ foreach ($samples as $n => &$s) {
         . "When it is sent: {$s['when']}\n"
         . "Who gets it: {$s['who']}\n"
         . ($s['group'] ? "The real one also carries an unsubscribe link in its heading, which most mail programs show as a button.\n" : '')
-        . "Below the line is the email exactly as it goes out. The names, items and amounts are made up,\n"
+        . "Below the line is the email exactly as it goes out. The names, items and amounts are made up, "
         . "and the links in it will not work.\n$rule\n\n" . $s['body'];
 }
 unset($s);
