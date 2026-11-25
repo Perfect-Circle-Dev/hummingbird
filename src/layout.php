@@ -58,7 +58,8 @@ function page_start(string $title): void
   </defs>
   <rect width="100%" height="36" fill="url(#tile)"/>
 </svg>
-<header class="top">
+<?php // "has-menu" tells site.css the menu is there, which is the part that stays in view on a phone. ?>
+<header class="top<?= $member ? ' has-menu' : '' ?>">
   <a class="brand" href="/">
     <?php if ($logo): ?>
     <img class="brand-logo" src="<?= e($logo['src']) ?>" alt=""<?= $logo['width'] ? ' width="' . (int) $logo['width'] . '" height="' . (int) $logo['height'] . '"' : '' ?>>
@@ -69,7 +70,8 @@ function page_start(string $title): void
     </span>
   </a>
   <?php if ($member): ?>
-  <nav class="nav" aria-label="Main">
+  <?php // An organizer's menu has a fourth pill; "four" lets site.css set them two by two on a phone. ?>
+  <nav class="nav<?= $member['is_admin'] ? ' four' : '' ?>" aria-label="Main">
     <?php // The page you are on is marked, which fills its pill in (see site.css).
     $here = (string) ($_GET['a'] ?? '');
     $pages = ['order' => 'My order', 'shares' => 'Share items', 'household' => 'My household'];

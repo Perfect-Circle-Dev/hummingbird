@@ -48,7 +48,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   paid (`order_set_paid()`), the pickup email (`pickup_emails_send()`, `venmo_link()`).
 - `src/members.php`: members and households (`member_save()`, `member_delete()`,
   `members_import()`, `household_rename()`), `settings_save()`, and what members do for their own
-  household (`household_person_save()`, `household_person_add()`, `email_change_request()`,
+  household (`household_person_save()`, `household_person_add()`, `household_person_remove()`,
+  `email_change_request()`,
   `email_change_confirm()`).
 - `src/layout.php`: the page frame. Link the stylesheet and script through `asset()`, which adds
   a version number so browsers fetch a changed file at once. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
@@ -80,8 +81,13 @@ a little, and wants to be able to follow and lightly edit the code. So:
 - Orders belong to a household, not a person. Check `household_id` / `order_id` on every
   change so one household can never edit another's order.
 - Any change to an order sets it back to `draft`; the member must submit again.
-- Interface text: plain, friendly, sentence case, no jargon. Touch targets at least 48px.
+- Interface text: plain, friendly, sentence case, no jargon. Touch targets at least 48px
+  (the header's menu pills and its "Sign out" on a phone are 44px, to keep the header small).
   Pages must work on a phone.
+- The header stays at the top of the window as the page scrolls. On a screen under 960px only
+  its menu row stays: the header is parked above the window by the height of its first row,
+  which is why that row has a set height (`--brand-row` in `site.css`). A signed-out page has
+  no menu and its header scrolls away.
 - The look is the Talavera theme (`docs/THEME.md`), light and dark, following the device's
   setting. Every colour in `public/site.css` is a variable set in the two blocks at the top of
   the file (light, then dark); never write a colour straight into a rule. Body text is 17px and
@@ -90,6 +96,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   have no star or check mark.
 - Messages: `notice` is good news (with a check mark), `notice warn` a caution, `notice error`
   a problem (add `role="alert"`), `notice info` something neutral.
+- The two tables on My order (`table.order`) have seven columns on a wide screen and three on a
+  narrow one (under 940px): item, quantity, total, with the name across the top of each row.
+  Cells marked `wide-only` are left out on a narrow screen and `narrow-only` text is shown only
+  there (see "Order tables on a narrow screen" in `site.css`). A new column needs one of those
+  marks or it will break the narrow layout.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 
@@ -177,7 +188,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
   `HOUSEHOLD_MAX_MEMBERS` active people); the new person is sent a 7-day sign-in link and the
   organizers are emailed. Each person can change only their own email address, and only by
   confirming a link sent to the new address (`members.pending_email`, good for 48 hours); the
-  old address is told. Archiving, removing, moving between households and making organizers
+  old address is told. Anyone in a household can also remove someone else from it, behind a
+  ticked box (`household_person_remove()`): that archives the person, exactly as Archive on the
+  Members page does, and emails them and the organizers. Nobody can remove themselves, and a
+  member can't remove an organizer. Restoring, moving between households and making organizers
   stay with the organizer. Every one of these checks the target is in the acting member's
   household.
 - End-of-year tidy-up (`bin/yearly-archive.php`, `yearly_archive_candidates()`): on December 31
