@@ -201,6 +201,8 @@ html { scroll-padding-top: 88px; --under-header: 53px; } /* --under-header: wher
 @media (max-width: 700px) { .cards.pair { grid-template-columns: minmax(0, 1fr); } }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 .row.end { justify-content: flex-end; align-items: center; }
+/* A plain link beside a button: as tall as the button, so it is as easy to tap. */
+.text-link { display: inline-flex; align-items: center; min-height: 48px; margin-right: 6px; }
 .grow { flex: 1 1 200px; min-width: 0; }
 .step { border-top: 1px solid var(--line); padding-top: 12px; }
 .note { font-size: 15px; line-height: 1.4; color: var(--muted); }
