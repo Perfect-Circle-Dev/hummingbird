@@ -324,6 +324,8 @@ function page_order(array $member, bool $isPost): void
               <?php else: ?>
                 Not submitted yet. Submit to send your order in and get a summary by email. Anything not submitted when the order is placed stays on your list for next month.
               <?php endif; ?></p>
+            <?php // Leads to the list at the foot of My household. ?>
+            <a class="text-link" href="/?a=household#previous-orders">Previous orders</a>
             <button class="btn" name="do" value="submit">Submit my order</button>
           </form>
           <?php endif; ?>

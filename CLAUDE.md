@@ -261,7 +261,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   under "Previously sent" (`notices_sent()`).
 - "Previous orders" on My household (`household_past_orders()` in `src/orders.php`): every
   closed month the household had a line or a share part on, newest first under a heading per
-  year, each opening to its items, sums and how it was paid. Nothing is stored for it; it
+  year, each opening to its items, sums and how it was paid. On My order a "Previous orders"
+  link beside "Submit my order" leads there (`#previous-orders`). Nothing is stored for it; it
   reads the closed months' orders.
 - The last line of `group_footer()` is Brent's wording (2026-11-27): "The primary person in
   your household will still get emails about placed orders." There is no "primary person" in
