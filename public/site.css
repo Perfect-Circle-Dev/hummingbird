@@ -431,6 +431,9 @@ td.center { min-width: 160px; }
 /* Email everyone: the two "who gets it" choices and the names to tick. The names show only
    while "Send to selected members" is chosen. A browser that does not know :has() skips the
    whole @supports block and simply shows the names all the time. */
+/* The greeting box sits a little clear of the Subject box above it: 8px more than the 12px a
+   stack leaves between its parts. */
+.stack > .check.greet { margin-top: 20px; }
 fieldset.send-to { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); min-width: 0; }
 fieldset.send-to legend { padding: 0; font-weight: 700; }
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 0 16px; padding-left: 34px; }
