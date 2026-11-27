@@ -304,13 +304,18 @@
 // still folded on the next visit. Each box says what to remember it as (data-remember).
 // A box marked data-fold-on-phone starts folded on a narrow screen until the person opens
 // it, because there it would push the results a long way down.
+// The cards on My household work the other way round: they start folded, and one a person
+// has opened is open on the next visit. A box marked data-keep-open was opened by the link
+// that led here ("Previous orders" on My order), so it is left open whatever was remembered.
 (function () {
   var boxes = document.querySelectorAll('details[data-remember]');
   Array.prototype.forEach.call(boxes, function (box) {
     var name = box.getAttribute('data-remember');
     try {
       var stored = window.localStorage.getItem(name);
-      if (stored === '1') box.open = false;
+      var keepOpen = box.hasAttribute('data-keep-open');
+      if (stored === '1' && !keepOpen) box.open = false;
+      if (stored === '0') box.open = true;
       if (stored === null && box.hasAttribute('data-fold-on-phone') && window.innerWidth < 700) box.open = false;
       box.addEventListener('toggle', function () {
         window.localStorage.setItem(name, box.open ? '0' : '1');
