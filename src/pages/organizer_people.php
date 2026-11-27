@@ -68,18 +68,27 @@ function organizer_people_post(string $do, array $member): void
         $subject = (string) ($_POST['subject'] ?? '');
         $body = (string) ($_POST['body'] ?? '');
         $email = '/?a=organizer&view=email';
-        notice_draft_save($subject, $body);
+        $greet = !empty($_POST['greet']);
+        $to = ($_POST['to'] ?? '') === 'selected' ? 'selected' : 'everyone';
+        $picked = is_array($_POST['pick'] ?? null) ? array_map('intval', $_POST['pick']) : [];
+        notice_draft_save($subject, $body, $greet, $to, $picked);
         if (trim($subject) === '' || trim($body) === '') {
             redirect($email . '&problem=notice_empty');
         }
+        // With the box ticked, "Hi {first_name}," goes above the message.
+        $body = notice_body($body, $greet);
         if ($do === 'notice_test') {
             redirect($email . (notice_test($subject, $body, $member) ? '&done=notice_tested' : '&problem=notice_not_sent'));
         }
-        // Sending to everyone needs the box ticked, so a stray tap can't do it.
+        if ($to === 'selected' && !$picked) {
+            redirect($email . '&problem=notice_nobody');
+        }
+        // Sending needs the box ticked, so a stray tap can't do it.
         if (empty($_POST['sure'])) {
             redirect($email . '&problem=unsure');
         }
-        redirect($email . '&sent=' . notice_queue($subject, $body));
+        $sent = notice_queue($subject, $body, $to === 'selected' ? $picked : null, $actingId);
+        redirect($email . ($sent ? '&sent=' . $sent : '&problem=notice_nobody'));
     }
     if ($do === 'settings_save') {
         $problem = settings_save($_POST);
@@ -274,12 +283,19 @@ function organizer_members(array $member): void
 /** Email everyone page: the organizer writes a message and it goes to every member. */
 function organizer_email(array $member): void
 {
-    $count = count(group_recipients());
+    // The members who can be sent it, listed by name for the tick boxes.
+    $recipients = group_recipients();
+    usort($recipients, fn(array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+    $count = count($recipients);
     // Active members who have switched notification emails off: they are left out.
     $off = q('SELECT name FROM members WHERE active = 1 AND email_opt_out = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+    // What was typed and ticked last time, if it has not been sent yet.
     $subject = (string) setting('notice_draft_subject', '');
     $body = (string) setting('notice_draft_body', '');
-    $lastAt = setting('notice_sent_at');
+    $greet = (string) setting('notice_draft_greet', '') === '1';
+    $toSelected = setting('notice_draft_to') === 'selected';
+    $picked = array_map('intval', array_filter(explode(',', (string) setting('notice_draft_picked', ''))));
+    $sentBefore = notices_sent();
 
     page_start('Email everyone');
     organizer_nav('email');
@@ -299,24 +315,51 @@ function organizer_email(array $member): void
           <label for="notice-subject">Subject</label>
           <input id="notice-subject" name="subject" type="text" value="<?= e($subject) ?>" maxlength="150" autocomplete="off" required>
         </div>
+        <label class="check"><input type="checkbox" name="greet" value="1" <?= $greet ? 'checked' : '' ?>> Start the email with "Hi &lt;first name&gt;,"</label>
         <div>
           <label for="notice-body">Message</label>
           <textarea id="notice-body" name="body" rows="14" required><?= e($body) ?></textarea>
         </div>
-        <p class="note">It is sent exactly as you type it: nothing is added at the top, so write your own greeting and sign your name. Type {first_name} wherever you want each person's first name, as in "Hi {first_name},". Leave an empty line between paragraphs.</p>
-        <p class="note">Goes to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?>: everyone active who receives notification emails.
-          <?php if ($off): ?>Left out, because they have switched those off: <?= e(implode(', ', $off)) ?>.<?php endif; ?>
-          Each copy ends with the group's usual footer and that person's own unsubscribe link.</p>
+        <p class="note">Apart from that greeting, if you tick its box, the email is sent exactly as you type it, so sign your name. Type {first_name} wherever else you want each person's first name. Leave an empty line between paragraphs. Each copy ends with the group's usual footer and that person's own unsubscribe link.</p>
         <div><button class="btn quiet" name="do" value="notice_test">Send a test to me first</button></div>
         <p class="note">The test goes only to <?= e($member['email']) ?>, and your message stays here afterwards.</p>
+
+        <?php // The list of names shows only while "Send to selected members" is chosen
+              // (see .send-to in site.css); in a browser too old for that it always shows. ?>
+        <fieldset class="send-to stack step">
+          <legend>Who gets it</legend>
+          <label class="check"><input type="radio" name="to" value="everyone" <?= $toSelected ? '' : 'checked' ?>> Send to everyone (<?= $count ?> <?= $count === 1 ? 'member' : 'members' ?>)</label>
+          <label class="check"><input type="radio" name="to" value="selected" <?= $toSelected ? 'checked' : '' ?>> Send to selected members</label>
+          <div class="pick-list">
+            <?php foreach ($recipients as $r): ?>
+              <label class="check"><input type="checkbox" name="pick[]" value="<?= (int) $r['id'] ?>" <?= in_array((int) $r['id'], $picked, true) ? 'checked' : '' ?>> <?= e($r['name']) ?> <span class="note">(<?= e($r['household_name']) ?>)</span></label>
+            <?php endforeach; ?>
+          </div>
+          <p class="note">Only members who receive notification emails are listed.
+            <?php if ($off): ?>Left out, because they have switched those off: <?= e(implode(', ', $off)) ?>.<?php endif; ?></p>
+        </fieldset>
         <div class="stack step">
-          <label class="check"><input type="checkbox" name="sure" value="1"> Yes, send this to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?></label>
-          <div><button class="btn" name="do" value="notice_send">Send to everyone</button></div>
+          <label class="check"><input type="checkbox" name="sure" value="1"> Yes, send this email</label>
+          <div><button class="btn" name="do" value="notice_send">Send</button></div>
         </div>
       </form>
-      <?php if ($lastAt): ?>
-        <p class="note step">Last sent: "<?= e((string) setting('notice_sent_subject', '')) ?>" on <?= e(fmt_local($lastAt)) ?>, to <?= (int) setting('notice_sent_count', '0') ?>.</p>
+    </div>
+
+    <div class="card stack narrow-form">
+      <h2>Previously sent</h2>
+      <?php if (!$sentBefore): ?>
+        <p class="note">Nothing yet. Each email you send from this page is kept here.</p>
       <?php endif; ?>
+      <?php foreach ($sentBefore as $n): ?>
+        <details class="step">
+          <summary><?= e($n['subject']) ?> <span class="note">· <?= e(fmt_local($n['sent_at'], 'M j, Y')) ?></span></summary>
+          <p class="note">Sent <?= e(fmt_local($n['sent_at'])) ?><?= $n['sender'] ? ' by ' . e($n['sender']) : '' ?>, to
+            <?= $n['sent_to'] === 'everyone'
+                ? 'everyone (' . (int) $n['recipient_count'] . ')'
+                : (int) $n['recipient_count'] . ' selected: ' . e($n['sent_to']) ?>.</p>
+          <pre class="email"><?= e($n['body']) ?></pre>
+        </details>
+      <?php endforeach; ?>
     </div>
     <?php
     page_end();

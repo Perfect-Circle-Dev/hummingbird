@@ -47,6 +47,7 @@ const ORGANIZER_PROBLEMS = [
     'household_name'      => 'Give the household a name.',
     'household_duplicate' => 'Another household already has that name.',
     'notice_empty'    => 'Nothing was sent. The email needs both a subject and a message.',
+    'notice_nobody'   => 'Nothing was sent. Tick at least one member under "Send to selected members", or choose "Send to everyone".',
     'notice_not_sent' => 'The test could not be sent. Your message is still below.',
     'settings_discount' =>'Nothing was saved. The discount should be a number from 0 to 100.',
     'settings_deposit'  => 'Nothing was saved. Type each deposit as an amount, like 1.50.',
