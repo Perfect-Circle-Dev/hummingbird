@@ -409,6 +409,17 @@ td.center { min-width: 160px; }
 .eyebrow { font-size: 15px; line-height: 1.4; font-weight: 700; color: var(--muted); }
 .bar { height: 14px; border-radius: 7px; background: var(--bar-track); overflow: hidden; }
 .bar div { height: 14px; background: var(--accent); }
+/* "(share)" after a shared item on My order: a link to that card on Share items, coloured
+   but not underlined until it is pointed at. */
+.share-link { text-decoration: none; }
+.share-link:hover, .share-link:focus-visible { text-decoration: underline; }
+/* The organizer's Shares page: a name, then a short box for the amount, then the unit. */
+.share-edit { align-items: center; flex-wrap: nowrap; }
+.share-edit > label { margin: 0; font-weight: 400; }
+.share-edit > input { flex: none; width: 96px; }
+/* The "Add someone" row has a label over its list, so its boxes line up along the bottom. */
+.share-edit.step { align-items: flex-end; }
+.share-edit.step > .note { align-self: center; padding-top: 24px; }
 .claims { list-style: none; margin: 0; padding: 0; }
 .claims li { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
 

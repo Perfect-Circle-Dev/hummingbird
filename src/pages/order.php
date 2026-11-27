@@ -292,7 +292,7 @@ function page_order(array $member, bool $isPost): void
               <?php foreach ($summary['shares'] as $s): ?>
                 <tr class="share" role="row">
                   <?php $part = fmt_amount($s['amount']) . ' ' . $s['size_unit'] . ' of ' . $s['size']; ?>
-                  <td class="what" role="cell"><div class="what-name"><?= e($s['product_title']) ?> (share)</div><div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><span class="narrow-only"> · <?= e($part) ?></span><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
+                  <td class="what" role="cell"><div class="what-name"><?= e($s['product_title']) ?> <a class="share-link" href="/?a=shares#share-<?= (int) $s['share_id'] ?>" aria-label="Share: see <?= e($s['product_title']) ?> on Share items">(share)</a></div><div class="note"><?= e($s['sku']) ?> · <?= e($s['member_name']) ?><span class="narrow-only"> · <?= e($part) ?></span><?= $s['out_of_stock'] ? ' · out of stock, not charged' : '' ?></div></td>
                   <td class="wide-only" role="cell"><?= e($part) ?></td>
                   <td class="center" role="cell"></td><td class="wide-only" role="cell"></td><td class="wide-only" role="cell"></td><td class="money wide-only" role="cell">None</td>
                   <td class="money total" role="cell"><?= money($s['cost_cents']) ?></td>

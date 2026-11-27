@@ -64,7 +64,7 @@ function page_shares(array $member, bool $isPost): void
         $editable = $s['status'] === 'open';
         $unit = $s['size_unit'];
         $percent = min(100, round($s['claimed'] / $s['size_amount'] * 100)); ?>
-      <div class="card stack">
+      <div class="card stack" id="share-<?= (int) $s['id'] ?>">
         <?php if ($editable && !$s['full']): ?><div class="eyebrow">Up for sharing?</div><?php endif; ?>
         <div>
           <h2><?= e($s['product_title']) ?></h2>

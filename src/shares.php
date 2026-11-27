@@ -161,6 +161,153 @@ function share_set_price(int $shareId, int $priceCents): void
     }
 }
 
+// ---- The organizer's Shares page: changing or deleting any share by hand ----
+
+/**
+ * Can an organizer still change this share? Yes while it is on the board, and while it is
+ * on the order of the month that is locked now. Not once its month is closed, or it expired.
+ */
+function share_admin_editable(array $share): bool
+{
+    if ($share['status'] === 'open') {
+        return true;
+    }
+    $cycle = current_cycle();
+    return $share['status'] === 'ordered' && $cycle && (int) $share['cycle_id'] === (int) $cycle['id'];
+}
+
+/**
+ * Sets the amounts on a share as the organizer typed them. $amounts is claim id => amount
+ * for the people already on it (nought takes that person off); $addMemberId and $addAmount
+ * put one more person on. Returns null when saved, 'same' when nothing was different, or
+ * the short name of a problem. The people on the share, before or after, are emailed.
+ *
+ * A share on a locked order has to stay fully claimed, because its price is already split
+ * between its people; each person's part is worked out again from the new amounts.
+ */
+function share_admin_save(int $shareId, array $amounts, int $addMemberId, string $addAmount, array $actor): ?string
+{
+    $share = find_share($shareId);
+    if (!$share || !share_admin_editable($share)) {
+        return 'share_fixed';
+    }
+    $new = [];       // member id => amount, for everyone who will be on the share
+    $changed = false;
+    foreach ($share['claims'] as $c) {
+        $typed = trim((string) ($amounts[$c['id']] ?? fmt_amount($c['amount'])));
+        if (!is_numeric($typed) || (float) $typed < 0) {
+            return 'share_amount';
+        }
+        $amount = round((float) $typed, 2);
+        if (abs($amount - $c['amount']) >= SHARE_EPSILON) {
+            $changed = true;
+        }
+        if ($amount > 0) {
+            $new[(int) $c['member_id']] = $amount;
+        }
+    }
+    if ($addMemberId && trim($addAmount) !== '') {
+        $added = find_member($addMemberId);
+        if (!$added || !$added['active'] || !is_numeric(trim($addAmount)) || (float) $addAmount <= 0) {
+            return 'share_amount';
+        }
+        // Someone already on the share is changed in their own box, not added a second time.
+        if (!in_array($addMemberId, array_map('intval', array_column($share['claims'], 'member_id')), true)) {
+            $new[$addMemberId] = round((float) $addAmount, 2);
+            $changed = true;
+        }
+    }
+    if (!$changed) {
+        return 'same';
+    }
+    $size = (float) $share['size_amount'];
+    $total = array_sum($new);
+    if ($total > $size + SHARE_EPSILON) {
+        return 'share_over';
+    }
+    if ($share['status'] === 'ordered' && $new && abs($total - $size) >= SHARE_EPSILON) {
+        return 'share_not_full';
+    }
+    if (!$new) {
+        // Nobody left on it: that is the same as deleting it.
+        return share_admin_delete($shareId, $actor);
+    }
+
+    db()->beginTransaction();
+    q('DELETE FROM share_claims WHERE share_id = ? AND member_id NOT IN (' . implode(',', array_keys($new)) . ')', [$shareId]);
+    foreach ($new as $memberId => $amount) {
+        q('INSERT INTO share_claims (share_id, member_id, amount) VALUES (?, ?, ?)
+           ON CONFLICT(share_id, member_id) DO UPDATE SET amount = excluded.amount', [$shareId, $memberId, $amount]);
+    }
+    if ($share['status'] === 'ordered') {
+        // Works each person's part of the fixed price out again.
+        share_set_price($shareId, (int) $share['price_cents']);
+    }
+    db()->commit();
+    share_change_email($share, find_share($shareId), $actor);
+    return null;
+}
+
+/** Deletes a share and everyone's claim on it, and emails the people who were on it. */
+function share_admin_delete(int $shareId, array $actor): ?string
+{
+    $share = find_share($shareId);
+    if (!$share || !share_admin_editable($share)) {
+        return 'share_fixed';
+    }
+    q('DELETE FROM share_claims WHERE share_id = ?', [$shareId]);
+    q('DELETE FROM shares WHERE id = ?', [$shareId]);
+    share_change_email($share, null, $actor);
+    return null;
+}
+
+/**
+ * Tells the people on a share that an organizer changed it ($after is the share as it is
+ * now) or deleted it ($after is null). It goes to everyone who was on it or is on it now,
+ * except the organizer who did it, and except anyone archived or with "Receives
+ * notification emails" switched off. Returns how many were emailed.
+ */
+function share_change_email(array $before, ?array $after, array $actor): int
+{
+    $item = "{$before['product_title']}, {$before['size']}";
+    $unit = $before['size_unit'];
+    $people = [];
+    foreach (array_merge($before['claims'], $after['claims'] ?? []) as $c) {
+        $people[(int) $c['member_id']] = true;
+    }
+    $now = [];       // member id => amount, as the share stands
+    $list = '';
+    foreach ($after['claims'] ?? [] as $c) {
+        $now[(int) $c['member_id']] = $c['amount'];
+        $list .= "{$c['name']}: " . fmt_amount($c['amount']) . " $unit\n";
+    }
+    $sent = 0;
+    foreach (array_keys($people) as $memberId) {
+        $m = find_member($memberId);
+        if (!$m || !$m['active'] || $m['email_opt_out'] || $memberId === (int) $actor['id']) {
+            continue;
+        }
+        $body = "Hi " . first_name($m) . ",\n\n";
+        if ($after === null) {
+            $subject = "Share item removed: {$before['product_title']}";
+            $body .= first_name($actor) . " has removed the share of $item from Share items. "
+                . "It will not be ordered and you will not be charged for it.\n";
+        } else {
+            $subject = "Share item changed: {$before['product_title']}";
+            $body .= first_name($actor) . " has changed the share of $item. Here is how it stands now:\n\n"
+                . $list . "\n"
+                . fmt_amount($after['claimed']) . " of " . fmt_amount((float) $after['size_amount']) . " $unit claimed"
+                . ($after['full'] ? '' : ", " . fmt_amount($after['left']) . " $unit left") . ".\n\n"
+                . (isset($now[$memberId])
+                    ? "Your part is " . fmt_amount($now[$memberId]) . " $unit.\n"
+                    : "You are no longer on this share.\n")
+                . "\nYou can see it here:\n\n" . config('base_url') . "/?a=shares#share-{$after['id']}\n";
+        }
+        $sent += send_email($m['email'], $subject, $body) ? 1 : 0;
+    }
+    return $sent;
+}
+
 /** Takes unfilled shares off the board once they pass their expiry date. Run nightly. */
 function expire_shares(): int
 {

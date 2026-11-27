@@ -64,7 +64,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
   a version number so browsers fetch a changed file at once. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
   the header and as the tab icon when such a file exists.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
-  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=email`; `&view=settings`;
+  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=share-items`; `&view=email`; `&view=settings`;
   `&month=ID` that month's combined order; `&month=ID&view=report` report and payments;
   `&month=ID&view=shares` split sheets. Month pages are in `pages/organizer.php`, members and
   settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
@@ -187,6 +187,17 @@ a little, and wants to be able to follow and lightly edit the code. So:
   fetched, has lost its headings, or matches fewer than 50 items, nothing is changed. State
   abbreviations are written out (`ORIGIN_NAMES`). A product card shows them on one line under
   the name: "Organic • Raw • Origin: Oregon", with whichever parts apply.
+- The organizer's Shares page (`/?a=organizer&view=share-items`, `organizer_shares()` in
+  `pages/organizer_people.php`; the split sheets keep `&month=ID&view=shares`) lists every share
+  on the board and those on the locked month's order. `share_admin_save()` sets anyone's
+  amount (nought takes them off, and one person can be added) and `share_admin_delete()`
+  removes the share, behind a ticked box. A share on a locked order must stay fully claimed,
+  and its parts of the price are worked out again; a share of a closed month can't be touched
+  (`share_admin_editable()`). Each save or delete emails the people who were or are on it
+  (`share_change_email()`; Brent's choice, 2026-11-27), but not the organizer who did it, nor
+  anyone archived or with notification emails off.
+- On My order, "(share)" after a shared item's name is a link (`.share-link`, coloured, no
+  underline) to that card on Share items; each card there has `id="share-ID"`.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 
