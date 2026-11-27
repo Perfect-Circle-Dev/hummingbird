@@ -6,7 +6,7 @@ declare(strict_types=1);
 /** The row of links at the top of the main organizer pages. */
 function organizer_nav(string $current): void
 {
-    $pages = ['' => 'Months', 'members' => 'Members', 'settings' => 'Settings'];
+    $pages = ['' => 'Months', 'members' => 'Members', 'email' => 'Email everyone', 'settings' => 'Settings'];
     echo '<nav class="subnav" aria-label="Organizer">';
     foreach ($pages as $view => $label) {
         echo $view === $current
@@ -61,6 +61,25 @@ function organizer_people_post(string $do, array $member): void
     if ($do === 'household_rename') {
         $problem = household_rename((int) ($_POST['household_id'] ?? 0), (string) ($_POST['name'] ?? ''));
         redirect($members . ($problem ? '&problem=' . $problem : '&done=household_saved'));
+    }
+    if ($do === 'notice_test' || $do === 'notice_send') {
+        // The "Email everyone" page. What was typed is kept first, so nothing is lost if
+        // there is a problem, and so it is still there after a test.
+        $subject = (string) ($_POST['subject'] ?? '');
+        $body = (string) ($_POST['body'] ?? '');
+        $email = '/?a=organizer&view=email';
+        notice_draft_save($subject, $body);
+        if (trim($subject) === '' || trim($body) === '') {
+            redirect($email . '&problem=notice_empty');
+        }
+        if ($do === 'notice_test') {
+            redirect($email . (notice_test($subject, $body, $member) ? '&done=notice_tested' : '&problem=notice_not_sent'));
+        }
+        // Sending to everyone needs the box ticked, so a stray tap can't do it.
+        if (empty($_POST['sure'])) {
+            redirect($email . '&problem=unsure');
+        }
+        redirect($email . '&sent=' . notice_queue($subject, $body));
     }
     if ($do === 'settings_save') {
         $problem = settings_save($_POST);
@@ -214,7 +233,7 @@ function organizer_members(array $member): void
       </div>
     <?php endif; ?>
 
-    <div class="columns">
+    <div class="cards">
     <?php foreach ($households as $h): ?>
       <div class="card stack">
         <h2><?= e($h['name']) ?><?= $h['active_count'] === 0 ? ' <span class="flag">archived</span>' : '' ?></h2>
@@ -247,6 +266,57 @@ function organizer_members(array $member): void
         </ul>
       </div>
     <?php endforeach; ?>
+    </div>
+    <?php
+    page_end();
+}
+
+/** Email everyone page: the organizer writes a message and it goes to every member. */
+function organizer_email(array $member): void
+{
+    $count = count(group_recipients());
+    // Active members who have switched notification emails off: they are left out.
+    $off = q('SELECT name FROM members WHERE active = 1 AND email_opt_out = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+    $subject = (string) setting('notice_draft_subject', '');
+    $body = (string) setting('notice_draft_body', '');
+    $lastAt = setting('notice_sent_at');
+
+    page_start('Email everyone');
+    organizer_nav('email');
+    echo '<h1>Email everyone</h1>';
+    organizer_messages();
+    if (isset($_GET['sent'])) {
+        $sent = (int) $_GET['sent'];
+        echo '<p class="notice" role="status">Your email is on its way to ' . $sent . ' ' . ($sent === 1 ? 'member' : 'members')
+            . '. Emails go out a few at a time over the next few minutes.</p>';
+    }
+    organizer_queue_notice();
+    ?>
+    <div class="card stack narrow-form">
+      <form method="post" action="/?a=organizer" class="stack">
+        <?= csrf_field() ?>
+        <div>
+          <label for="notice-subject">Subject</label>
+          <input id="notice-subject" name="subject" type="text" value="<?= e($subject) ?>" maxlength="150" autocomplete="off" required>
+        </div>
+        <div>
+          <label for="notice-body">Message</label>
+          <textarea id="notice-body" name="body" rows="14" required><?= e($body) ?></textarea>
+        </div>
+        <p class="note">It is sent exactly as you type it: nothing is added at the top, so write your own greeting and sign your name. Type {first_name} wherever you want each person's first name, as in "Hi {first_name},". Leave an empty line between paragraphs.</p>
+        <p class="note">Goes to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?>: everyone active who receives notification emails.
+          <?php if ($off): ?>Left out, because they have switched those off: <?= e(implode(', ', $off)) ?>.<?php endif; ?>
+          Each copy ends with the group's usual footer and that person's own unsubscribe link.</p>
+        <div><button class="btn quiet" name="do" value="notice_test">Send a test to me first</button></div>
+        <p class="note">The test goes only to <?= e($member['email']) ?>, and your message stays here afterwards.</p>
+        <div class="stack step">
+          <label class="check"><input type="checkbox" name="sure" value="1"> Yes, send this to <?= $count ?> <?= $count === 1 ? 'member' : 'members' ?></label>
+          <div><button class="btn" name="do" value="notice_send">Send to everyone</button></div>
+        </div>
+      </form>
+      <?php if ($lastAt): ?>
+        <p class="note step">Last sent: "<?= e((string) setting('notice_sent_subject', '')) ?>" on <?= e(fmt_local($lastAt)) ?>, to <?= (int) setting('notice_sent_count', '0') ?>.</p>
+      <?php endif; ?>
     </div>
     <?php
     page_end();

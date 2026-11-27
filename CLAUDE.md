@@ -64,7 +64,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
   a version number so browsers fetch a changed file at once. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
   the header and as the tab icon when such a file exists.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
-  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=settings`;
+  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=email`; `&view=settings`;
   `&month=ID` that month's combined order; `&month=ID&view=report` report and payments;
   `&month=ID&view=shares` split sheets. Month pages are in `pages/organizer.php`, members and
   settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
@@ -247,6 +247,16 @@ a little, and wants to be able to follow and lightly edit the code. So:
   household has not submitted) and the share-expiry warning (automatic, 7 days before, to the
   people on an unfilled share). Each ends with `group_footer()` and the member's own
   unsubscribe link.
+- "Email everyone" (`/?a=organizer&view=email`, `organizer_email()`): the organizer writes a
+  subject and a message and it is queued to the same people as the other group emails
+  (`notice_queue()` in `src/mailings.php`). It goes out exactly as typed, with no greeting
+  added (Brent's choice, 2026-11-27); `{first_name}` is filled in for each person
+  (`notice_fill()`), and the usual footer and unsubscribe link follow. "Send a test to me first"
+  sends one copy to the organizer at once. What is typed is kept in `settings`
+  (`notice_draft_subject`, `notice_draft_body`) until it is sent to everyone, which needs a
+  ticked box.
+- The Members page shows a card per household in the `.cards` grid, three across on a wide
+  screen, each row as tall as its tallest card.
 - One switch per person, `members.email_opt_out`, shown as "Receives notification emails": on
   My household (anyone in a household can set it for anyone in it), on the organizer's member
   form, and flipped by the unsubscribe link. Off, the person gets no group emails and no emails

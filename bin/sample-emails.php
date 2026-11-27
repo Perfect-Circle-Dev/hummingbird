@@ -282,6 +282,14 @@ take('Account archived',
 take('Notice: the end-of-year tidy-up',
     'By itself on December 31, after the tidy-up has run.', 'Every organizer.', 'tidy-up', null, true);
 
+// ---- 21. A message written by an organizer ----
+notice_queue('A note about pickup this month',
+    "Hi {first_name},\n\nThis is where your own message appears, exactly as you type it on the Email everyone page. "
+    . "Nothing is added above it or below it, apart from the group's footer. The first name in the greeting was filled in for each person.\n\nBrent");
+take('A message from an organizer',
+    'An organizer writes it on the "Email everyone" page and presses "Send to everyone".',
+    'Every active member who receives notification emails.', 'A note about pickup', $rosa['email']);
+
 // ---- Show them, or send them ----
 $total = count($samples);
 $rule = str_repeat('-', 70);

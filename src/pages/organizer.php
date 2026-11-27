@@ -20,7 +20,8 @@ const ORGANIZER_DONE = [
     'member_restored' => 'Restored. They can sign in again and will get emails.',
     'login_sent'      => 'A sign-in link has been emailed to them. It works once, any time in the next 7 days.',
     'household_saved' => 'Household renamed.',
-    'settings_saved' => 'Settings saved. Open orders and saved lists now use the new amounts.',
+    'notice_tested'  => 'A test has been emailed to you. Your message is still below, ready to send to everyone.',
+    'settings_saved' =>'Settings saved. Open orders and saved lists now use the new amounts.',
 ];
 const ORGANIZER_PROBLEMS = [
     'label'      => 'Give the month a name, like "December 2026".',
@@ -45,7 +46,9 @@ const ORGANIZER_PROBLEMS = [
     'login_not_sent'   => 'The sign-in link could not be sent. An archived member has to be restored first.',
     'household_name'      => 'Give the household a name.',
     'household_duplicate' => 'Another household already has that name.',
-    'settings_discount' => 'Nothing was saved. The discount should be a number from 0 to 100.',
+    'notice_empty'    => 'Nothing was sent. The email needs both a subject and a message.',
+    'notice_not_sent' => 'The test could not be sent. Your message is still below.',
+    'settings_discount' =>'Nothing was saved. The discount should be a number from 0 to 100.',
     'settings_deposit'  => 'Nothing was saved. Type each deposit as an amount, like 1.50.',
     'settings_months'   => 'Nothing was saved. The number of months should be from 1 to 24.',
     'settings_cap'      => 'Nothing was saved. The email limit should be a whole number, 1 or more.',
@@ -203,6 +206,8 @@ function page_organizer(array $member, bool $isPost): void
         }
     } elseif ($view === 'members') {
         organizer_members($member);
+    } elseif ($view === 'email') {
+        organizer_email($member);
     } elseif ($view === 'settings') {
         organizer_settings();
     } else {

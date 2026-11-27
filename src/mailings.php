@@ -229,6 +229,55 @@ function last_call_queue(array $cycle): int
     return $queued;
 }
 
+// ---- "Email everyone": a message the organizer writes ----
+
+/**
+ * The organizer's own words, made ready for one member. Nothing is added to them: no
+ * greeting and no sign-off. {first_name} anywhere in the subject or the message becomes
+ * that person's first name.
+ */
+function notice_fill(string $text, array $member): string
+{
+    // A web form sends line ends as "\r\n"; emails here use "\n" alone.
+    $text = str_replace(["\r\n", "\r"], "\n", trim($text));
+    return str_replace('{first_name}', first_name($member), $text);
+}
+
+/**
+ * Keeps what the organizer has typed, so it is still in the boxes after a test send or
+ * after a problem. Sending it to everyone empties it.
+ */
+function notice_draft_save(string $subject, string $body): void
+{
+    set_setting('notice_draft_subject', trim($subject));
+    set_setting('notice_draft_body', trim($body));
+}
+
+/** Sends the message to one organizer now, as a member would get it, so it can be read first. */
+function notice_test(string $subject, string $body, array $member): bool
+{
+    return send_email($member['email'], notice_fill($subject, $member),
+        notice_fill($body, $member) . "\n" . group_footer('(each person\'s own unsubscribe link goes here)'));
+}
+
+/**
+ * Queues the message to every member who gets notification emails, each with the usual
+ * footer and their own unsubscribe link. Returns how many were queued.
+ */
+function notice_queue(string $subject, string $body): int
+{
+    $members = group_recipients();
+    foreach ($members as $m) {
+        queue_group_email($m, notice_fill($subject, $m), notice_fill($body, $m) . "\n");
+    }
+    // Remembered so the page can say what went out last, and when.
+    set_setting('notice_sent_at', now_utc());
+    set_setting('notice_sent_subject', trim($subject));
+    set_setting('notice_sent_count', (string) count($members));
+    notice_draft_save('', '');
+    return count($members);
+}
+
 // ---- Share-expiry warning ----
 
 /**
