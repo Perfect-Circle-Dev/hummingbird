@@ -146,6 +146,10 @@ a little, and wants to be able to follow and lightly edit the code. So:
   "started by" line (`.card-foot`) at the bottom of the card.
   My household uses the same grid held to two across (`.cards.pair`), one on a phone, with
   "Add someone to your household" as its last card.
+  Every card on My household (each person, Add someone, Previous orders) is a folding
+  `<details class="card fold">` like My favorites and starts folded (Brent, 2026-11-27).
+  `site.js` remembers the ones a person leaves open (`data-remember`). The "Previous orders"
+  link on My order adds `&show=orders`, which opens that card (`data-keep-open`).
 - "Browse by category" on My order, a card of its own under My favorites: each chip lists
   everything in that category, in the results under the search box (the page moves to them if
   they are out of view). A category is a name and the letters its item numbers begin with (L is beans, N is

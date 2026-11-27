@@ -71,14 +71,16 @@ function page_household(array $member, bool $isPost): void
     <?php if ($done): ?><p class="notice" role="status"><?= e($done) ?></p><?php endif; ?>
     <?php if ($problem): ?><p class="notice error" role="alert"><?= e($problem) ?></p><?php endif; ?>
 
-    <?php // Two cards across (one on a phone), each row as tall as its taller card. The
-          // "Add someone" card is the last of them. ?>
+    <?php // Two cards across (one on a phone). The "Add someone" card is the last of them.
+          // Every card on this page folds away under its heading, like My favorites on My
+          // order, and starts folded; site.js remembers the ones a person leaves open. ?>
     <div class="cards pair">
     <?php foreach ($people as $p):
         $isMe = (int) $p['id'] === (int) $member['id'];
         $id = (int) $p['id']; ?>
-      <div class="card stack">
-        <h2><?= e($p['name']) ?><?= $isMe ? ' <span class="flag">you</span>' : '' ?><?= $p['active'] ? '' : ' <span class="flag">archived</span>' ?></h2>
+      <details class="card fold" data-remember="household-person-<?= $id ?>">
+        <summary><h2><?= e($p['name']) ?><?= $isMe ? ' <span class="flag">you</span>' : '' ?><?= $p['active'] ? '' : ' <span class="flag">archived</span>' ?></h2></summary>
+        <div class="stack">
         <?php if (!$p['active']): ?>
           <p class="note"><?= e($p['email']) ?></p>
           <p class="note">This account is archived, so it can't sign in or add to your order. To switch it back on, contact Brent.</p>
@@ -146,11 +148,13 @@ function page_household(array $member, bool $isPost): void
           </details>
           <?php endif; ?>
         <?php endif; ?>
-      </div>
+        </div>
+      </details>
     <?php endforeach; ?>
 
-    <div class="card stack">
-      <h2>Add someone to your household</h2>
+    <details class="card fold" data-remember="household-add">
+      <summary><h2>Add someone to your household</h2></summary>
+      <div class="stack">
       <p class="note">For a partner, housemate or friend who orders with you. They share this order, sign in with their own email address, and get the group's emails. They are sent a sign-in link, and Brent is told.</p>
       <form method="post" action="/?a=household" class="stack">
         <?= csrf_field() ?>
@@ -174,15 +178,19 @@ function page_household(array $member, bool $isPost): void
         </div>
         <div><button class="btn" name="do" value="add">Add to my household</button></div>
       </form>
-    </div>
+      </div>
+    </details>
     </div>
 
     <?php // Previous orders: every closed month this household had something on, newest
           // first, under a heading for each year. Each month opens to show what was ordered.
     $past = household_past_orders((int) $member['household_id']);
-    $yearShown = ''; ?>
-    <div class="card stack" id="previous-orders">
-      <h2>Previous orders</h2>
+    $yearShown = '';
+    // The "Previous orders" link on My order asks for this card to be open (&show=orders).
+    $showOrders = ($_GET['show'] ?? '') === 'orders'; ?>
+    <details class="card fold" id="previous-orders" data-remember="household-previous-orders"<?= $showOrders ? ' open data-keep-open' : '' ?>>
+      <summary><h2>Previous orders</h2></summary>
+      <div class="stack">
       <?php if (!$past): ?>
         <p class="note">Nothing yet. Each month's order is listed here once that month is finished.</p>
       <?php endif; ?>
@@ -216,7 +224,8 @@ function page_household(array $member, bool $isPost): void
           <?php if ($p['paid_method']): ?><p class="note">Paid by <?= e($p['paid_method'] === 'venmo' ? 'Venmo' : $p['paid_method']) ?>.</p><?php endif; ?>
         </details>
       <?php endforeach; ?>
-    </div>
+      </div>
+    </details>
     <?php
     page_end();
 }
