@@ -443,6 +443,14 @@ fieldset.send-to legend { padding: 0; font-weight: 700; }
 .past-order li > span:last-child { flex: none; text-align: right; font-variant-numeric: tabular-nums; }
 .past-order li.sum { border-bottom: 0; padding: 2px 0; color: var(--muted); }
 .past-order li.sum.due { color: var(--ink); font-weight: 700; }
+/* Sent emails: one line per email (subject, then who and when), opening to its text. */
+.sent-email { border-top: 1px solid var(--line); }
+.sent-email:first-child { border-top: 0; }
+.sent-email > summary { display: flex; gap: 12px; padding: 10px 0; color: var(--ink); font-weight: 400; line-height: 1.4; }
+.sent-email > summary .grow { overflow-wrap: anywhere; }
+.sent-email[open] > summary { font-weight: 700; }
+.sent-email > pre { margin-bottom: 12px; }
+.sent-list li { display: flex; padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 pre.email { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--ground); color: var(--ink); font: 15px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ---- Things that open and close ---- */
