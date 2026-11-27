@@ -525,7 +525,7 @@ function organizer_email(array $member): void
           <label for="notice-subject">Subject</label>
           <input id="notice-subject" name="subject" type="text" value="<?= e($subject) ?>" maxlength="150" autocomplete="off" required>
         </div>
-        <label class="check"><input type="checkbox" name="greet" value="1" <?= $greet ? 'checked' : '' ?>> Start the email with "Hi &lt;first name&gt;,"</label>
+        <label class="check greet"><input type="checkbox" name="greet" value="1" <?= $greet ? 'checked' : '' ?>> Start with Hi &lt;first name&gt;</label>
         <div>
           <label for="notice-body">Message</label>
           <textarea id="notice-body" name="body" rows="14" required><?= e($body) ?></textarea>
