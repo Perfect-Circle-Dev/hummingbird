@@ -157,6 +157,106 @@ function fetch_json(string $url): array
  * Full refresh. Reads the catalog page by page, then switches off any variant
  * that is no longer listed. Nothing is switched off unless every page loaded.
  */
+// ---- Hummingbird's price sheet: where each item comes from, and whether it is organic or raw ----
+// The product feed does not say these things. Hummingbird's wholesale price list does: a Google
+// spreadsheet with a row for each item number. It is read after each catalog refresh.
+// config.php may give another address as 'price_sheet_url'.
+const PRICE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1O3edfScStDKfCxTcuMod_NnKKrsvd9XS6CAfaBy-tH0/export?format=csv';
+// The sheet abbreviates. These are written out in full for members; anything not listed
+// here ("Italy", "S. America") is shown as the sheet has it.
+const ORIGIN_NAMES = [
+    'OR' => 'Oregon', 'WA' => 'Washington', 'CA' => 'California', 'ID' => 'Idaho', 'HI' => 'Hawaii',
+    'VT' => 'Vermont', 'VA' => 'Virginia', 'CO' => 'Colorado', 'AZ' => 'Arizona', 'MT' => 'Montana',
+    'CAN' => 'Canada',
+];
+
+/** "OR" -> "Oregon", "USA/CAN" -> "USA/Canada"; a name already written out is left alone. */
+function origin_name(string $origin): string
+{
+    $parts = preg_split('#\s*([/,])\s*#', trim($origin), -1, PREG_SPLIT_DELIM_CAPTURE);
+    foreach ($parts as &$part) {
+        $part = ORIGIN_NAMES[strtoupper($part)] ?? $part;
+        if ($part === ',') {
+            $part = ', ';
+        }
+    }
+    return implode('', $parts);
+}
+
+/**
+ * Reads the price sheet and saves, for each item number in the catalog, its origin and whether
+ * it is organic and raw (variants.origin, organic, raw). Returns how many sizes were matched.
+ * It is careful, because the sheet is kept by hand and may change shape or be out of reach:
+ * unless the heading row is found and a good number of rows match the catalog, nothing is
+ * changed and the site keeps what it had. An item missing from the sheet also keeps what it had.
+ * $file reads a saved copy of the sheet, for testing.
+ */
+function sync_price_sheet(?string $file = null): int
+{
+    if ($file !== null) {
+        $csv = (string) file_get_contents($file);
+    } else {
+        $ch = curl_init((string) (config('price_sheet_url') ?: PRICE_SHEET_URL));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT => 'HolyFrijolesBuyingGroup/1.0 (brent@schefley.net)',
+        ]);
+        $csv = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($csv === false || $code !== 200) {
+            throw new RuntimeException("Could not load the price sheet (HTTP $code)");
+        }
+    }
+
+    // Find the heading row, then read each row under it by its headings.
+    $columns = null;
+    $facts = [];
+    foreach (preg_split('/\R/', (string) $csv) as $line) {
+        $cells = array_map(fn($cell): string => trim((string) $cell), str_getcsv($line, ',', '"', ''));
+        if ($columns === null) {
+            if (in_array('Item No.', $cells, true) && in_array('Origin', $cells, true)) {
+                $columns = array_flip(array_filter($cells, fn(string $c): bool => $c !== ''));
+            }
+            continue;
+        }
+        $sku = strtoupper($cells[$columns['Item No.']] ?? '');
+        if ($sku === '') {
+            continue;
+        }
+        $facts[$sku] = [
+            'origin'  => origin_name($cells[$columns['Origin']] ?? ''),
+            // "OG" is organic. The sheet also has "OGI" on a couple of rows, which is left unmarked.
+            'organic' => isset($columns['OG']) && strtoupper($cells[$columns['OG']] ?? '') === 'OG' ? 1 : 0,
+            // "Raw" and "Raw*" both count as raw.
+            'raw'     => isset($columns['Raw']) && stripos($cells[$columns['Raw']] ?? '', 'raw') === 0 ? 1 : 0,
+        ];
+    }
+    if ($columns === null) {
+        throw new RuntimeException('The price sheet has no "Item No." and "Origin" headings any more, so nothing was changed.');
+    }
+
+    $matches = [];
+    foreach (q('SELECT id, sku FROM variants WHERE active = 1')->fetchAll() as $v) {
+        $sku = strtoupper(trim((string) $v['sku']));
+        if (isset($facts[$sku])) {
+            $matches[(int) $v['id']] = $facts[$sku];
+        }
+    }
+    if (count($matches) < 50) {
+        throw new RuntimeException('Only ' . count($matches) . ' rows of the price sheet match the catalog, so nothing was changed.');
+    }
+    db()->beginTransaction();
+    foreach ($matches as $id => $f) {
+        q('UPDATE variants SET origin = ?, organic = ?, raw = ? WHERE id = ?', [$f['origin'] ?: null, $f['organic'], $f['raw'], $id]);
+    }
+    db()->commit();
+    set_setting('price_sheet_synced_at', now_utc());
+    return count($matches);
+}
+
 function sync_catalog(?string $fixtureFile = null): array
 {
     $syncedAt = now_utc();

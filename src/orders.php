@@ -247,7 +247,15 @@ function group_by_product(array $variants): array
     foreach ($variants as $v) {
         $key = $find('product ' . $v['product_id']);
         if (!isset($products[$key])) {
-            $products[$key] = ['title' => (string) $v['product_title'], 'description' => '', 'sizes' => []];
+            $products[$key] = ['title' => (string) $v['product_title'], 'description' => '', 'sizes' => [],
+                               'organic' => false, 'raw' => false, 'origin' => ''];
+        }
+        // Organic, raw and origin come from the price sheet, by size. They are shown once for the
+        // product, taken from whichever of its sizes has them.
+        $products[$key]['organic'] = $products[$key]['organic'] || !empty($v['organic']);
+        $products[$key]['raw'] = $products[$key]['raw'] || !empty($v['raw']);
+        if ($products[$key]['origin'] === '' && !empty($v['origin'])) {
+            $products[$key]['origin'] = (string) $v['origin'];
         }
         if ($products[$key]['description'] === '' && !empty($v['product_description'])) {
             $products[$key]['description'] = (string) $v['product_description'];
