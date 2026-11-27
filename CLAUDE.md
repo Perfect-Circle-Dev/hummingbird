@@ -273,8 +273,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   subject and a message and it is queued to the same people as the other group emails
   (`notice_queue()` in `src/mailings.php`). It goes out exactly as typed, with no greeting
   added (Brent's choice, 2026-11-27); `{first_name}` is filled in for each person
-  (`notice_fill()`), and the usual footer and unsubscribe link follow. "Send a test to me first"
-  sends one copy to the organizer at once. What is typed and ticked is kept in `settings`
+  (`notice_fill()`), and the usual footer and unsubscribe link follow. "Test email"
+  sends one copy to the organizer at once, and "Clear email" empties the saved draft. What is typed and ticked is kept in `settings`
   (`notice_draft_*`) until it is sent, which needs a ticked box. A box between Subject and
   Message puts "Hi {first_name}," above the message (`notice_body()`). It goes to everyone or
   to "selected members", ticked from a list of the people who receive notification emails

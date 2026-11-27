@@ -78,6 +78,11 @@ function organizer_people_post(string $do, array $member): void
         // If the last person was taken off, the share is gone and there is no card to go back to.
         redirect($page . $result . (find_share($shareId) ? '#share-' . $shareId : ''));
     }
+    if ($do === 'notice_clear') {
+        // "Clear email": forget the saved draft, so the page comes back empty.
+        notice_draft_save('', '');
+        redirect('/?a=organizer&view=email&done=notice_cleared');
+    }
     if ($do === 'notice_test' || $do === 'notice_send') {
         // The "Email everyone" page. What was typed is kept first, so nothing is lost if
         // there is a problem, and so it is still there after a test.
@@ -526,8 +531,13 @@ function organizer_email(array $member): void
           <textarea id="notice-body" name="body" rows="14" required><?= e($body) ?></textarea>
         </div>
         <p class="note">Apart from that greeting, if you tick its box, the email is sent exactly as you type it, so sign your name. Type {first_name} wherever else you want each person's first name. Leave an empty line between paragraphs. Each copy ends with the group's usual footer and that person's own unsubscribe link.</p>
-        <div><button class="btn quiet" name="do" value="notice_test">Send a test to me first</button></div>
-        <p class="note">The test goes only to <?= e($member['email']) ?>, and your message stays here afterwards.</p>
+        <?php // "Clear email" has formnovalidate so it works with the boxes already emptied:
+              // without it the browser would refuse to send a form whose required boxes are blank. ?>
+        <div class="row">
+          <button class="btn quiet" name="do" value="notice_test">Test email</button>
+          <button class="btn quiet" name="do" value="notice_clear" formnovalidate>Clear email</button>
+        </div>
+        <p class="note">The test goes only to <?= e($member['email']) ?>. Your message stays here, even if you leave the page, until you send it or press "Clear email".</p>
 
         <?php // The list of names shows only while "Send to selected members" is chosen
               // (see .send-to in site.css); in a browser too old for that it always shows. ?>
