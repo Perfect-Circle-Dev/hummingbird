@@ -23,6 +23,7 @@ const ORGANIZER_DONE = [
     'share_saved'   => 'Saved. The people on that share item have been emailed how it stands now.',
     'share_same'    => 'Nothing was different, so nothing was saved and nobody was emailed.',
     'share_deleted' => 'The share item is deleted. The people who were on it have been emailed.',
+    'notice_cleared' => 'Cleared. Nothing was sent.',
     'notice_tested'  => 'A test has been emailed to you. Your message is still below, ready to send to everyone.',
     'settings_saved' =>'Settings saved. Open orders and saved lists now use the new amounts.',
 ];
