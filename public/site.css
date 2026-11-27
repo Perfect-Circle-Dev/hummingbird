@@ -413,6 +413,21 @@ td.center { min-width: 160px; }
 .people li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
 .people li:first-child { border-top: 0; padding-top: 0; }
 .people li + li { margin-top: 10px; }
+/* Email everyone: the two "who gets it" choices and the names to tick. The names show only
+   while "Send to selected members" is chosen. A browser that does not know :has() skips the
+   whole @supports block and simply shows the names all the time. */
+fieldset.send-to { margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); min-width: 0; }
+fieldset.send-to legend { padding: 0; font-weight: 700; }
+.pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 0 16px; padding-left: 34px; }
+@supports selector(:has(*)) {
+  .send-to .pick-list { display: none; }
+  .send-to:has(input[value="selected"]:checked) .pick-list { display: grid; }
+}
+/* Previous orders on My household: the item at the left, its amount at the right. */
+.past-order li { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px dotted var(--line); }
+.past-order li > span:last-child { flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+.past-order li.sum { border-bottom: 0; padding: 2px 0; color: var(--muted); }
+.past-order li.sum.due { color: var(--ink); font-weight: 700; }
 pre.email { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--ground); color: var(--ink); font: 15px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ---- Things that open and close ---- */

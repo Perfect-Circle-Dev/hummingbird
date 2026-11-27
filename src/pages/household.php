@@ -176,6 +176,47 @@ function page_household(array $member, bool $isPost): void
       </form>
     </div>
     </div>
+
+    <?php // Previous orders: every closed month this household had something on, newest
+          // first, under a heading for each year. Each month opens to show what was ordered.
+    $past = household_past_orders((int) $member['household_id']);
+    $yearShown = ''; ?>
+    <div class="card stack" id="previous-orders">
+      <h2>Previous orders</h2>
+      <?php if (!$past): ?>
+        <p class="note">Nothing yet. Each month's order is listed here once that month is finished.</p>
+      <?php endif; ?>
+      <?php foreach ($past as $p):
+          $summary = $p['summary'];
+          $year = fmt_local($p['cycle']['due_at'], 'Y');
+          if ($year !== $yearShown):
+              $yearShown = $year; ?>
+        <h3><?= e($year) ?></h3>
+      <?php endif; ?>
+        <details class="step">
+          <summary><?= e(cycle_month_name($p['cycle'])) ?> <span class="note">· <?= money($summary['due_cents']) ?></span></summary>
+          <ul class="plain past-order">
+            <?php foreach ($summary['lines'] as $l): ?>
+              <li>
+                <span><?= (int) $l['qty'] ?> &times; <?= e($l['product_title']) ?>, <?= e($l['size']) ?> <span class="note">(<?= e($l['sku']) ?>)</span></span>
+                <span><?= $l['out_of_stock'] ? 'Out of stock' : money($l['line_cents'] + $l['line_deposit_cents']) ?></span>
+              </li>
+            <?php endforeach; ?>
+            <?php foreach ($summary['shares'] as $s): ?>
+              <li>
+                <span>Share: <?= e(fmt_amount((float) $s['amount'])) ?> <?= e($s['size_unit']) ?> of <?= e($s['product_title']) ?>, <?= e($s['size']) ?></span>
+                <span><?= $s['out_of_stock'] ? 'Out of stock' : money((int) $s['cost_cents']) ?></span>
+              </li>
+            <?php endforeach; ?>
+            <li class="sum"><span>Regular items</span><span><?= money($summary['items_cents']) ?></span></li>
+            <li class="sum"><span>Container deposits</span><span><?= money($summary['deposits_cents']) ?></span></li>
+            <li class="sum"><span>Share items</span><span><?= money($summary['shares_cents']) ?></span></li>
+            <li class="sum due"><span>Total</span><span><?= money($summary['due_cents']) ?></span></li>
+          </ul>
+          <?php if ($p['paid_method']): ?><p class="note">Paid by <?= e($p['paid_method'] === 'venmo' ? 'Venmo' : $p['paid_method']) ?>.</p><?php endif; ?>
+        </details>
+      <?php endforeach; ?>
+    </div>
     <?php
     page_end();
 }

@@ -84,7 +84,7 @@ function group_footer(string $unsubscribeUrl): string
     return "\n-- \n" . config('site_name') . ", " . config('site_tagline') . ".\n"
         . "You get this because you are a member.\n"
         . "To stop emails from the site: $unsubscribeUrl\n"
-        . "Someone in your household will still get the emails about its order.\n";
+        . "The primary person in your household will still get emails about placed orders.\n";
 }
 
 /** Queues one group email to one member, with the footer and unsubscribe link added. */
@@ -243,14 +243,24 @@ function notice_fill(string $text, array $member): string
     return str_replace('{first_name}', first_name($member), $text);
 }
 
+/** The message with "Hi {first_name}," put above it, when the organizer ticked that box. */
+function notice_body(string $body, bool $greet): string
+{
+    return ($greet ? "Hi {first_name},\n\n" : '') . trim($body);
+}
+
 /**
- * Keeps what the organizer has typed, so it is still in the boxes after a test send or
- * after a problem. Sending it to everyone empties it.
+ * Keeps what the organizer has typed and ticked, so it is still on the page after a test
+ * send or after a problem. Sending the email empties it. $to is 'everyone' or 'selected',
+ * and $picked the ids of the members ticked.
  */
-function notice_draft_save(string $subject, string $body): void
+function notice_draft_save(string $subject, string $body, bool $greet = false, string $to = 'everyone', array $picked = []): void
 {
     set_setting('notice_draft_subject', trim($subject));
     set_setting('notice_draft_body', trim($body));
+    set_setting('notice_draft_greet', $greet ? '1' : '');
+    set_setting('notice_draft_to', $to === 'selected' ? 'selected' : 'everyone');
+    set_setting('notice_draft_picked', implode(',', array_map('intval', $picked)));
 }
 
 /** Sends the message to one organizer now, as a member would get it, so it can be read first. */
@@ -261,21 +271,37 @@ function notice_test(string $subject, string $body, array $member): bool
 }
 
 /**
- * Queues the message to every member who gets notification emails, each with the usual
- * footer and their own unsubscribe link. Returns how many were queued.
+ * Queues the message, each copy with the usual footer and that person's own unsubscribe
+ * link, and keeps a copy for the "Previously sent" list. With $onlyIds null it goes to every
+ * member who gets notification emails; with a list of member ids, to those of them who are on
+ * the list. So a member who has switched notification emails off can never be sent one.
+ * Returns how many were queued (nothing is saved or emptied when that is none).
  */
-function notice_queue(string $subject, string $body): int
+function notice_queue(string $subject, string $body, ?array $onlyIds, int $sentBy): int
 {
     $members = group_recipients();
+    if ($onlyIds !== null) {
+        $onlyIds = array_map('intval', $onlyIds);
+        $members = array_values(array_filter($members, fn(array $m): bool => in_array((int) $m['id'], $onlyIds, true)));
+    }
+    if (!$members) {
+        return 0;
+    }
     foreach ($members as $m) {
         queue_group_email($m, notice_fill($subject, $m), notice_fill($body, $m) . "\n");
     }
-    // Remembered so the page can say what went out last, and when.
-    set_setting('notice_sent_at', now_utc());
-    set_setting('notice_sent_subject', trim($subject));
-    set_setting('notice_sent_count', (string) count($members));
+    q('INSERT INTO notices (subject, body, sent_to, recipient_count, sent_by, sent_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [trim($subject), str_replace(["\r\n", "\r"], "\n", trim($body)),
+         $onlyIds === null ? 'everyone' : implode(', ', array_column($members, 'name')),
+         count($members), $sentBy, now_utc()]);
     notice_draft_save('', '');
     return count($members);
+}
+
+/** The messages sent from the "Email everyone" page, newest first. */
+function notices_sent(): array
+{
+    return q('SELECT n.*, m.name AS sender FROM notices n LEFT JOIN members m ON m.id = n.sent_by ORDER BY n.id DESC')->fetchAll();
 }
 
 // ---- Share-expiry warning ----

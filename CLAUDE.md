@@ -252,9 +252,20 @@ a little, and wants to be able to follow and lightly edit the code. So:
   (`notice_queue()` in `src/mailings.php`). It goes out exactly as typed, with no greeting
   added (Brent's choice, 2026-11-27); `{first_name}` is filled in for each person
   (`notice_fill()`), and the usual footer and unsubscribe link follow. "Send a test to me first"
-  sends one copy to the organizer at once. What is typed is kept in `settings`
-  (`notice_draft_subject`, `notice_draft_body`) until it is sent to everyone, which needs a
-  ticked box.
+  sends one copy to the organizer at once. What is typed and ticked is kept in `settings`
+  (`notice_draft_*`) until it is sent, which needs a ticked box. A box between Subject and
+  Message puts "Hi {first_name}," above the message (`notice_body()`). It goes to everyone or
+  to "selected members", ticked from a list of the people who receive notification emails
+  (the list shows only while that choice is made, by CSS `:has()`); `notice_queue()` drops
+  any id that is not on that list. Each one sent is kept in the `notices` table and listed
+  under "Previously sent" (`notices_sent()`).
+- "Previous orders" on My household (`household_past_orders()` in `src/orders.php`): every
+  closed month the household had a line or a share part on, newest first under a heading per
+  year, each opening to its items, sums and how it was paid. Nothing is stored for it; it
+  reads the closed months' orders.
+- The last line of `group_footer()` is Brent's wording (2026-11-27): "The primary person in
+  your household will still get emails about placed orders." There is no "primary person" in
+  the code; who gets order emails is still `household_email_recipients()`.
 - The Members page shows a card per household in the `.cards` grid, three across on a wide
   screen, each row as tall as its tallest card.
 - One switch per person, `members.email_opt_out`, shown as "Receives notification emails": on

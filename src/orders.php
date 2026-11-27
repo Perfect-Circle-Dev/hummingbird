@@ -466,6 +466,26 @@ function order_summary(array $order): array
     ];
 }
 
+/**
+ * A household's orders from closed months, newest first, for "Previous orders" on My
+ * household. Each is the month with its summary (see order_summary) and how it was paid.
+ * A month the household had nothing on is left out.
+ */
+function household_past_orders(int $householdId): array
+{
+    $past = [];
+    foreach (q("SELECT * FROM cycles WHERE status = 'closed' ORDER BY due_at DESC, id DESC")->fetchAll() as $cycle) {
+        // Looked up, not created: a household with only a share part has no order row.
+        $order = q('SELECT * FROM orders WHERE cycle_id = ? AND household_id = ?', [$cycle['id'], $householdId])->fetch()
+            ?: ['id' => 0, 'household_id' => $householdId, 'cycle_id' => $cycle['id'], 'paid_method' => null];
+        $summary = order_summary($order);
+        if ($summary['lines'] || $summary['shares']) {
+            $past[] = ['cycle' => $cycle, 'summary' => $summary, 'paid_method' => $order['paid_method'] ?? null];
+        }
+    }
+    return $past;
+}
+
 /** Marks the order submitted and emails a summary to everyone in the household. */
 function order_submit(array $order, array $cycle): void
 {

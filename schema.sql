@@ -179,3 +179,14 @@ CREATE TABLE IF NOT EXISTS email_queue (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sent_at TEXT
 );
+
+-- Messages an organizer wrote on the "Email everyone" page, kept so they can be read again.
+CREATE TABLE IF NOT EXISTS notices (
+    id INTEGER PRIMARY KEY,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,                  -- as typed; {first_name} is filled in for each person when it is sent
+    sent_to TEXT NOT NULL,               -- 'everyone', or the names of the members picked
+    recipient_count INTEGER NOT NULL,
+    sent_by INTEGER REFERENCES members(id),
+    sent_at TEXT NOT NULL
+);
