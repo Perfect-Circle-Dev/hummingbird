@@ -54,6 +54,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] One card per product with a row for each size; double listings shown once; very big sizes left out
 - [x] Product descriptions from Hummingbird, in a pop-up beside the name
 - [x] Organic, raw and origin under each product's name, from Hummingbird's price sheet
+- [x] Add and Save buttons show how many are on the order ("2 Added", "1 Saved"), with "View order" and "View saved" links
 - [x] Order page: search, favorites, quantities, submit, confirmation email
 - [x] Share board: start, claim, change, cancel; filled shares show on household totals
 - [x] Open a month from the command line (`bin/open-cycle.php`), until the organizer page exists

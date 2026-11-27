@@ -208,15 +208,14 @@
     return null;
   }
 
-  // Shows on the button itself that the item went on. For a moment "Add" reads "Added" and
-  // "Save for next month" reads "Saved", in another colour with a check mark (the "done"
-  // style in site.css). Then it goes back, ready to be pressed again.
+  // After an item goes on the order or the next-month list: a small bounce on its button, and
+  // the news read out for a screen reader. The button's new wording ("1 Added", "2 Added")
+  // is not set here; it comes with the refreshed page, from the real quantities.
   function showDone(button, mark) {
     var word = mark.kind === 'do:add' ? 'Added' : (mark.kind === 'do:later' ? 'Saved' : '');
     if (!word) return;
-    var was = button.textContent;
-    button.style.minWidth = button.offsetWidth + 'px'; // keep its width, so nothing beside it moves
-    button.textContent = word;
+    // The button already reads "1 Added" or "2 Saved": the page that came back says how many
+    // are on the order now. All that is added here is a small bounce, so the press is seen.
     button.classList.add('done');
     // The same news for someone using a screen reader, with the item's name.
     // The name is on the product's card, or on the row itself in My favorites; the size is on the row.
@@ -228,11 +227,7 @@
       said.textContent = (word === 'Added' ? 'Added to your order: ' : 'Saved for next month: ')
         + name.textContent + (size ? ', ' + size.textContent : '');
     }
-    setTimeout(function () {
-      button.textContent = was;
-      button.classList.remove('done');
-      button.style.minWidth = '';
-    }, 1600);
+    setTimeout(function () { button.classList.remove('done'); }, 600);
   }
 
   document.addEventListener('submit', function (event) {

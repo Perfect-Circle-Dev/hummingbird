@@ -38,8 +38,6 @@
   --success-bg: #1E40AF;   /* "done" messages */
   --success-ink: #FFFFFF;
   --success-icon: #FFC53D; /* the check mark in them */
-  --done-bg: #F2B01E;      /* a button just after it worked ("Added"); must differ from --primary */
-  --done-ink: #14213D;
   --shadow: rgb(20 33 61 / 0.22); /* under a pop-up */
   --warn-bg: #FFF1C7;     /* warnings: locked order, unfinished flags */
   --warn-ink: #5A3D00;
@@ -65,8 +63,6 @@
     --success-bg: #7FA4FF;
     --success-ink: #0E1630;
     --success-icon: #0E1630;
-    --done-bg: #7FA4FF;
-    --done-ink: #0E1630;
     --shadow: rgb(0 0 0 / 0.6);
     --warn-bg: #3A2F0B;
     --warn-ink: #FFE08A;
@@ -234,12 +230,10 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .btn:active, .star:active, .qty button:active { transform: scale(0.96); }
 /* "Add" is as wide as "Added" with its check mark, so nothing beside it moves when it changes. */
 .item .btn[value="add"] { min-width: 118px; }
-/* For a moment after an item goes on the order, its button changes colour and reads "Added"
-   or "Saved" with a check mark (site.js adds and removes "done"). */
-.btn.done { background: var(--done-bg); color: var(--done-ink); border-color: var(--done-bg); }
-.btn.done::before { content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 6px; vertical-align: -3px; background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat; }
+/* "Save for next month" keeps its width when it reads "1 Saved", so nothing beside it moves. */
+.item .btn[value="later"] { min-width: 202px; }
+/* When an item goes on the order its button reads "1 Added" (the page says so; see order.php)
+   and keeps its colour. site.js adds "done" for a moment, which is only a small bounce. */
 /* The small bounce is left out for anyone who has asked their device for less movement. */
 @media (prefers-reduced-motion: no-preference) {
   .btn, .star, .qty button { transition: transform 0.08s; }
@@ -332,6 +326,9 @@ main > .notice { margin-bottom: 16px; }
 .item-text { flex: 1 1 200px; min-width: 0; }
 .item-name { font-weight: 700; }
 .item form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* The links under the buttons: Share it, View order, View saved. */
+.item-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.item-links:empty { display: none; }
 /* The favorite star is a drawing, not a character: outlined when off, filled when on. */
 .star { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; background: none; }
 .star svg { width: 26px; height: 26px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; }

@@ -46,12 +46,21 @@ function page_order(array $member, bool $isPost): void
 
     $favorites = favorites_for((int) $member['id']);
     $favoriteIds = array_column($favorites, 'id');
+    // How many of each size the household already has: on this month's order (only while it can
+    // still be changed) and on the list for next month. The Add and Save buttons show these.
+    $onOrder = $open ? array_column(order_lines((int) $order['id']), 'qty', 'variant_id') : [];
+    $onSaved = array_column(order_lines((int) $nextOrder['id']), 'qty', 'variant_id');
     $results = $cat !== '' ? category_items($cat) : search_catalog($query);
 
     // The star, Add and Save buttons for one size of one product. Used by the favorites rows and
     // by the size rows of a product card, so the two can never drift apart.
-    $itemButtons = function (array $v) use ($favoriteIds, $open, $query, $cat): void {
+    $itemButtons = function (array $v) use ($favoriteIds, $open, $query, $cat, $onOrder, $onSaved): void {
         $isFav = in_array($v['id'], $favoriteIds);
+        $what = $v['product_title'] . ', ' . $v['title'];
+        // Once some are on the order the button says how many, and stays that way: "1 Added",
+        // then "2 Added" when it is pressed again. The same for the next-month list.
+        $added = (int) ($onOrder[$v['id']] ?? 0);
+        $saved = (int) ($onSaved[$v['id']] ?? 0);
         ?>
           <form method="post" action="/?a=order">
             <?= csrf_field() ?>
@@ -59,12 +68,17 @@ function page_order(array $member, bool $isPost): void
             <input type="hidden" name="cat" value="<?= e($cat) ?>">
             <input type="hidden" name="variant_id" value="<?= (int) $v['id'] ?>">
             <button class="star<?= $isFav ? ' on' : '' ?>" name="do" value="fav" aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>: <?= e($v['product_title'] . ', ' . $v['title']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg></button>
-            <?php if ($open): ?><button class="btn" name="do" value="add" aria-label="Add <?= e($v['product_title'] . ', ' . $v['title']) ?>">Add</button><?php endif; ?>
-            <button class="btn<?= $open ? ' quiet' : '' ?>" name="do" value="later" aria-label="Save for next month: <?= e($v['product_title'] . ', ' . $v['title']) ?>">Save for next month</button>
+            <?php if ($open): ?><button class="btn" name="do" value="add" aria-label="<?= $added ? $added . ' on your order, add another' : 'Add' ?>: <?= e($what) ?>"><?= $added ? $added . ' Added' : 'Add' ?></button><?php endif; ?>
+            <button class="btn<?= $open ? ' quiet' : '' ?>" name="do" value="later" aria-label="<?= $saved ? $saved . ' saved for next month, save another' : 'Save for next month' ?>: <?= e($what) ?>"><?= $saved ? $saved . ' Saved' : 'Save for next month' ?></button>
           </form>
-          <?php if ($v['size_amount']): ?>
-            <a class="note" href="/?a=shares&amp;start=<?= (int) $v['id'] ?>">Share it</a>
-          <?php endif; ?>
+          <?php // Under the buttons: split it with others, and jump to the order or the saved list once it is on one. ?>
+          <div class="item-links">
+            <?php if ($v['size_amount']): ?>
+              <a class="note" href="/?a=shares&amp;start=<?= (int) $v['id'] ?>">Share it</a>
+            <?php endif; ?>
+            <?php if ($added): ?><a class="note" href="#order">View order</a><?php endif; ?>
+            <?php if ($saved): ?><a class="note" href="#saved">View saved</a><?php endif; ?>
+          </div>
         <?php
     };
 
@@ -139,7 +153,7 @@ function page_order(array $member, bool $isPost): void
         // Close puts the list away, the same as Clear. It is a plain link to this page with
         // nothing showing, so it works without the script.
         echo '<div class="results-head"><p class="note">' . $heading . '</p>'
-            . '<a class="close" href="/?a=order" data-close aria-label="Close this list"><span>Close</span></a></div>';
+            . '<a class="close" href="/?a=order" data-close aria-label="Close this list"><span>Close Search</span></a></div>';
         foreach ($products as $p) {
             $productCard($p);
         }
@@ -264,7 +278,7 @@ function page_order(array $member, bool $isPost): void
     if ($cycle) {
         $summary = order_summary($order);
         ?>
-        <div class="card stack">
+        <div class="card stack" id="order">
           <h2><?= e($member['household_name']) ?> order for <?= e($cycle['label']) ?></h2>
           <p class="note">Due <?= e(fmt_local($cycle['due_at'])) ?><?= pickup_text($cycle) !== '' ? ' · ' . e(pickup_text($cycle)) : '' ?></p>
           <?php if (!$summary['lines'] && !$summary['shares']): ?>
@@ -319,7 +333,7 @@ function page_order(array $member, bool $isPost): void
 
     $saved = order_summary($nextOrder);
     ?>
-    <div class="card stack">
+    <div class="card stack" id="saved">
       <h2>Saved for next month</h2>
       <?php if (!$saved['lines']): ?>
         <p class="note">Nothing saved. If you think of something for a later order, choose "Save for next month" on the item and it will be waiting for you.</p>

@@ -27,11 +27,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   on My order, buttons update the page in place (the server still answers with the whole page,
   and the script swaps in the parts with ids `results`, `favorites` and `order-lists`); and the
   organizer's "out of stock for everyone" box ticking the others. It also remembers whether
-  "My favorites" was left folded away (the folding itself is a plain `<details>`), turns
-  "Add" and "Save for next month" into "Added" and "Saved" for a moment after they work (the
-  `done` class), and makes the Clear button inside the search box empty it on the spot (without
+  "My favorites" was left folded away (the folding itself is a plain `<details>`), gives
+  "Add" and "Save for next month" a small bounce when they work (the `done` class), and makes
+  the Clear button inside the search box empty it on the spot (without
   the script Clear is a link that reloads the page with no search). Clear shows only when
-  there is text in the box or a category on show. The Close button over a list of results (a
+  there is text in the box or a category on show. The "Close Search" button over a list of results (a
   search or a category) does the same as Clear; it is drawn as part of the results, straight
   under Clear, which is why the Search button has a set width (`--search-w` in `site.css`).
   That line (count and Close) stays in view under the header while its list is scrolled
@@ -164,6 +164,12 @@ a little, and wants to be able to follow and lightly edit the code. So:
   share a stem (G129 and G129-5# are both G129), which is what joins the two halves of a
   double listing. Each card is a bordered box, with a dotted line between its sizes.
   My favorites stays one row per size.
+- The Add and Save for next month buttons count: once a size is on the order its button reads
+  "1 Added", then "2 Added" (and "1 Saved", "2 Saved"), and stays that way. The number is the
+  real quantity on the order or the saved list, written by the server in `page_order()`
+  (`$onOrder`, `$onSaved`), so it is right after a reload and goes back to "Add" when the line
+  is taken off. Under the buttons, beside "Share it" (`.item-links`), "View order" and
+  "View saved" appear and jump to those cards (`id="order"`, `id="saved"`).
 - The nightly catalog refresh stores each product's description as plain text
   (`products.description`, `plain_description()`): tags and scripts are stripped, so a
   description can never alter a page. "Description" beside a product's name opens it in a
