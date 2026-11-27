@@ -64,7 +64,7 @@ a little, and wants to be able to follow and lightly edit the code. So:
   a version number so browsers fetch a changed file at once. `site_logo()` shows `public/logo.svg`, `.webp` or `.png` in
   the header and as the tab icon when such a file exists.
 - `src/pages/*.php`: one function per page (`page_order`, `page_shares`, `page_organizer`).
-  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=share-items`; `&view=email`; `&view=settings`;
+  Organizer addresses: `/?a=organizer` months; `&view=members`; `&view=share-items`; `&view=email`; `&view=sent`; `&view=settings`;
   `&month=ID` that month's combined order; `&month=ID&view=report` report and payments;
   `&month=ID&view=shares` split sheets. Month pages are in `pages/organizer.php`, members and
   settings in `pages/organizer_people.php`. Every organizer form posts to `/?a=organizer` with
@@ -196,6 +196,11 @@ a little, and wants to be able to follow and lightly edit the code. So:
   (`share_admin_editable()`). Each save or delete emails the people who were or are on it
   (`share_change_email()`; Brent's choice, 2026-11-27), but not the organizer who did it, nor
   anyone archived or with notification emails off.
+- "Sent emails" (`/?a=organizer&view=sent`, `organizer_sent_emails()`): every row of
+  `email_log`, newest first, 100 to a page, each opening to its text, with what is still in
+  the queue above it and a search by name, address or subject. Read only. The secret part of
+  any sign-in, unsubscribe or confirm link is hidden (`email_text_for_show()`), so the page
+  can't be used to sign in as a member; keep that if the page is changed.
 - On My order, "(share)" after a shared item's name is a link (`.share-link`, coloured, no
   underline) to that card on Share items; each card there has `id="share-ID"`.
 - Members see the share page as "Share items". The code and these notes still say shares and

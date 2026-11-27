@@ -76,6 +76,7 @@ Hummingbird Wholesale, Eugene). Target: live for the December 2026 order.
 - [x] Previous orders on My household, by year and month
 - [x] Organizer: Shares page, to change the amounts on any share item or delete it, with an email to the people on it
 - [x] "(share)" on My order links to that item on Share items
+- [x] Organizer: Sent emails page, listing every email the site has sent and what is waiting
 - [x] Each member's personal sign-in link in the "time to order" and last-call emails, good until the month is closed
 - [x] Email queue with a daily limit, so a big mailing can't go over Resend's cap
 - [x] Deposits on a case of several jugs: one deposit for each container in the case

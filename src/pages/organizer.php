@@ -216,6 +216,8 @@ function page_organizer(array $member, bool $isPost): void
         organizer_members($member);
     } elseif ($view === 'share-items') {
         organizer_shares();
+    } elseif ($view === 'sent') {
+        organizer_sent_emails();
     } elseif ($view === 'email') {
         organizer_email($member);
     } elseif ($view === 'settings') {

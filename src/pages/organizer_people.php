@@ -6,7 +6,7 @@ declare(strict_types=1);
 /** The row of links at the top of the main organizer pages. */
 function organizer_nav(string $current): void
 {
-    $pages = ['' => 'Months', 'members' => 'Members', 'share-items' => 'Shares', 'email' => 'Email everyone', 'settings' => 'Settings'];
+    $pages = ['' => 'Months', 'members' => 'Members', 'share-items' => 'Shares', 'email' => 'Email everyone', 'sent' => 'Sent emails', 'settings' => 'Settings'];
     echo '<nav class="subnav" aria-label="Organizer">';
     foreach ($pages as $view => $label) {
         echo $view === $current
@@ -378,6 +378,108 @@ function organizer_shares(): void
         </div>
       </div>
     <?php endforeach; ?>
+    </div>
+    <?php
+    page_end();
+}
+
+const SENT_EMAILS_PER_PAGE = 100;
+
+/**
+ * An email's text as the organizer may see it: the secret part of any sign-in, unsubscribe
+ * or confirm link is left out, so reading this page can't be used to sign in as a member.
+ */
+function email_text_for_show(string $body): string
+{
+    return (string) preg_replace('/([?&]t=)[0-9a-f]{16,}/i', '$1(hidden)', $body);
+}
+
+/**
+ * Sent emails page: everything the site has sent, newest first, from email_log, with what
+ * is still waiting in the queue above it. A search box narrows it to an address, a name or
+ * a subject. Read only: nothing can be sent or changed from here.
+ */
+function organizer_sent_emails(): void
+{
+    $search = trim((string) ($_GET['q'] ?? ''));
+    $before = (int) ($_GET['before'] ?? 0);   // show emails older than this one ("Older" link)
+    $where = [];
+    $params = [];
+    if ($search !== '') {
+        // A name is looked up through the member who has that address.
+        $where[] = '(l.to_email LIKE ? OR l.subject LIKE ? OR m.name LIKE ?)';
+        array_push($params, "%$search%", "%$search%", "%$search%");
+    }
+    if ($before > 0) {
+        $where[] = 'l.id < ?';
+        $params[] = $before;
+    }
+    // One more than a page is fetched, to know whether there are older ones.
+    $rows = q('SELECT l.*, m.name AS member_name FROM email_log l
+               LEFT JOIN members m ON m.email = l.to_email COLLATE NOCASE'
+        . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+        . ' ORDER BY l.id DESC LIMIT ' . (SENT_EMAILS_PER_PAGE + 1), $params)->fetchAll();
+    $more = count($rows) > SENT_EMAILS_PER_PAGE;
+    $rows = array_slice($rows, 0, SENT_EMAILS_PER_PAGE);
+    $waiting = q('SELECT e.*, m.name AS member_name FROM email_queue e
+                  LEFT JOIN members m ON m.email = e.to_email COLLATE NOCASE
+                  WHERE e.sent_at IS NULL ORDER BY e.id')->fetchAll();
+    $address = '/?a=organizer&amp;view=sent' . ($search !== '' ? '&amp;q=' . urlencode($search) : '');
+
+    page_start('Sent emails');
+    organizer_nav('sent');
+    echo '<h1>Sent emails</h1>';
+    ?>
+    <p class="note">Every email the site has sent, newest first: sign-in links, order emails, group emails and notices. The secret part of sign-in and unsubscribe links is hidden here.</p>
+    <form method="get" action="/" class="row">
+      <input type="hidden" name="a" value="organizer">
+      <input type="hidden" name="view" value="sent">
+      <div class="grow">
+        <label for="sent-q">Find by name, email address or subject</label>
+        <input id="sent-q" name="q" type="search" value="<?= e($search) ?>" autocomplete="off">
+      </div>
+      <button class="btn">Find</button>
+      <?php if ($search !== ''): ?><a class="btn quiet" href="/?a=organizer&amp;view=sent">Show all</a><?php endif; ?>
+    </form>
+
+    <?php if ($waiting && $search === '' && !$before): ?>
+      <div class="card stack">
+        <h2>Waiting to go out <span class="note">(<?= count($waiting) ?>)</span></h2>
+        <?php organizer_queue_notice(); ?>
+        <ul class="plain sent-list">
+          <?php foreach ($waiting as $w): ?>
+            <li>
+              <span class="grow"><strong><?= e($w['subject']) ?></strong><br>
+                <span class="note">To <?= e($w['member_name'] ? $w['member_name'] . ' · ' : '') ?><?= e($w['to_email']) ?> · queued <?= e(fmt_local($w['created_at'])) ?><?= $w['attempts'] >= 3 ? ' · given up after 3 tries' : ($w['attempts'] ? ' · ' . (int) $w['attempts'] . ' failed ' . ($w['attempts'] == 1 ? 'try' : 'tries') : '') ?></span></span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
+
+    <div class="card stack">
+      <?php if (!$rows): ?>
+        <p class="note"><?= $search !== '' ? 'No emails match that.' : 'No emails yet.' ?></p>
+      <?php endif; ?>
+      <?php foreach ($rows as $r): ?>
+        <details class="fold sent-email">
+          <summary>
+            <span class="grow"><?= e($r['subject']) ?><?php if ($r['status'] === 'failed'): ?> <span class="flag">not delivered</span><?php elseif ($r['status'] === 'logged'): ?> <span class="flag">test only, not sent</span><?php endif; ?><br>
+              <span class="note">To <?= e($r['member_name'] ? $r['member_name'] . ' · ' : '') ?><?= e($r['to_email']) ?> · <?= e(fmt_local($r['created_at'], 'D, M j, Y')) ?> at <?= e(fmt_time_short($r['created_at'])) ?></span></span>
+          </summary>
+          <?php if ($r['body'] !== ''): ?>
+            <pre class="email"><?= e(email_text_for_show($r['body'])) ?></pre>
+          <?php else: ?>
+            <p class="note">The text of this email was not kept.</p>
+          <?php endif; ?>
+        </details>
+      <?php endforeach; ?>
+      <?php if ($more): ?>
+        <p><a class="btn quiet" href="<?= $address ?>&amp;before=<?= (int) end($rows)['id'] ?>">Older emails</a></p>
+      <?php endif; ?>
+      <?php if ($before): ?>
+        <p><a href="<?= $address ?>">Back to the newest</a></p>
+      <?php endif; ?>
     </div>
     <?php
     page_end();
