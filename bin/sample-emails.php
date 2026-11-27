@@ -290,6 +290,19 @@ take('A message from an organizer',
     'An organizer writes it on the "Email everyone" page and presses "Send to everyone".',
     'Every active member who receives notification emails.', 'A note about pickup', $rosa['email']);
 
+// ---- 22 and 23. An organizer changes a share by hand, then deletes one ----
+$oatShare = share_start($oats, (int) $rosa['id'], 10);
+share_set_claim($oatShare, (int) $priya['id'], 5);
+$oatClaims = array_column(find_share($oatShare)['claims'], 'id', 'member_id');
+share_admin_save($oatShare, [$oatClaims[(int) $rosa['id']] => '12', $oatClaims[(int) $priya['id']] => '8'], 0, '', $organizer);
+take('A share item changed by an organizer',
+    'An organizer changes the amounts on a share item on the organizer\'s Shares page.',
+    'Everyone who was on that share item or is on it now.', 'Share item changed', $rosa['email']);
+share_admin_delete($oatShare, $organizer);
+take('A share item deleted by an organizer',
+    'An organizer deletes a share item on the organizer\'s Shares page.',
+    'Everyone who was on that share item.', 'Share item removed', $rosa['email']);
+
 // ---- Show them, or send them ----
 $total = count($samples);
 $rule = str_repeat('-', 70);

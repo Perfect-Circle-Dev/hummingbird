@@ -20,6 +20,9 @@ const ORGANIZER_DONE = [
     'member_restored' => 'Restored. They can sign in again and will get emails.',
     'login_sent'      => 'A sign-in link has been emailed to them. It works once, any time in the next 7 days.',
     'household_saved' => 'Household renamed.',
+    'share_saved'   => 'Saved. The people on that share item have been emailed how it stands now.',
+    'share_same'    => 'Nothing was different, so nothing was saved and nobody was emailed.',
+    'share_deleted' => 'The share item is deleted. The people who were on it have been emailed.',
     'notice_tested'  => 'A test has been emailed to you. Your message is still below, ready to send to everyone.',
     'settings_saved' =>'Settings saved. Open orders and saved lists now use the new amounts.',
 ];
@@ -46,6 +49,10 @@ const ORGANIZER_PROBLEMS = [
     'login_not_sent'   => 'The sign-in link could not be sent. An archived member has to be restored first.',
     'household_name'      => 'Give the household a name.',
     'household_duplicate' => 'Another household already has that name.',
+    'share_fixed'    => 'That share item can no longer be changed: it has expired, been deleted, or its month is closed.',
+    'share_amount'   => 'Nothing was saved. Type each amount as a number, like 2.5, or 0 to take that person off.',
+    'share_over'     => 'Nothing was saved. Those amounts add up to more than the item holds.',
+    'share_not_full' => 'Nothing was saved. This share item is on the locked order, so its amounts must add up to the whole item. To take it off the order, delete it.',
     'notice_empty'    => 'Nothing was sent. The email needs both a subject and a message.',
     'notice_nobody'   => 'Nothing was sent. Tick at least one member under "Send to selected members", or choose "Send to everyone".',
     'notice_not_sent' => 'The test could not be sent. Your message is still below.',
@@ -207,6 +214,8 @@ function page_organizer(array $member, bool $isPost): void
         }
     } elseif ($view === 'members') {
         organizer_members($member);
+    } elseif ($view === 'share-items') {
+        organizer_shares();
     } elseif ($view === 'email') {
         organizer_email($member);
     } elseif ($view === 'settings') {

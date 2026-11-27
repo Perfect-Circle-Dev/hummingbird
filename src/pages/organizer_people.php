@@ -6,7 +6,7 @@ declare(strict_types=1);
 /** The row of links at the top of the main organizer pages. */
 function organizer_nav(string $current): void
 {
-    $pages = ['' => 'Months', 'members' => 'Members', 'email' => 'Email everyone', 'settings' => 'Settings'];
+    $pages = ['' => 'Months', 'members' => 'Members', 'share-items' => 'Shares', 'email' => 'Email everyone', 'settings' => 'Settings'];
     echo '<nav class="subnav" aria-label="Organizer">';
     foreach ($pages as $view => $label) {
         echo $view === $current
@@ -61,6 +61,22 @@ function organizer_people_post(string $do, array $member): void
     if ($do === 'household_rename') {
         $problem = household_rename((int) ($_POST['household_id'] ?? 0), (string) ($_POST['name'] ?? ''));
         redirect($members . ($problem ? '&problem=' . $problem : '&done=household_saved'));
+    }
+    if ($do === 'share_admin_save' || $do === 'share_admin_delete') {
+        // The organizer's Shares page: change the amounts on a share, or delete it.
+        $shareId = (int) ($_POST['share_id'] ?? 0);
+        $page = '/?a=organizer&view=share-items';
+        if ($do === 'share_admin_delete') {
+            // Deleting needs its box ticked, like the other steps that can't be undone.
+            $problem = empty($_POST['sure']) ? 'unsure' : share_admin_delete($shareId, $member);
+            redirect($page . ($problem ? '&problem=' . $problem . '#share-' . $shareId : '&done=share_deleted'));
+        }
+        $problem = share_admin_save($shareId, is_array($_POST['amount'] ?? null) ? $_POST['amount'] : [],
+            (int) ($_POST['add_member'] ?? 0), (string) ($_POST['add_amount'] ?? ''), $member);
+        // 'same' is not a problem: nothing was different, so nothing was saved or emailed.
+        $result = $problem === null ? '&done=share_saved' : ($problem === 'same' ? '&done=share_same' : '&problem=' . $problem);
+        // If the last person was taken off, the share is gone and there is no card to go back to.
+        redirect($page . $result . (find_share($shareId) ? '#share-' . $shareId : ''));
     }
     if ($do === 'notice_test' || $do === 'notice_send') {
         // The "Email everyone" page. What was typed is kept first, so nothing is lost if
@@ -277,6 +293,89 @@ function organizer_members(array $member): void
             </li>
           <?php endforeach; ?>
         </ul>
+      </div>
+    <?php endforeach; ?>
+    </div>
+    <?php
+    page_end();
+}
+
+/**
+ * Shares page: every share on the board, and those on the locked month's order. The
+ * organizer can change anyone's amount, put someone on, take someone off (nought), or
+ * delete the share. The people on it are emailed each time.
+ */
+function organizer_shares(): void
+{
+    $cycle = current_cycle();
+    $shares = board_shares($cycle ? (int) $cycle['id'] : null);
+    $members = q('SELECT id, name FROM members WHERE active = 1 ORDER BY name COLLATE NOCASE')->fetchAll();
+
+    page_start('Shares');
+    organizer_nav('share-items');
+    echo '<h1>Shares</h1>';
+    organizer_messages();
+    ?>
+    <p class="note">Every share item members have started, filled or not. Change anyone's amount, add someone, or type 0 to take someone off. Each time you save or delete, the people on that share item are emailed what changed (not you, and not anyone who has switched notification emails off).</p>
+    <?php if (!$shares): ?>
+      <div class="card"><p>There are no share items right now.</p></div>
+    <?php endif; ?>
+    <div class="cards">
+    <?php foreach ($shares as $s):
+        $id = (int) $s['id'];
+        $unit = $s['size_unit'];
+        $ordered = $s['status'] === 'ordered';
+        $onIt = array_map('intval', array_column($s['claims'], 'member_id')); ?>
+      <div class="card stack" id="share-<?= $id ?>">
+        <div>
+          <h2><?= e($s['product_title']) ?></h2>
+          <div class="note"><?= e($s['sku']) ?> · <?= e($s['size']) ?> · <?= money($s['price_cents']) ?> (<?= money($s['per_unit_cents']) ?> per <?= e($unit) ?>)</div>
+        </div>
+        <div><?= e(fmt_amount($s['claimed'])) ?> of <?= e(fmt_amount((float) $s['size_amount'])) ?> <?= e($unit) ?> claimed
+          <?php if ($ordered): ?><span class="flag">on the <?= e($cycle['label'] ?? '') ?> order</span>
+          <?php elseif ($s['full']): ?><span class="flag">fully claimed</span>
+          <?php else: ?>· <?= e(fmt_amount($s['left'])) ?> <?= e($unit) ?> left<?php endif; ?></div>
+        <form method="post" action="/?a=organizer" class="stack">
+          <?= csrf_field() ?>
+          <input type="hidden" name="share_id" value="<?= $id ?>">
+          <?php foreach ($s['claims'] as $c): ?>
+            <div class="row share-edit">
+              <label class="grow" for="amt-<?= (int) $c['id'] ?>"><?= e($c['name']) ?> <span class="note">· <?= money($c['cost_cents']) ?></span></label>
+              <input id="amt-<?= (int) $c['id'] ?>" name="amount[<?= (int) $c['id'] ?>]" type="number" inputmode="decimal" min="0" step="0.01" value="<?= e(fmt_amount($c['amount'])) ?>" required>
+              <span class="note"><?= e($unit) ?></span>
+            </div>
+          <?php endforeach; ?>
+          <div class="row share-edit step">
+            <div class="grow">
+              <label for="add-<?= $id ?>">Add someone</label>
+              <select id="add-<?= $id ?>" name="add_member">
+                <option value="0">Nobody</option>
+                <?php foreach ($members as $m): if (!in_array((int) $m['id'], $onIt, true)): ?>
+                  <option value="<?= (int) $m['id'] ?>"><?= e($m['name']) ?></option>
+                <?php endif; endforeach; ?>
+              </select>
+            </div>
+            <input name="add_amount" type="number" inputmode="decimal" min="0.01" step="0.01" aria-label="Amount for the person added, in <?= e($unit) ?>">
+            <span class="note"><?= e($unit) ?></span>
+          </div>
+          <?php if ($ordered): ?>
+            <p class="note">This one is on the locked order, so its amounts must still add up to <?= e(fmt_amount((float) $s['size_amount'])) ?> <?= e($unit) ?>. Each person's part of the price is worked out again when you save.</p>
+          <?php endif; ?>
+          <div><button class="btn" name="do" value="share_admin_save">Save amounts</button></div>
+        </form>
+        <div class="card-foot stack">
+          <div class="note">Started by <?= e($s['started_by_name']) ?> on <?= e(fmt_local($s['created_at'], 'M j')) ?><?= $ordered ? '' : ' · comes off the list ' . e(fmt_local($s['expires_at'], 'M j')) . ' if not filled' ?></div>
+          <details>
+            <summary>Delete this share item</summary>
+            <form method="post" action="/?a=organizer" class="stack">
+              <?= csrf_field() ?>
+              <input type="hidden" name="share_id" value="<?= $id ?>">
+              <p class="note">It comes off Share items<?= $ordered ? ' and off the ' . e($cycle['label'] ?? '') . ' order' : '' ?>, with everyone's claim on it. This can't be undone.</p>
+              <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, delete it</label>
+              <div><button class="btn quiet" name="do" value="share_admin_delete">Delete share item</button></div>
+            </form>
+          </details>
+        </div>
       </div>
     <?php endforeach; ?>
     </div>
