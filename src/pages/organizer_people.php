@@ -221,8 +221,11 @@ function organizer_members(array $member): void
         </form>
       </div>
     <?php else: ?>
-      <div class="card stack">
-        <h2>Add a member</h2>
+      <?php // Folds away like the cards on My household, and starts folded. It is opened
+            // for you when the form comes back with a problem, so the message has its form. ?>
+      <details class="card fold" data-remember="organizer-add-member"<?= isset($_GET['problem']) ? ' open data-keep-open' : '' ?>>
+        <summary><h2>Add a member</h2></summary>
+        <div class="stack">
         <form method="post" action="/?a=organizer" class="stack">
           <?= csrf_field() ?>
           <?php organizer_member_fields(null, $households); ?>
@@ -239,7 +242,8 @@ function organizer_members(array $member): void
             <div><button class="btn" name="do" value="members_import">Add everyone in the list</button></div>
           </form>
         </details>
-      </div>
+        </div>
+      </details>
     <?php endif; ?>
 
     <div class="cards">

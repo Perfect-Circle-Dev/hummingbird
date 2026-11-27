@@ -150,6 +150,8 @@ a little, and wants to be able to follow and lightly edit the code. So:
   `<details class="card fold">` like My favorites and starts folded (Brent, 2026-11-27).
   `site.js` remembers the ones a person leaves open (`data-remember`). The "Previous orders"
   link on My order adds `&show=orders`, which opens that card (`data-keep-open`).
+  "Add a member" on the organizer's Members page folds the same way, and is opened when its
+  form comes back with a problem.
 - "Browse by category" on My order, a card of its own under My favorites: each chip lists
   everything in that category, in the results under the search box (the page moves to them if
   they are out of view). A category is a name and the letters its item numbers begin with (L is beans, N is
