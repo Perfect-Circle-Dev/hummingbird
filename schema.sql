@@ -78,7 +78,10 @@ CREATE TABLE IF NOT EXISTS variants (
     deposit_cents INTEGER NOT NULL DEFAULT 0,
     deposit_override_cents INTEGER,      -- set by the organizer when the automatic rule is wrong
     active INTEGER NOT NULL DEFAULT 1,   -- 0 when it disappears from Hummingbird's catalog
-    synced_at TEXT
+    synced_at TEXT,
+    origin TEXT,                         -- where it comes from, from Hummingbird's price sheet ("Oregon")
+    organic INTEGER NOT NULL DEFAULT 0,  -- 1 = marked organic on the price sheet
+    raw INTEGER NOT NULL DEFAULT 0       -- 1 = marked raw on the price sheet
 );
 CREATE INDEX IF NOT EXISTS variants_sku ON variants(sku);
 

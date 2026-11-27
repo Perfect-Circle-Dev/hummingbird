@@ -168,6 +168,13 @@ a little, and wants to be able to follow and lightly edit the code. So:
   (`products.description`, `plain_description()`): tags and scripts are stripped, so a
   description can never alter a page. "Description" beside a product's name opens it in a
   pop-up (a `<details>`, so it works without the script). No pictures are stored.
+- Origin, organic and raw are not in Hummingbird's product feed. They come from its wholesale
+  price sheet, a Google spreadsheet with a row per item number (`PRICE_SHEET_URL` in
+  `src/catalog.php`, or `price_sheet_url` in config.php). `sync_price_sheet()` reads it after
+  each catalog refresh and saves `variants.origin`, `organic` and `raw`. If the sheet cannot be
+  fetched, has lost its headings, or matches fewer than 50 items, nothing is changed. State
+  abbreviations are written out (`ORIGIN_NAMES`). A product card shows them on one line under
+  the name: "Organic • Raw • Origin: Oregon", with whichever parts apply.
 - Members see the share page as "Share items". The code and these notes still say shares and
   the share board.
 

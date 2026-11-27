@@ -283,6 +283,10 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 /* Each product in the results is a box of its own, so one is easy to tell from the next. */
 .product { padding: 10px; border: 1px solid var(--muted); border-radius: 10px; }
 .product-head { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 16px; }
+/* Under the name: organic, raw and where it comes from, in the page's text colour (white in
+   dark mode), the same size as the Description link. */
+.product .facts { margin: -6px 0 6px; font-size: 15px; line-height: 1.4; color: var(--ink); }
+.product .facts span { margin: 0 4px; }
 .product .item { border-top: 0; padding-top: 6px; }
 /* A light dotted line between one size and the next, so the rows do not run together. */
 .product .item + .item { margin-top: 10px; padding-top: 12px; border-top: 1px dotted var(--muted); }

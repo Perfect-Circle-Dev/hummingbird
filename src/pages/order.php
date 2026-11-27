@@ -72,6 +72,8 @@ function page_order(array $member, bool $isPost): void
     // that opens Hummingbird's description in a small pop-up, then a row for each size with
     // its price and its own buttons. $p comes from group_by_product().
     $productCard = function (array $p) use ($itemButtons): void {
+        // The line under the name: "Organic · Raw · Origin: Oregon", with whichever parts apply.
+        $facts = array_filter([$p['organic'] ? 'Organic' : '', $p['raw'] ? 'Raw' : '', $p['origin'] !== '' ? 'Origin: ' . $p['origin'] : '']);
         ?>
         <div class="product">
           <div class="product-head">
@@ -89,6 +91,9 @@ function page_order(array $member, bool $isPost): void
             </details>
             <?php endif; ?>
           </div>
+          <?php if ($facts): ?>
+            <div class="facts"><?= implode(' <span aria-hidden="true">&bull;</span> ', array_map('e', $facts)) ?></div>
+          <?php endif; ?>
           <?php foreach ($p['sizes'] as $v):
               $deposit = variant_deposit_cents($v); ?>
             <div class="item">
